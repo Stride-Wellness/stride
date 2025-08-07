@@ -41,7 +41,7 @@
 				data={{
 					'User Id': $authStore.user.id,
 					Email: $authStore.firebaseUser?.email,
-					'Permission Level': permissions[$authStore.user.permissionLevel]
+					'Permission Level': permissions[$authStore.user.privilege]
 				}}
 			/>
 		</Card>

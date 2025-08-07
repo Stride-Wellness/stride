@@ -21,7 +21,6 @@ This document outlines the Firestore database structure for the Stride elderly c
 {
   id: "org_12345",
   name: "Sunset Retirement Homes",
-  plan: "premium", // basic, premium, enterprise
   totalSeats: 50,
   usedSeats: 35,
   status: "active", // active, suspended, cancelled
@@ -88,9 +87,9 @@ This document outlines the Firestore database structure for the Stride elderly c
 
 **Design Decision:** Single users collection with role-based differentiation simplifies authentication and user management. Medical info is included for clients to inform exercise recommendations.
 
-### 3. Locations
+### 3. Divisions
 **Collection:** `locations`
-**Purpose:** Physical locations like retirement homes or care facilities
+**Purpose:** A sub catagory of a organization, employees are grouped into divisions. A manager can manage 1 or more divisions.
 
 ```javascript
 {
@@ -121,7 +120,7 @@ This document outlines the Firestore database structure for the Stride elderly c
 **Design Decision:** Separate locations collection supports multi-location businesses and enables location-specific management and reporting.
 
 ### 4. Client-Worker Assignments
-**Collection:** `clientAssignments`
+**Collection:** `assigenments`
 **Purpose:** Links PSWs to their assigned clients
 
 ```javascript
@@ -180,7 +179,7 @@ This document outlines the Firestore database structure for the Stride elderly c
 
 **Design Decision:** Assessments capture both structured data for AI processing and free-form responses for personalization. AI recommendations are stored for audit and refinement.
 
-### 6. Exercise Programs
+### 6. NOT USING FOR NOW Exercise Programs
 **Collection:** `exercisePrograms`
 **Purpose:** AI-generated personalized exercise programs
 
@@ -242,56 +241,12 @@ This document outlines the Firestore database structure for the Stride elderly c
 
 **Design Decision:** Programs store complete exercise details with rich metadata for tracking, progression, and safety. AI generation details are preserved for quality improvement.
 
-### 7. Exercise Sessions
-**Collection:** `exerciseSessions`
-**Purpose:** Individual workout sessions and progress tracking
 
-```javascript
-{
-  id: "session_123",
-  organizationId: "org_12345",
-  clientId: "user_client1",
-  programId: "program_789",
-  conductedBy: "user_psw1",
-  sessionType: "guided", // guided, independent, virtual
-  location: "Main Hall",
-  scheduledFor: timestamp,
-  actualStartTime: timestamp,
-  actualEndTime: timestamp,
-  exercises: [
-    {
-      exerciseId: "ex_001",
-      completed: true,
-      setsCompleted: 2,
-      repsCompleted: [8, 10], // Actual reps per set
-      difficultyRating: 3, // 1-5 scale
-      painLevel: 2, // 1-10 scale
-      modifications: "Used chair arms for support",
-      notes: "Great form, seemed confident"
-    }
-  ],
-  overallRating: {
-    clientSelfRating: 4, // 1-5 scale
-    workerAssessment: 4,
-    energyLevel: 3,
-    enjoyment: 5
-  },
-  notes: "Client was enthusiastic and completed all exercises",
-  vitals: {
-    heartRateBefore: 72,
-    heartRateAfter: 85,
-    bloodPressure: "120/80"
-  },
-  status: "completed", // scheduled, in-progress, completed, cancelled
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
 
 **Design Decision:** Detailed session tracking enables progress monitoring, safety tracking, and program refinement. Both objective and subjective measures are captured.
 
 ### 8. Exercise Library
-**Collection:** `exerciseLibrary`
+**Collection:** `exercises`
 **Purpose:** Master library of available exercises
 
 ```javascript

@@ -8,7 +8,7 @@
     size = 'md',
     children 
   }: { 
-    onclick: () => void; 
+    onclick?: () => void; 
     style?: string; 
     type?: "button" | "submit" | "reset" | null | undefined; 
     class?: string; 

@@ -2,15 +2,24 @@ import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { redirect } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
-import { auth } from '$lib/firebase/admin';
+import { adminAuth } from '$lib/firebase/admin';
+import { AdminUsersService } from '$lib/services';
 
 const handleAuth: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get('session');
 
 	if (token) {
 		try {
-			const decodedToken = await auth.verifyIdToken(token);
-			event.locals.user = decodedToken;
+			const decodedToken = await adminAuth.verifySessionCookie(token);
+			// Get full admin user data and verify admin status
+			const adminUser = await AdminUsersService.getAdminById(decodedToken.uid);
+
+			if (adminUser) {
+				event.locals.user = adminUser;
+			} else {
+				// User exists but is not an admin, clear session
+				event.cookies.delete('session', { path: '/' });
+			}
 		} catch {
 			event.cookies.delete('session', { path: '/' });
 		}
@@ -27,11 +36,14 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 
 	// Redirect to dashboard if logged in user tries to access login
 	if (isLoginRoute && event.locals.user) {
+		console.log('🔄 Redirecting to dashboard - user already logged in');
 		throw redirect(302, '/');
 	}
 
+	console.log('✅ Proceeding to resolve');
 	return resolve(event);
 };
+
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
