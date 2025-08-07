@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  /* Semantic colors - simplified naming */
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-muted: #cbd5e1;
+  
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #eff6ff;
+  
+  --color-secondary: #e2e8f0;
+  --color-secondary-hover: #cbd5e1;
+  
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  
+  --color-success: #10b981;
+  --color-success-light: #ecfdf5;
+  
+  --color-warning: #f59e0b;
+  --color-warning-light: #fffbeb;
+  
+  --color-danger: #ef4444;
+  --color-danger-light: #fef2f2;
+
+  --color-border: #e2e8f0;
+}
+
+/* Base styles for admin dashboard */
+@layer base {
+  body {
+    @apply bg-surface text-text antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-text font-medium;
+  }
+}
+
+/* Utility classes for common admin patterns */
+@layer utilities {
+  .card {
+    @apply bg-surface border border-border rounded-lg shadow-sm;
+  }
+  
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary hover:bg-secondary-hover text-text px-4 py-2 rounded-md transition-colors;
+  }
+  
+  .status-success {
+    @apply bg-success-light text-success border-success;
+  }
+  
+  .status-warning {
+    @apply bg-warning-light text-warning border-warning;
+  }
+  
+  .status-error {
+    @apply bg-danger-light text-danger border-danger;
+  }
+
+  .border {
+    @apply border border-border;
+  }
+}
