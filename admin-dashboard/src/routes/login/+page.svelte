@@ -14,8 +14,20 @@
     
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('User signed in:', userCredential.user);
-      goto('/'); // Redirect after successful sign in
+      const idToken = await userCredential.user.getIdToken();
+      
+      // Set secure session
+      const response = await fetch('/v1/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+      
+      if (response.ok) {
+        goto('/');
+      } else {
+        error = 'Login failed';
+      }
     } catch (err: any) {
       error = err.message;
     } finally {
