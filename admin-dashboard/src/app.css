@@ -36,38 +36,22 @@
   body {
     @apply bg-surface text-text antialiased;
   }
+
+  h1 {
+    @apply font-semibold;
+  }
   
-  h1, h2, h3, h4, h5, h6 {
-    @apply text-text font-medium;
+  h4 {
+    @apply text-sm font-medium text-gray-600;
+  }
+
+  h2 {
+    @apply text-lg font-medium text-gray-900 mb-4;
   }
 }
 
 /* Utility classes for common admin patterns */
 @layer utilities {
-  .card {
-    @apply bg-surface border border-border rounded-lg shadow-sm;
-  }
-  
-  .btn-primary {
-    @apply bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md transition-colors;
-  }
-  
-  .btn-secondary {
-    @apply bg-secondary hover:bg-secondary-hover text-text px-4 py-2 rounded-md transition-colors;
-  }
-  
-  .status-success {
-    @apply bg-success-light text-success border-success;
-  }
-  
-  .status-warning {
-    @apply bg-warning-light text-warning border-warning;
-  }
-  
-  .status-error {
-    @apply bg-danger-light text-danger border-danger;
-  }
-
   .border {
     @apply border border-border;
   }

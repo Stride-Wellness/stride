@@ -1,20 +1,16 @@
 <script lang="ts">
   const { 
-    onclick, 
-    style, 
     class: className = '', 
-    type = 'button', 
     variant = 'primary',
     size = 'md',
-    children 
+    children,
+    ...restProps
   }: { 
-    onclick?: () => void; 
-    style?: string; 
-    type?: "button" | "submit" | "reset" | null | undefined; 
     class?: string; 
     variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'subtle';
     size?: 'sm' | 'md' | 'lg';
     children?: any 
+    [key: string]: any;
   } = $props();
 
   const baseClasses = 'px-4 py-2 border transition-colors font-medium';
@@ -36,6 +32,6 @@
   const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
 </script>
 
-<button onclick={onclick} class={classes} {type} {style}>
+<button class={classes} {...restProps}>
   {@render children?.()}
 </button>

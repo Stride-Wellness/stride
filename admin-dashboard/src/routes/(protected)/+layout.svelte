@@ -28,7 +28,7 @@
 {#if $authStore.loading}
     <div>Loading...</div>
 {:else if $authStore.user}
-    <header class="bg-background flex h-10 items-center justify-between border px-2">
+    <header class="bg-background flex h-15 items-center justify-between border px-2">
         <div class="flex items-center gap-4">
             <h1 class="px-2">
                 <a href="/">Admin Dashboard</a>

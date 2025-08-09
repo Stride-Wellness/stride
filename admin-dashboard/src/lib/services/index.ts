@@ -264,3 +264,6 @@ export class OrganizationsService {
 		}
 	}
 }
+
+export { AdminsService } from './admins';
+export type { CreateAdminData, UpdateAdminData } from './admins';

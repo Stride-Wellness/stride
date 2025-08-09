@@ -16,7 +16,7 @@
     [key: string]: any;
   } = $props();
 
-  const baseClasses = 'border transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-primary';
+  const baseClasses = 'w-full border transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-primary rounded-none';
   
   const variantClasses = {
     default: 'bg-background text-text border-border focus:border-primary',

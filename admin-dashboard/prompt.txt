@@ -1,0 +1,1 @@
+This app is a elderly fitness wellness app. The backend is in firebase, and the admin dashboard and user facing dashboard and landing site are built with sveltekit 5 in runes mode! This is the admin dashboard. The database design is outlined in database-design.md, there are pre defined styles in app.css. Componenets are in the lib/componenets folder.
