@@ -1,14 +1,18 @@
 <script lang="ts">
   let { 
     value = $bindable(undefined),
+    as = 'input',
     size = 'md',
     variant = 'default',
     class: className = '',
+    children,
     ...restProps
   }: { 
+    as?: 'input' | 'select';
     size?: 'sm' | 'md' | 'lg';
     variant?: 'default' | 'outline';
     class?: string;
+    children?: any;
     [key: string]: any;
   } = $props();
 
@@ -28,8 +32,18 @@
   const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
 </script>
 
-<input
-  bind:value={value}
-  class={classes}
-  {...restProps}
-/>
+{#if as === 'select'}
+  <select
+    bind:value={value}
+    class={classes}
+    {...restProps}
+  >
+    {@render children?.()}
+  </select>
+{:else}
+  <input
+    bind:value={value}
+    class={classes}
+    {...restProps}
+  />
+{/if}

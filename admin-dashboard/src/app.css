@@ -4,7 +4,7 @@
 
 @theme {
   /* Semantic colors - simplified naming */
-  --color-background: #f8fafc;
+  --color-background: white;
   --color-surface: #ffffff;
   --color-border: #e2e8f0;
   --color-muted: #cbd5e1;

@@ -24,21 +24,9 @@ This document outlines the Firestore database structure for the Stride elderly c
   totalSeats: 50,
   usedSeats: 35,
   status: "active", // active, suspended, cancelled
-  billingInfo: {
-    contactEmail: "billing@sunset.com",
-    phone: "+1234567890",
-    address: {
-      street: "123 Main St",
-      city: "Springfield",
-      state: "CA",
-      zipCode: "90210",
-      country: "USA"
-    }
-  },
+  stripeUserId: "id"
   settings: {
-    allowClientDirectAccess: true,
-    requireManagerApproval: false,
-    defaultLanguage: "en"
+    "not sure what will go here yet"
   },
   createdAt: timestamp,
   updatedAt: timestamp

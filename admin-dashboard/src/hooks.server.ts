@@ -3,7 +3,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { redirect } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
 import { adminAuth } from '$lib/firebase/admin';
-import { AdminUsersService } from '$lib/services';
+import { AdminUsersService } from '$lib/services/privileged';
 
 const handleAuth: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get('session');

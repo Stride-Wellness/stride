@@ -4,21 +4,23 @@
   const headers = data.length > 0 ? Object.keys(data[0]) : [];
 </script>
 
-<table class="border border-collapse w-full {className ?? ''}">
-  <thead>
-    <tr>
-      {#each headers as header}
-        <th class="border p-2 text-left font-medium bg-background">{header}</th>
-      {/each}
-    </tr>
-  </thead>
-  <tbody>
-    {#each data as row}
+<div class="overflow-auto {className ?? ''}">
+  <table class="border border-collapse w-full min-w-max">
+    <thead>
       <tr>
         {#each headers as header}
-          <td class="border p-2">{row[header]}</td>
+          <th class="border p-2 text-left font-medium bg-background whitespace-nowrap">{header}</th>
         {/each}
       </tr>
-    {/each}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {#each data as row}
+        <tr>
+          {#each headers as header}
+            <td class="border p-2 whitespace-nowrap">{row[header]}</td>
+          {/each}
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+</div>
