@@ -84,21 +84,10 @@ This document outlines the Firestore database structure for the Stride elderly c
   id: "location_123",
   organizationId: "org_12345",
   name: "Sunset Manor East",
-  address: {
-    street: "456 Oak Ave",
-    city: "Springfield",
-    state: "CA",
-    zipCode: "90211"
-  },
   managerId: "user_manager1", // Primary manager for this location
-  capacity: 100,
-  currentResidents: 75,
+  divisionType: "retirement_home" | "homecare provider"
   settings: {
-    operatingHours: {
-      start: "08:00",
-      end: "20:00"
-    },
-    exerciseRooms: ["Main Hall", "Therapy Room A"]
+    "tbd"
   },
   createdAt: timestamp,
   updatedAt: timestamp

@@ -15,6 +15,7 @@
 
     let pages = [
         { name: 'Organizations', href: '/organizations' },
+        { name: 'Divisions', href: '/divisions' },
         { name: 'Users', href: '/users' },
         { name: 'Admins', href: '/admins' }
     ];

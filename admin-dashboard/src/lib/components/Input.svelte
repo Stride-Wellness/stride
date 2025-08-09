@@ -5,6 +5,7 @@
     size = 'md',
     variant = 'default',
     class: className = '',
+    options = [], // Add options prop
     children,
     ...restProps
   }: { 
@@ -12,6 +13,7 @@
     size?: 'sm' | 'md' | 'lg';
     variant?: 'default' | 'outline';
     class?: string;
+    options?: Array<{ value: string; label: string }>; // Add options type
     children?: any;
     [key: string]: any;
   } = $props();
@@ -32,12 +34,16 @@
   const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
 </script>
 
+
 {#if as === 'select'}
   <select
     bind:value={value}
     class={classes}
     {...restProps}
   >
+    {#each options as option}
+      <option value={option.value}>{option.label}</option>
+    {/each}
     {@render children?.()}
   </select>
 {:else if as === 'textarea'}
