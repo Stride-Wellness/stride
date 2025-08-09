@@ -4,12 +4,16 @@
     variant = 'primary',
     size = 'md',
     children,
+    href,
+    as = 'button',
     ...restProps
   }: { 
     class?: string; 
     variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'subtle';
     size?: 'sm' | 'md' | 'lg';
-    children?: any 
+    children?: any;
+    as?: 'button' | 'a';
+    href?: string;
     [key: string]: any;
   } = $props();
 
@@ -32,6 +36,12 @@
   const classes = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`;
 </script>
 
-<button class={classes} {...restProps}>
-  {@render children?.()}
-</button>
+{#if href}
+  <a class={classes} href={href} {...restProps}>
+    {@render children?.()}
+  </a>
+{:else}
+  <button class={classes} {...restProps}>
+    {@render children?.()}
+  </button>
+{/if}

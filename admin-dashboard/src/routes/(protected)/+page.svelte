@@ -5,6 +5,7 @@
   import { OrganizationsService, AdminsService } from '$lib/services';
   import type { Organization } from '$lib/services';
   import type { AdminUser } from '$lib/types';
+	import { goto } from '$app/navigation';
 
   // State for dashboard data
   let organizations = $state<Organization[]>([]);
@@ -140,19 +141,19 @@
     <Card class="p-6">
       <h2>Quick Actions</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Button href="/organizations" size="md" class="w-full justify-start">
+        <Button onclick={()=>goto('/organizations')} size="md" class="w-full justify-start">
           Add Organization
         </Button>
-        
-        <Button href="/admins" size="md" variant="secondary" class="w-full justify-start">
+
+        <Button onclick={()=>goto('/admins')} size="md" variant="secondary" class="w-full justify-start">
           Add Admin User
         </Button>
-        
-        <Button href="/organizations" size="md" variant="secondary" class="w-full justify-start">
+
+        <Button onclick={()=>alert('Not Yet!')} size="md" variant="secondary" class="w-full justify-start">
           View Reports
         </Button>
-        
-        <Button href="/settings" size="md" variant="secondary" class="w-full justify-start">
+
+        <Button onclick={()=>alert('Not Yet!')} size="md" variant="secondary" class="w-full justify-start">
           System Settings
         </Button>
       </div>

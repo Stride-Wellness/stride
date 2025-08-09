@@ -65,28 +65,28 @@
 		<Card class="flex items-center justify-between p-4">
 			<div>
 				<h4>Total Admins</h4>
-				<p class="text-2xl font-bold text-gray-900">{summaryStats().total}</p>
+				<p class="text-2xl font-bold">{summaryStats().total}</p>
 			</div>
 		</Card>
 
 		<Card class="flex items-center justify-between p-4">
 			<div>
 				<h4>Active Admins</h4>
-				<p class="text-2xl font-bold text-green-600">{summaryStats().active}</p>
+				<p class="text-2xl font-bold">{summaryStats().active}</p>
 			</div>
 		</Card>
 
 		<Card class="flex items-center justify-between p-4">
 			<div>
 				<h4>Email Verified</h4>
-				<p class="text-2xl font-bold text-blue-600">{summaryStats().verified}</p>
+				<p class="text-2xl font-bold ">{summaryStats().verified}</p>
 			</div>
 		</Card>
 
 		<Card class="flex items-center justify-between p-4">
 			<div>
 				<h4>High Privilege</h4>
-				<p class="text-2xl font-bold text-purple-600">{summaryStats().highPrivilege}</p>
+				<p class="text-2xl font-bold">{summaryStats().highPrivilege}</p>
 			</div>
 		</Card>
 	</div>

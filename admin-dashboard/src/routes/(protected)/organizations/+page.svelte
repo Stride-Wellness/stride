@@ -199,7 +199,7 @@
 	// Transform data for table display
 	const tableData = $derived(
 		organizations.map((org) => ({
-			id: org.id,
+			id: { name: org.id, href: `/organizations/${org.id}` },
 			name: org.name,
 			status: org.status,
 			'Total Seats': org.totalSeats,
@@ -251,21 +251,21 @@
 			<Card class="flex items-center justify-between p-4">
 				<div>
 					<h4>Active Organizations</h4>
-					<p class="text-2xl font-bold text-green-600">{summaryStats().active}</p>
+					<p class="text-2xl font-bold">{summaryStats().active}</p>
 				</div>
 			</Card>
 
 			<Card class="flex items-center justify-between p-4">
 				<div>
 					<h4>Platform Seats</h4>
-					<p class="text-2xl font-bold text-blue-600">{summaryStats().totalSeats}</p>
+					<p class="text-2xl font-bold">{summaryStats().totalSeats}</p>
 				</div>
 			</Card>
 
 			<Card class="flex items-center justify-between p-4">
 				<div>
 					<h4>Seats in Use</h4>
-					<p class="text-2xl font-bold text-purple-600">{summaryStats().usedSeats}</p>
+					<p class="text-2xl font-bold">{summaryStats().usedSeats}</p>
 				</div>
 			</Card>
 		</div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Link from './Link.svelte';
+  
   const { data, class: className }: { data: Record<string, any>[]; class?: string } = $props();
   
   const headers = data.length > 0 ? Object.keys(data[0]) : [];
@@ -17,7 +19,13 @@
       {#each data as row}
         <tr>
           {#each headers as header}
-            <td class="border p-2 whitespace-nowrap">{row[header]}</td>
+            <td class="border p-2 whitespace-nowrap">
+              {#if typeof row[header] === 'object' && row[header]?.href}
+                <Link name={row[header].name} href={row[header].href} />
+              {:else}
+                {row[header]}
+              {/if}
+            </td>
           {/each}
         </tr>
       {/each}
