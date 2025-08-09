@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Organization } from '$lib/services';
-	import { OrganizationsService } from '$lib/services';
+	import type { Organization } from '$lib/services/organizations';
+	import { OrganizationsService } from '$lib/services/organizations';
 	import Table from '$lib/components/Table.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';

@@ -14,6 +14,17 @@ import {
 } from 'firebase/firestore';
 import { db } from '$lib/firebase/config';
 
+// Helper function to safely convert Firestore data to Date
+function toSafeDate(value: Timestamp | Date | { toDate(): Date } | null | undefined): Date {
+	if (value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+		return value.toDate();
+	}
+	if (value instanceof Date) {
+		return value;
+	}
+	return new Date();
+}
+
 export interface OrganizationSettings {
 	[key: string]: string | number | boolean | null;
 }
@@ -69,8 +80,8 @@ export class OrganizationsService {
 				status: data.status,
 				stripeUserId: data.stripeUserId,
 				settings: data.settings || {},
-				createdAt: data.createdAt?.toDate() || new Date(),
-				updatedAt: data.updatedAt?.toDate() || new Date()
+				createdAt: toSafeDate(data.createdAt),
+				updatedAt: toSafeDate(data.updatedAt)
 			};
 		} catch (error) {
 			console.error('Error getting organization:', error);
@@ -99,8 +110,8 @@ export class OrganizationsService {
 					status: data.status,
 					stripeUserId: data.stripeUserId,
 					settings: data.settings || {},
-					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date()
+					createdAt: toSafeDate(data.createdAt),
+					updatedAt: toSafeDate(data.updatedAt)
 				});
 			});
 
@@ -132,8 +143,8 @@ export class OrganizationsService {
 					status: data.status,
 					stripeUserId: data.stripeUserId,
 					settings: data.settings || {},
-					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date()
+					createdAt: toSafeDate(data.createdAt),
+					updatedAt: toSafeDate(data.updatedAt)
 				});
 			});
 

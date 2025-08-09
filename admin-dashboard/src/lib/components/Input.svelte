@@ -8,7 +8,7 @@
     children,
     ...restProps
   }: { 
-    as?: 'input' | 'select';
+    as?: 'input' | 'select' | 'textarea';
     size?: 'sm' | 'md' | 'lg';
     variant?: 'default' | 'outline';
     class?: string;
@@ -40,6 +40,12 @@
   >
     {@render children?.()}
   </select>
+{:else if as === 'textarea'}
+  <textarea
+    bind:value={value}
+    class={classes}
+    {...restProps}
+  ></textarea>
 {:else}
   <input
     bind:value={value}

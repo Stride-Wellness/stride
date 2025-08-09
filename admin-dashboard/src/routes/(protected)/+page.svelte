@@ -2,8 +2,8 @@
   import Card from '$lib/components/Card.svelte';
   import Button from '$lib/components/Button.svelte';
   import { onMount } from 'svelte';
-  import { OrganizationsService, AdminsService } from '$lib/services';
-  import type { Organization } from '$lib/services';
+  import { OrganizationsService, AdminsService } from '$lib/services/organizations';
+  import type { Organization } from '$lib/services/organizations';
   import type { AdminUser } from '$lib/types';
 	import { goto } from '$app/navigation';
 
