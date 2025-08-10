@@ -39,13 +39,34 @@ This document outlines the Firestore database structure for the Stride elderly c
 **Collection:** `users`
 **Purpose:** All users in the system (Admins, Managers, PSWs, Clients)
 
+there are two patterns for users depending if they are an employee or client
 ```javascript
 {
   id: "user_67890",
   email: "john.doe@example.com",
   name: "John Doe",
-  role: "psw", // admin, manager, psw, client
+  type: "employee",
+  emplyeeRole: "psw", // psw, lw, admin, or manager, or any mix of.
   organizationId: "org_12345",
+  divisionId: "div_12345",
+  profile: {
+    "tbd"
+  },
+  status: "active", // active, inactive, pending
+  lastLoginAt: timestamp,
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
+```
+
+```javascript
+{
+  id: "user_67890",
+  email: "john.doe@example.com",
+  name: "John Doe",
+  type: "client",
+  organizationId: "org_12345",
+  divisionId: "div_12345",
   profile: {
     phone: "+1234567890",
     dateOfBirth: "1990-05-15", // For clients, important for exercise customization
@@ -59,12 +80,9 @@ This document outlines the Firestore database structure for the Stride elderly c
       medications: ["metformin"],
       mobility: "walker", // independent, cane, walker, wheelchair
       notes: "Prefers morning exercises"
+      "more info tbd"
     }
-  },
-  permissions: {
-    canManageUsers: false,
-    canViewAllClients: false,
-    assignedLocations: ["location_123"] // For managers assigned to specific homes
+    "more fields tbd",
   },
   status: "active", // active, inactive, pending
   lastLoginAt: timestamp,
