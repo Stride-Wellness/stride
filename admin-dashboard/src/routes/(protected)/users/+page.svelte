@@ -431,7 +431,7 @@
 					
 					<!-- Role Checkboxes -->
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-2">Employee Roles</label>
+						<p class="block text-sm font-medium text-gray-700 mb-2">Employee Roles</p>
 						<div class="space-y-2">
 							{#each availableRoles as role}
 								<label class="flex items-center">

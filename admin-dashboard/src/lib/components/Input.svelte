@@ -13,7 +13,7 @@
     size?: 'sm' | 'md' | 'lg';
     variant?: 'default' | 'outline';
     class?: string;
-    options?: Array<{ value: string; label: string }>; // Add options type
+    options?: Array<{ value: string|number|boolean; label: string }>; // Add options type
     children?: any;
     [key: string]: any;
   } = $props();

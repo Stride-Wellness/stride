@@ -29,7 +29,15 @@
 
 		try {
 			division = await DivisionsService.getById(divisionId);
-			jsonText = JSON.stringify(division, null, 2);
+			if (!division) {
+				error = 'Division not found.';
+				loading = false;
+				return;
+			}
+			
+			// Remove the id field from the JSON display
+			const { id, ...divisionWithoutId } = division;
+			jsonText = JSON.stringify(divisionWithoutId, null, 2);
 		} catch (err) {
 			console.error('Error loading division:', err);
 			error = 'Failed to load division data. Please check the ID and try again.';
@@ -51,19 +59,13 @@
 
 		try {
 			// Parse the JSON
-			const updatedDivision = JSON.parse(jsonText);
+			const updatedDivisionData = JSON.parse(jsonText);
 
-			// Validate that it has an ID and matches the current division ID
-			if (!updatedDivision.id || updatedDivision.id !== divisionId) {
-				error = 'Invalid JSON: ID field is missing or does not match the current division ID.';
-				return;
-			}
+			// Update the division (the service will handle adding the ID back)
+			await DivisionsService.update(divisionId, updatedDivisionData);
 
-			// Update the division
-			await DivisionsService.update(divisionId, updatedDivision);
-
-			// Update local state
-			division = updatedDivision;
+			// Update local state with the ID included
+			division = { id: divisionId, ...updatedDivisionData };
 			successMessage = 'Division updated successfully!';
 		} catch (err) {
 			console.error('Error:', err);
@@ -82,7 +84,9 @@
 	// Reset changes
 	function resetChanges() {
 		if (division) {
-			jsonText = JSON.stringify(division, null, 2);
+			// Remove the id field when resetting
+			const { id, ...divisionWithoutId } = division;
+			jsonText = JSON.stringify(divisionWithoutId, null, 2);
 			error = null;
 			successMessage = null;
 		}

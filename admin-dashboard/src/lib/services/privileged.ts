@@ -93,45 +93,91 @@ export class AdminUsersService {
    */
   static async createAdmin(data: CreateAdminData): Promise<AdminUser> {
     try {
-      // Create user in Firebase Auth
-      const userRecord = await adminAuth.createUser({
-        email: data.email,
-        password: data.password || this.generateRandomPassword(),
-        disabled: data.disabled || false,
-        emailVerified: false
-      });
+			// Create user in Firebase Auth with a temporary password
+			const tempPassword = this.generateRandomPassword();
+			const userRecord = await adminAuth.createUser({
+				email: data.email,
+				password: tempPassword,
+				disabled: data.disabled || false,
+				emailVerified: false
+			});
 
-      // Set admin custom claims
-      await adminAuth.setCustomUserClaims(userRecord.uid, {
-        isAdmin: true,
-        privilege: data.privilege,
-        lastUpdated: Date.now()
-      });
+			// Set admin custom claims
+			await adminAuth.setCustomUserClaims(userRecord.uid, {
+				isAdmin: true,
+				privilege: data.privilege,
+				lastUpdated: Date.now()
+			});
 
-      // Create Firestore record
-      const firestoreData = {
-        name: data.name,
-        privilege: data.privilege,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: 'system' // You can pass this as parameter
-      };
+			// Create Firestore record
+			const firestoreData = {
+				name: data.name,
+				privilege: data.privilege,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				createdBy: 'system' // You can pass this as parameter
+			};
 
-      await adminDb.collection('admins').doc(userRecord.uid).set(firestoreData);
+			await adminDb.collection('admins').doc(userRecord.uid).set(firestoreData);
 
-      return {
-        id: userRecord.uid,
-        email: data.email,
-        disabled: data.disabled || false,
-        emailVerified: false,
-        lastSignIn: null,
-        ...firestoreData
-      };
-    } catch (error) {
+			// Send email verification
+			try {
+				await adminAuth.generateEmailVerificationLink(data.email);
+				console.log('Email verification sent to:', data.email);
+			} catch (emailError) {
+				console.error('Error sending email verification:', emailError);
+				// Don't throw here - user creation was successful
+			}
+
+			// Send password reset email so user can set their own password
+			try {
+				await adminAuth.generatePasswordResetLink(data.email);
+				console.log('Password reset email sent to:', data.email);
+			} catch (resetError) {
+				console.error('Error sending password reset email:', resetError);
+				// Don't throw here - user creation was successful
+			}
+
+			return {
+				id: userRecord.uid,
+				email: data.email,
+				disabled: data.disabled || false,
+				emailVerified: false,
+				lastSignIn: null,
+				...firestoreData
+			};
+		} catch (error) {
       console.error('Error creating admin:', error);
       throw new Error('Failed to create admin user');
     }
   }
+
+  /**
+   * Resend email verification
+   */
+  static async resendEmailVerification(email: string): Promise<void> {
+    try {
+      await adminAuth.generateEmailVerificationLink(email);
+      console.log('Email verification resent to:', email);
+    } catch (error) {
+      console.error('Error resending email verification:', error);
+      throw new Error('Failed to resend email verification');
+    }
+  }
+
+  /**
+   * Send password reset email
+   */
+  static async sendPasswordReset(email: string): Promise<void> {
+    try {
+      await adminAuth.generatePasswordResetLink(email);
+      console.log('Password reset email sent to:', email);
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      throw new Error('Failed to send password reset email');
+    }
+  }
+
 
   /**
    * Update admin user privileges and data

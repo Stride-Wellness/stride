@@ -31,7 +31,7 @@
 	// Transform data for table display - make this reactive too
 	const tableData = $derived(
 		admins.map((admin) => ({
-			id: admin.id,
+			id: { name: admin.id, href: `/admins/${admin.id}` },
 			name: admin.name,
 			email: admin.email,
 			privilege: admin.privilege,

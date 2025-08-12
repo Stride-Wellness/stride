@@ -14,16 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '$lib/firebase/config';
 
-// Helper function to safely convert Firestore data to Date
-function toSafeDate(value: Timestamp | Date | { toDate(): Date } | null | undefined): Date {
-	if (value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
-		return value.toDate();
-	}
-	if (value instanceof Date) {
-		return value;
-	}
-	return new Date();
-}
+import { toSafeDate } from './utils'; // Import the utility function
 
 export interface OrganizationSettings {
 	[key: string]: string | number | boolean | null;

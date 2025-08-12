@@ -42,7 +42,6 @@
         </div>
         <div class="flex items-center gap-2">
             <Link href="/profile" name="Profile" />
-            <Button onclick={handleSignOut} variant="subtle" size="sm">Sign Out</Button>
         </div>
     </header>
     <main class="">
