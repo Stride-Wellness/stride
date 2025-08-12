@@ -116,7 +116,7 @@
 					required
 				/>
 				<div class="space-y-2">
-					<label class="block text-sm font-medium text-gray-700">Privilege Level</label>
+					<h5 class="block text-sm font-medium text-gray-700">Privilege Level</h5>
 					<Input
 						type="number"
 						placeholder="0-3 (0=Super Admin, 3=Limited)"

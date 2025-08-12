@@ -222,7 +222,11 @@ export class UsersService {
 	static async getByOrganizationId(organizationId: string): Promise<User[]> {
 		try {
 			const usersRef = collection(db, this.COLLECTION);
-			const q = query(usersRef, where('organizationId', '==', organizationId), orderBy('createdAt', 'desc'));
+			const q = query(
+				usersRef,
+				where('organizationId', '==', organizationId),
+				orderBy('createdAt', 'desc')
+			);
 
 			const querySnap = await getDocs(q);
 			const users: User[] = [];
@@ -261,6 +265,58 @@ export class UsersService {
 		} catch (error) {
 			console.error('Error getting users by organization:', error);
 			throw new Error('Failed to get users by organization');
+		}
+	}
+
+	/**
+	 * Get users by division ID
+	 */
+	static async getByDivisionId(divisionId: string): Promise<User[]> {
+		try {
+			const usersRef = collection(db, this.COLLECTION);
+			const q = query(
+				usersRef,
+				where('divisionId', '==', divisionId),
+				orderBy('createdAt', 'desc')
+			);
+
+			const querySnap = await getDocs(q);
+			const users: User[] = [];
+
+			querySnap.forEach((doc) => {
+				const data = doc.data();
+				const baseUser = {
+					id: doc.id,
+					email: data.email,
+					name: data.name,
+					organizationId: data.organizationId,
+					divisionId: data.divisionId,
+					status: data.status,
+					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
+					createdAt: toSafeDate(data.createdAt),
+					updatedAt: toSafeDate(data.updatedAt)
+				};
+
+				if (data.type === 'employee') {
+					users.push({
+						...baseUser,
+						type: 'employee',
+						employeeRole: data.employeeRole || [],
+						profile: data.profile || {}
+					} as EmployeeUser);
+				} else {
+					users.push({
+						...baseUser,
+						type: 'client',
+						profile: data.profile || {}
+					} as ClientUser);
+				}
+			});
+
+			return users;
+		} catch (error) {
+			console.error('Error getting users by division:', error);
+			throw new Error('Failed to get users by division');
 		}
 	}
 
@@ -320,7 +376,10 @@ export class UsersService {
 	/**
 	 * Get users by status and organization
 	 */
-	static async getByStatusAndOrganization(status: UserStatus, organizationId: string): Promise<User[]> {
+	static async getByStatusAndOrganization(
+		status: UserStatus,
+		organizationId: string
+	): Promise<User[]> {
 		try {
 			const usersRef = collection(db, this.COLLECTION);
 			const q = query(

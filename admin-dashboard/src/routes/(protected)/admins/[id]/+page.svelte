@@ -88,22 +88,22 @@
 				<!-- Left Column -->
 				<div class="space-y-4">
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Email</label>
+						<h5 class="block text-sm font-medium text-gray-700">Email</h5>
 						<p class="mt-1 text-sm text-gray-900">{admin.email}</p>
 					</div>
 					
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Current Privilege Level</label>
+						<h5 class="block text-sm font-medium text-gray-700">Current Privilege Level</h5>
 						<p class="mt-1 text-sm text-gray-900">{admin.privilege} - {getPrivilegeName(admin.privilege)}</p>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Email Verified</label>
+						<h5 class="block text-sm font-medium text-gray-700">Email Verified</h5>
 						<p class="mt-1 text-sm text-gray-900">{admin.emailVerified ? 'Verified' : 'Not Verified'}</p>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Account Status</label>
+						<h5 class="block text-sm font-medium text-gray-700">Account Status</h5>
 						<p class="mt-1 text-sm text-gray-900">{admin.disabled ? 'Disabled' : 'Active'}</p>
 					</div>
 				</div>
@@ -111,21 +111,21 @@
 				<!-- Right Column -->
 				<div class="space-y-4">
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Created At</label>
+						<h5 class="block text-sm font-medium text-gray-700">Created At</h5>
 						<p class="mt-1 text-sm text-gray-900">
 							{new Date(admin.createdAt).toLocaleString()}
 						</p>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Last Sign In</label>
+						<h5 class="block text-sm font-medium text-gray-700">Last Sign In</h5>
 						<p class="mt-1 text-sm text-gray-900">
 							{admin.lastSignIn ? new Date(admin.lastSignIn).toLocaleString() : 'Never'}
 						</p>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-gray-700">Last Updated</label>
+						<h5 class="block text-sm font-medium text-gray-700">Last Updated</h5>
 						<p class="mt-1 text-sm text-gray-900">
 							{new Date(admin.updatedAt).toLocaleString()}
 						</p>
