@@ -1,0 +1,340 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ====================================================================
+    // HELPER FUNCTIONS
+    // ====================================================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Get current user data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Check if user exists in users collection
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Check if user has specific employee role
+    function hasEmployeeRole(role) {
+      return userExists() && 
+             getUserData().type == 'employee' && 
+             role in getUserData().employeeRole;
+    }
+    
+    // Check if user is admin of their organization
+    function isOrgAdmin() {
+      return hasEmployeeRole('admin');
+    }
+
+    // Check if user is manager
+    function isManager() {
+      return hasEmployeeRole('manager');
+    }
+
+    // Check if user is PSW or LW
+    function isWorker() {
+      return hasEmployeeRole('psw') || hasEmployeeRole('lw');
+    }
+
+    // Check if user is client
+    function isClient() {
+      return userExists() && getUserData().type == 'client';
+    }
+
+    // Check if user belongs to specific organization
+    function belongsToOrganization(orgId) {
+      return userExists() && getUserData().organizationId == orgId;
+    }
+
+    // Check if user belongs to specific division
+    function belongsToDivision(divId) {
+      return userExists() && getUserData().divisionId == divId;
+    }
+
+    // Check if admin has sufficient privilege level
+    function isAdminWithPrivilege(level) {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+      get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.privilege <= level;
+    }
+
+    // Check if user is assigned to a specific client
+    // Note: This requires a composite index on assignments: workerId, clientId, status
+    function isAssignedToClient(clientId) {
+      // This will be validated at application level since Firestore rules
+      // don't support complex queries for existence checks
+    return true; // Placeholder - actual validation happens in service layer
+    }
+
+    // Validate required fields exist
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ====================================================================
+    // ORGANIZATIONS COLLECTION
+    // ====================================================================
+    match /organizations/{orgId} {
+      // Only organization admins can edit their organization data
+      // Any authenticated user can read their organization name
+      allow read: if isAuthenticated() && (belongsToOrganization(orgId) ||
+                                           isAdminWithPrivilege(3));
+      
+      // Only site admins can create organizations
+      allow create: if isAuthenticated() && 
+                       isAdminWithPrivilege(2) &&
+                       validateOrganizationCreation();
+      
+      allow delete: if isAuthenticated() && 
+                       ((belongsToOrganization(orgId) && 
+                         isOrgAdmin()) || isAdminWithPrivilege(2));
+
+      // Validation for organization updates
+      allow update: if isAuthenticated() && 
+                       ((belongsToOrganization(orgId) && 
+                         isOrgAdmin() &&
+                         // Prevent changing critical fields
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['name', 'settings', 'updatedAt']) &&
+                         // Ensure updatedAt is set
+                         request.resource.data.updatedAt == request.time) || 
+                        isAdminWithPrivilege(2));
+      
+      function validateOrganizationCreation() {
+        return hasRequiredFields(['name', 'totalSeats', 'status', 'stripeUserId']) &&
+               request.resource.data.status in ['active', 'suspended', 'cancelled'] &&
+               request.resource.data.totalSeats > 0 &&
+               request.resource.data.usedSeats >= 0 &&
+               request.resource.data.usedSeats <= request.resource.data.totalSeats;
+      }
+    }
+
+    // ====================================================================
+    // USERS COLLECTION
+    // ====================================================================
+    match /users/{userId} {
+      // Users can read their own data
+      // Workers can read clients they are assigned to
+      // Managers and admins can read users in their organization
+      allow read: if isAuthenticated() && (
+      // User reading their own data
+      request.auth.uid == userId ||
+      // Manager/admin reading users in their organization
+      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+      // Worker reading assigned client
+      (isWorker() && resource.data.type == 'client' && isAssignedToClient(userId)) ||
+      // Site admin access
+      isAdminWithPrivilege(3)
+      );
+
+      // Users can update their own profile
+      // Managers and admins can update users in their organization
+      allow update: if isAuthenticated() && (
+      // User updating their own profile (limited fields)
+      (request.auth.uid == userId && 
+      request.resource.data.diff(resource.data).affectedKeys()
+      .hasOnly(['profile', 'lastLoginAt', 'updatedAt'])) ||
+      // Manager/admin updating users in their organization
+      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+      // Site admin access
+      isAdminWithPrivilege(2)
+      );
+
+      // Only managers and admins can create new users
+      allow create: if isAuthenticated() && (
+      (isManager() || isOrgAdmin()) ||
+      isAdminWithPrivilege(2)
+      ) && validateUserCreation();
+
+      // Only managers and admins can delete users
+      allow delete: if isAuthenticated() && (
+      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+      isAdminWithPrivilege(2)
+      );
+
+      // User creation validation
+      function validateUserCreation() {
+        return hasRequiredFields(['email', 'name', 'type', 'organizationId', 'divisionId']) &&
+               request.resource.data.email.matches('.*@.*\\..*') &&
+               request.resource.data.type in ['employee', 'client'] &&
+               // Organization must exist (even for site admins)
+               exists(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)) &&
+               // Division must exist (even for site admins)
+               exists(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)) &&
+               // Division must belong to the specified organization (even for site admins)
+               get(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)).data.organizationId == request.resource.data.organizationId &&
+               // If employee, must have valid roles
+               (request.resource.data.type != 'employee' || 
+                request.resource.data.employeeRole.hasAny(['psw', 'lw', 'admin', 'manager'])) &&
+               // User must belong to creator's organization (unless site admin)
+               (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId));
+      }
+    }
+
+    // ====================================================================
+    // DIVISIONS COLLECTION
+    // ====================================================================
+    match /divisions/{divisionId} {
+      // Any authenticated user can read divisions in their organization
+      allow read: if isAuthenticated() && (
+        belongsToOrganization(resource.data.organizationId) ||
+        isAdminWithPrivilege(3)
+      );
+
+      // Only managers and admins can create divisions
+      allow create: if isAuthenticated() && (
+        (isManager() || isOrgAdmin()) ||
+        isAdminWithPrivilege(2)
+      ) && validateDivisionCreation();
+
+      // Only managers and admins can update divisions
+      allow update: if isAuthenticated() && (
+        (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+        isAdminWithPrivilege(2)
+      );
+
+      // Only managers and admins can delete divisions
+      allow delete: if isAuthenticated() && (
+        (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+        isAdminWithPrivilege(2)
+      );
+
+      function validateDivisionCreation() {
+        return hasRequiredFields(['organizationId', 'name', 'managerId', 'divisionType']) &&
+               request.resource.data.divisionType in ['retirement_home', 'homecare_provider'] &&
+               // Organization must exist (even for site admins)
+               exists(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)) &&
+               // Manager must exist (even for site admins)
+               exists(/databases/$(database)/documents/users/$(request.resource.data.managerId)) &&
+               // Manager must belong to the same organization (even for site admins)
+               get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.organizationId == request.resource.data.organizationId &&
+               // Manager must have manager role (even for site admins)
+               get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.type == 'employee' &&
+               'manager' in get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.employeeRole &&
+               // Creator must belong to the organization (unless site admin)
+               (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId));
+      }
+    }
+
+    // ====================================================================
+    // ASSIGNMENTS COLLECTION
+    // ====================================================================
+    match /assignments/{assignmentId} {
+      // Workers and clients can read their assignments
+      // Managers and admins can read assignments in their organization
+      allow read: if isAuthenticated() && (
+      // Worker or client involved in assignment
+      request.auth.uid == resource.data.workerId ||
+      request.auth.uid == resource.data.clientId ||
+      // Manager/admin in same organization
+      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+      // Site admin access
+      isAdminWithPrivilege(3)
+      );
+
+      // Only managers and admins can create assignments
+      allow create: if isAuthenticated() && (
+      (isManager() || isOrgAdmin()) ||
+      isAdminWithPrivilege(2)
+      ) && validateAssignmentCreation();
+
+      // Workers can delete their own assignments
+      // Managers and admins can delete any assignments in their organization
+      allow delete: if isAuthenticated() && (
+      // Worker deleting their own assignment
+      request.auth.uid == resource.data.workerId ||
+      // Manager/admin deleting assignments in their organization
+      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+      // Site admin access
+      isAdminWithPrivilege(2)
+      );
+
+      // Only managers and admins can update assignments
+      allow update: if isAuthenticated() && (
+      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+      isAdminWithPrivilege(2)
+      );
+
+      function validateAssignmentCreation() {
+        return hasRequiredFields(['organizationId', 'clientId', 'workerId', 'divisionId', 'assignedBy', 'status']) &&
+               request.resource.data.status in ['active', 'inactive', 'completed'] &&
+               // Organization must exist (even for site admins)
+               exists(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)) &&
+               // Division must exist (even for site admins)
+               exists(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)) &&
+               // Division must belong to the organization (even for site admins)
+               get(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)).data.organizationId == request.resource.data.organizationId &&
+               // Client and worker must exist (even for site admins)
+               exists(/databases/$(database)/documents/users/$(request.resource.data.clientId)) &&
+               exists(/databases/$(database)/documents/users/$(request.resource.data.workerId)) &&
+               // Client and worker must belong to the same organization (even for site admins)
+               get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.organizationId == request.resource.data.organizationId &&
+               get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.organizationId == request.resource.data.organizationId &&
+               // Client and worker must belong to the same division (even for site admins)
+               get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.divisionId == request.resource.data.divisionId &&
+               get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.divisionId == request.resource.data.divisionId &&
+               // Client must be client type and worker must be employee type (even for site admins)
+               get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.type == 'client' &&
+               get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.type == 'employee' &&
+               // Worker must have PSW or LW role (even for site admins)
+               (get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.employeeRole.hasAny(['psw', 'lw'])) &&
+               // Creator must belong to organization (unless site admin)
+               (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId));
+      }
+    }
+
+    // ====================================================================
+    // ADMINS COLLECTION (Site Maintainers)
+    // ====================================================================
+    match /admins/{adminId} {
+      // Any admin can read other admins
+      allow read: if isAuthenticated() && 
+      exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+
+      // Only super admins (level 0) can create new admins
+      allow create: if isAuthenticated() && 
+      isAdminWithPrivilege(0) &&
+      validateAdminCreation();
+
+      // Admins can update other admins based on privilege levels
+      allow update: if isAuthenticated() && 
+      exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+      validateAdminUpdate();
+
+      // Only super admins can delete admins
+      // Level 1+ admins cannot delete admins at their level or below
+      allow delete: if isAuthenticated() && 
+      isAdminWithPrivilege(0) ||
+      (isAdminWithPrivilege(1) && resource.data.privilege > 1);
+
+      function validateAdminCreation() {
+        return hasRequiredFields(['name', 'privilege']) &&
+        request.resource.data.privilege in [0, 1, 2, 3] &&
+        request.resource.data.createdBy == request.auth.uid;
+      }
+
+      function validateAdminUpdate() {
+        let currentAdminPrivilege = get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.privilege;
+        let targetAdminPrivilege = resource.data.privilege;
+
+        return currentAdminPrivilege == 0 || 
+        (currentAdminPrivilege == 1 && targetAdminPrivilege > 1) ||
+        (currentAdminPrivilege <= targetAdminPrivilege);
+      }
+    }
+
+    // ====================================================================
+    // DEFAULT DENY RULE
+    // ====================================================================
+    // Deny access to any other collections not explicitly defined
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

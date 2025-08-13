@@ -5,15 +5,15 @@ This document outlines the Firestore database structure for the Stride elderly c
 
 ## Design Principles
 
-1. **Multi-tenancy**: Each business operates independently with their own data isolation
-2. **Role-based access**: Clear separation between Admins, Managers, PSWs, and Clients
+1. **Multi-tenancy**: Each organization can organize their clients and employees into a division
+2. **Role-based access**: Clear separation between Organization Admins, Division Managers, PSWs and/or LWs (employee types), and Clients
 3. **Scalability**: Structure supports businesses of all sizes (single user to large retirement homes)
 4. **Security**: Firestore security rules can enforce proper access control
 5. **Flexibility**: Supports various business models (family care, retirement homes, etc.)
 
 ## Collections Structure
 
-### 1. Organizations
+### Organizations
 **Collection:** `organizations`
 **Purpose:** Represents businesses that purchase Stride
 
@@ -33,20 +33,26 @@ This document outlines the Firestore database structure for the Stride elderly c
 }
 ```
 
-**Design Decision:** Organizations are the top-level tenant boundary. All other data is scoped to an organization, enabling complete data isolation and independent billing.
+**Design Decision:** Organizations are the top-level tenant boundary. All other data is scoped to an organization, enabling complete data isolation and independent billing. An organization has 1 admin employee that is responisble for setting up the billing, and at least 1 manager that adds employeeds on a division level. The admin and manager can be the same person.
 
-### 2. Users
+**Constraints:** An organization must have an admin for it to be able to do anything. When an organization is being created the admin will be created after since the admin is an employee, and an employee must belong to an organization.
+
+**Scope:** Only the organization admin should be able to edit and read data. And authenticated user should be able to read the data to get the name of the organization they are in. (does this make sense?).
+
+
+### Users
 **Collection:** `users`
 **Purpose:** All users in the system (Admins, Managers, PSWs, Clients)
 
-there are two patterns for users depending if they are an employee or client
+There two user types based on if they are a client or employeed to the organization.
+
+**Employee**
 ```javascript
 {
-  id: "user_67890",
   email: "john.doe@example.com",
   name: "John Doe",
   type: "employee",
-  emplyeeRole: "psw", // psw, lw, admin, or manager, or any mix of.
+  employeeRole: ["psw"], // Can be array: ["psw", "manager"], ["lw", "admin"], etc.
   organizationId: "org_12345",
   divisionId: "div_12345",
   profile: {
@@ -59,9 +65,9 @@ there are two patterns for users depending if they are an employee or client
 }
 ```
 
+**Client**
 ```javascript
 {
-  id: "user_67890",
   email: "john.doe@example.com",
   name: "John Doe",
   type: "client",
@@ -91,15 +97,18 @@ there are two patterns for users depending if they are an employee or client
 }
 ```
 
-**Design Decision:** Single users collection with role-based differentiation simplifies authentication and user management. Medical info is included for clients to inform exercise recommendations.
+**Design Decision:** Users can be either client or admin. If they are a client the can be a basic employee which belongs to a division and organization (Lifestyle Worker and Personal Support Worker). If they are a client it stores the client info. There is a field to indicate what type they are.
 
-### 3. Divisions
-**Collection:** `locations`
+**Constraints:** A user most belong to both a divsion and organization, the divsion must belong to the same organization.
+
+**Scope:** Only users should be able to access their own data if they are a client. If they are an employee (PSW/LW) they should be able to access any one in their assignments. This means a manager or admin must assign a user to themselves if they want to be able to see the clients data.
+
+### Divisions
+**Collection:** `divisions`
 **Purpose:** A sub catagory of a organization, employees are grouped into divisions. A manager can manage 1 or more divisions.
 
 ```javascript
 {
-  id: "location_123",
   organizationId: "org_12345",
   name: "Sunset Manor East",
   managerId: "user_manager1", // Primary manager for this location
@@ -114,17 +123,20 @@ there are two patterns for users depending if they are an employee or client
 
 **Design Decision:** Separate locations collection supports multi-location businesses and enables location-specific management and reporting.
 
-### 4. Client-Worker Assignments
-**Collection:** `assigenments`
+**Constraints:** A division must belong to an existing organization. The managerId must reference a user with "manager" in their employeeRole array and belong to the same organization.
+
+**Scope:** Only managers and the admin should be able to edit. Any authenticated user should be able to read. (again does this make sense?).
+
+### Client-Worker Assignments
+**Collection:** `assignments`
 **Purpose:** Links PSWs to their assigned clients
 
 ```javascript
 {
-  id: "assignment_789",
   organizationId: "org_12345",
   clientId: "user_client1",
   workerId: "user_psw1",
-  locationId: "location_123",
+  divisionId: "div_12345", // Changed from locationId to match constraint
   assignedBy: "user_manager1",
   status: "active", // active, inactive, completed
   permissions: {
@@ -138,6 +150,32 @@ there are two patterns for users depending if they are an employee or client
 ```
 
 **Design Decision:** Explicit assignment collection provides flexible many-to-many relationships between PSWs and clients, with granular permissions and audit trails.
+
+**Constraints:** Both the client and worker must be in the database and belong to the same organization and division.
+
+**Scope:** Both worker should be able to read and delete the assignement. The client should be able to read. The manager or admin should be able to create, read, delete. A regular worker/employee should not be able to assign themselves to a client.
+
+### Admins
+
+**Collection:** `admins`
+
+**Purpose:** Store maintainer / site admin information. This is not for end users. This is soley for people who are maintaining the database.
+
+```javascript
+{
+  createdAt: timestamp,
+  createdBy: "admin_user_id",
+  name: string,
+  privilege: number, // 0 = super admin, 1 = admin, 2 = moderator, 3 = read-only
+  updatedAt: timestamp,
+}
+```
+
+**Constraints:** Can't think of any right now.
+
+**Scope:** Any admin should be able to read other admins. Level 0 admins can create, delete, read, edit any data. Level 1 can do the same but not delete admins below their level. They can also not create admins lower than their level. Level 2 can not create or delete any admins, but they have full read, write privileges for any end user in the database. Level 3 has full read privileges on all end user data.
+
+-- NOT IMPLEMENTED YET --
 
 ### 5. Assessments
 **Collection:** `assessments`

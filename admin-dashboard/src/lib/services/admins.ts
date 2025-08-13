@@ -12,18 +12,27 @@ import {
 	Timestamp
 } from 'firebase/firestore';
 import { db } from '$lib/firebase/config';
-import type { AdminUser } from '$lib/types';
+import { toSafeDate } from './utils';
+
+// Update interface to match database design
+export interface Admin {
+	id: string;
+	name: string;
+	privilege: number; // 0 = super admin, 1 = admin, 2 = moderator, 3 = read-only
+	createdAt: Date;
+	createdBy: string;
+	updatedAt: Date;
+}
 
 export interface CreateAdminData {
-	email: string;
 	name: string;
 	privilege: number;
+	createdBy: string;
 }
 
 export interface UpdateAdminData {
 	name?: string;
 	privilege?: number;
-	disabled?: boolean;
 }
 
 export class AdminsService {
@@ -32,26 +41,23 @@ export class AdminsService {
 	/**
 	 * Get all admin users
 	 */
-	static async getAll(limitCount: number = 100): Promise<AdminUser[]> {
+	static async getAll(limitCount: number = 100): Promise<Admin[]> {
 		try {
 			const adminsRef = collection(db, this.COLLECTION);
 			const q = query(adminsRef, orderBy('createdAt', 'desc'), limit(limitCount));
 
 			const querySnap = await getDocs(q);
-			const admins: AdminUser[] = [];
+			const admins: Admin[] = [];
 
 			querySnap.forEach((doc) => {
 				const data = doc.data();
 				admins.push({
 					id: doc.id,
-					email: data.email,
 					name: data.name,
 					privilege: data.privilege,
-					emailVerified: data.emailVerified || false,
-					disabled: data.disabled || false,
-					lastSignIn: data.lastSignIn?.toDate() || null,
-					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date()
+					createdAt: toSafeDate(data.createdAt),
+					createdBy: data.createdBy,
+					updatedAt: toSafeDate(data.updatedAt)
 				});
 			});
 
@@ -65,7 +71,7 @@ export class AdminsService {
 	/**
 	 * Get admin user by ID
 	 */
-	static async getById(adminId: string): Promise<AdminUser | null> {
+	static async getById(adminId: string): Promise<Admin | null> {
 		try {
 			const adminRef = doc(db, this.COLLECTION, adminId);
 			const adminSnap = await getDoc(adminRef);
@@ -77,14 +83,11 @@ export class AdminsService {
 			const data = adminSnap.data();
 			return {
 				id: adminSnap.id,
-				email: data.email,
 				name: data.name,
 				privilege: data.privilege,
-				emailVerified: data.emailVerified || false,
-				disabled: data.disabled || false,
-				lastSignIn: data.lastSignIn?.toDate() || null,
-				createdAt: data.createdAt?.toDate() || new Date(),
-				updatedAt: data.updatedAt?.toDate() || new Date()
+				createdAt: toSafeDate(data.createdAt),
+				createdBy: data.createdBy,
+				updatedAt: toSafeDate(data.updatedAt)
 			};
 		} catch (error) {
 			console.error('Error getting admin by ID:', error);
@@ -93,18 +96,15 @@ export class AdminsService {
 	}
 
 	/**
-	 * Create new admin user (calls server action)
+	 * Create new admin user
 	 */
-	static async create(data: CreateAdminData): Promise<AdminUser> {
+	static async create(data: CreateAdminData): Promise<Admin> {
 		try {
 			const now = Timestamp.now();
 			const adminData = {
-				email: data.email,
 				name: data.name,
 				privilege: data.privilege,
-				emailVerified: false,
-				disabled: false,
-				lastSignIn: null,
+				createdBy: data.createdBy,
 				createdAt: now,
 				updatedAt: now
 			};
@@ -114,7 +114,6 @@ export class AdminsService {
 			return {
 				id: docRef.id,
 				...adminData,
-				lastSignIn: null,
 				createdAt: now.toDate(),
 				updatedAt: now.toDate()
 			};
@@ -160,10 +159,6 @@ export class AdminsService {
 	 */
 	static async getStats(): Promise<{
 		total: number;
-		active: number;
-		disabled: number;
-		verified: number;
-		highPrivilege: number;
 		byPrivilegeLevel: Record<number, number>;
 	}> {
 		try {
@@ -171,15 +166,11 @@ export class AdminsService {
 
 			const stats = {
 				total: admins.length,
-				active: admins.filter(admin => !admin.disabled).length,
-				disabled: admins.filter(admin => admin.disabled).length,
-				verified: admins.filter(admin => admin.emailVerified).length,
-				highPrivilege: admins.filter(admin => admin.privilege <= 1).length,
 				byPrivilegeLevel: {} as Record<number, number>
 			};
 
 			// Count by privilege level
-			admins.forEach(admin => {
+			admins.forEach((admin) => {
 				const level = admin.privilege;
 				stats.byPrivilegeLevel[level] = (stats.byPrivilegeLevel[level] || 0) + 1;
 			});
@@ -197,8 +188,8 @@ export class AdminsService {
 	static async hasPermission(adminId: string, requiredLevel: number): Promise<boolean> {
 		try {
 			const admin = await this.getById(adminId);
-			if (!admin || admin.disabled) return false;
-			
+			if (!admin) return false;
+
 			return admin.privilege <= requiredLevel;
 		} catch (error) {
 			console.error('Error checking permissions:', error);
@@ -209,10 +200,10 @@ export class AdminsService {
 	/**
 	 * Get admins by privilege level
 	 */
-	static async getByPrivilegeLevel(privilegeLevel: number): Promise<AdminUser[]> {
+	static async getByPrivilegeLevel(privilegeLevel: number): Promise<Admin[]> {
 		try {
 			const admins = await this.getAll(1000);
-			return admins.filter(admin => admin.privilege === privilegeLevel);
+			return admins.filter((admin) => admin.privilege === privilegeLevel);
 		} catch (error) {
 			console.error('Error getting admins by privilege level:', error);
 			throw new Error('Failed to get admins by privilege level');
@@ -220,17 +211,14 @@ export class AdminsService {
 	}
 
 	/**
-	 * Search admins by email or name
+	 * Search admins by name
 	 */
-	static async search(searchTerm: string): Promise<AdminUser[]> {
+	static async search(searchTerm: string): Promise<Admin[]> {
 		try {
 			const admins = await this.getAll(1000);
 			const lowercaseSearch = searchTerm.toLowerCase();
-			
-			return admins.filter(admin => 
-				admin.email.toLowerCase().includes(lowercaseSearch) ||
-				admin.name.toLowerCase().includes(lowercaseSearch)
-			);
+
+			return admins.filter((admin) => admin.name.toLowerCase().includes(lowercaseSearch));
 		} catch (error) {
 			console.error('Error searching admins:', error);
 			throw new Error('Failed to search admin users');
