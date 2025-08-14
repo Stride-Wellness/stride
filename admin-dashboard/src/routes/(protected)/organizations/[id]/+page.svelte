@@ -146,7 +146,7 @@
 
 	// Create new division
 	async function createDivision() {
-		if (!organizationId || !newDivisionName.trim() || !newDivisionManagerId.trim()) return;
+		if (!organizationId || !newDivisionName.trim() ) return;
 		
 		creatingDivision = true;
 		error = null;
@@ -154,11 +154,12 @@
 		try {
 			const divisionData = {
 				name: newDivisionName.trim(),
-				managerId: newDivisionManagerId.trim(),
+				managerId: newDivisionManagerId.trim() || null,
 				divisionType: newDivisionType,
 				organizationId: organizationId
 			};
 			
+			console.log('Creating division with data:', divisionData);
 			await DivisionsService.create(divisionData);
 			
 			// Reset form
@@ -461,7 +462,7 @@
 				<div class="flex items-end">
 					<Button 
 						onclick={createDivision}
-						disabled={creatingDivision || !newDivisionName.trim() || !newDivisionManagerId.trim()}
+						disabled={creatingDivision || !newDivisionName.trim() }
 						class="w-full"
 					>
 						{creatingDivision ? 'Creating...' : 'Create Division'}

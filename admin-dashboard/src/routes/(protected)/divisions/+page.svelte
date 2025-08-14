@@ -26,6 +26,10 @@
 	// Form state for deleting division
 	let deleteDivisionId = $state('');
 
+	// Form state for assigning manager
+	let assignDivisionId = $state('');
+	let assignManagerId = $state('');
+
 	// Load divisions on mount
 	onMount(async () => {
 		try {
@@ -264,13 +268,63 @@
 		}
 	}
 
+	// Handle assign manager to division
+	async function handleAssignManager(event: Event) {
+		event.preventDefault();
+
+		error = null;
+		successMessage = null;
+
+		if (!assignDivisionId || !assignManagerId) {
+			error = 'Both Division ID and Manager ID are required';
+			return;
+		}
+
+		try {
+			await DivisionsService.assignManager(assignDivisionId, assignManagerId);
+
+			// Reload divisions to refresh the list
+			divisions = await DivisionsService.getAll(1000);
+
+			assignDivisionId = '';
+			assignManagerId = '';
+
+			successMessage = 'Manager assigned to division successfully!';
+		} catch (err: any) {
+			console.error('Error assigning manager:', err);
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to assign managers.';
+						break;
+					case 'not-found':
+						error = 'Division or manager not found. Please verify the IDs are correct.';
+						break;
+					case 'failed-precondition':
+						error = 'Manager assignment failed validation. The manager must exist, belong to the same organization, and have manager role.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in and try again.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to assign manager. Please try again.'}`;
+				}
+			} else if (err.message) {
+				error = err.message;
+			} else {
+				error = 'An unexpected error occurred while assigning the manager.';
+			}
+		}
+	}
+
 	// Transform data for table display
 	const tableData = $derived(
 		divisions.map((division) => ({
 			id: { name: division.id, href: `/divisions/${division.id}` },
 			name: division.name,
 			'Organization ID': division.organizationId,
-			'Manager ID': division.managerId,
+			'Manager ID': division.managerId || 'No Manager Assigned',
 			'Division Type': division.divisionType,
 			Created: division.createdAt ? new Date(division.createdAt).toLocaleDateString() : 'N/A',
 			Updated: division.updatedAt ? new Date(division.updatedAt).toLocaleDateString() : 'N/A'
@@ -282,8 +336,9 @@
 		const total = divisions.length;
 		const retirementHomes = divisions.filter((div) => div.divisionType === 'retirement_home').length;
 		const homecareProviders = divisions.filter((div) => div.divisionType === 'homecare_provider').length;
+		const withoutManager = divisions.filter((div) => !div.managerId).length;
 
-		return { total, retirementHomes, homecareProviders };
+		return { total, retirementHomes, homecareProviders, withoutManager };
 	});
 </script>
 
@@ -303,7 +358,7 @@
 		</div>
 
 		<!-- Summary Cards -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 			<Card class="flex items-center justify-between p-4">
 				<div>
 					<h4>Total Divisions</h4>
@@ -324,11 +379,21 @@
 					<p class="text-2xl font-bold">{summaryStats().homecareProviders}</p>
 				</div>
 			</Card>
+
+			<Card class="flex items-center justify-between p-4">
+				<div>
+					<h4>Without Manager</h4>
+					<p class="text-2xl font-bold text-amber-600">{summaryStats().withoutManager}</p>
+				</div>
+			</Card>
 		</div>
 
 		<!-- Create Division Form -->
 		<Card class="p-6">
 			<h2>Add New Division</h2>
+			<p class="mb-4 text-sm text-gray-600">
+				You can create a division without a manager and assign one later, or specify a manager ID if you already have one.
+			</p>
 			<form onsubmit={handleCreateDivision} class="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<Input
 					type="text"
@@ -372,10 +437,39 @@
 
 		<!-- Management Actions -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<!-- Placeholder for future actions -->
+			<!-- Assign Manager -->
 			<Card class="p-6">
-				<h2 class="mb-4 text-lg font-medium text-gray-900">Division Management</h2>
-				<p class="text-gray-600">Additional management options will be available here.</p>
+				<h2 class="mb-4 text-lg font-medium text-gray-900">Assign Manager</h2>
+				<p class="my-2 text-xs text-gray-700">
+					Assign a manager to a division that doesn't have one assigned yet.
+				</p>
+				<form onsubmit={handleAssignManager} class="space-y-4">
+					<Input
+						type="text"
+						placeholder="Division ID"
+						size="md"
+						variant="outline"
+						name="assignDivisionId"
+						bind:value={assignDivisionId}
+						required
+					/>
+					<Input
+						type="text"
+						placeholder="Manager ID"
+						size="md"
+						variant="outline"
+						name="assignManagerId"
+						bind:value={assignManagerId}
+						required
+					/>
+					<Button
+						type="submit"
+						size="md"
+						class="w-full"
+					>
+						Assign Manager
+					</Button>
+				</form>
 			</Card>
 
 			<!-- Delete Division -->
