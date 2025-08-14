@@ -30,9 +30,29 @@
 	onMount(async () => {
 		try {
 			divisions = await DivisionsService.getAll(1000);
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error loading divisions:', err);
-			error = 'Failed to load divisions. Please refresh the page.';
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have access to view divisions.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in to view divisions.';
+						break;
+					default:
+						error = `Error loading divisions: ${err.message || 'Please refresh the page and try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to get divisions')) {
+					error = 'Failed to load divisions. Please check your internet connection and refresh the page.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'Failed to load divisions. Please refresh the page.';
+			}
 		} finally {
 			loading = false;
 		}
@@ -75,9 +95,46 @@
 			divisions = [...divisions, newDivision];
 
 			successMessage = 'Division created successfully!';
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error creating division:', err);
-			error = 'Failed to create division. Please try again.';
+			
+			// Parse specific Firebase/Firestore errors
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions or the organization/manager may not exist.';
+						break;
+					case 'not-found':
+						error = 'Organization or manager not found. Please verify the IDs are correct.';
+						break;
+					case 'already-exists':
+						error = 'A division with this name already exists in the organization.';
+						break;
+					case 'invalid-argument':
+						error = 'Invalid data provided. Please check all fields are correctly filled.';
+						break;
+					case 'failed-precondition':
+						error = 'Division creation failed validation. The manager must exist, belong to the organization, and have manager role.';
+						break;
+					case 'resource-exhausted':
+						error = 'Too many requests. Please wait a moment and try again.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in and try again.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to create division. Please try again.'}`;
+				}
+			} else if (err.message) {
+				// Handle generic errors from the service
+				if (err.message.includes('Failed to create division')) {
+					error = 'Failed to create division. Please verify the organization and manager IDs exist and try again.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'An unexpected error occurred. Please try again.';
+			}
 		}
 	}
 
@@ -111,9 +168,36 @@
 			deleteDivisionId = '';
 
 			successMessage = 'Division deleted successfully!';
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error deleting division:', err);
-			error = 'Failed to delete division. Please try again.';
+			
+			// Parse specific Firebase/Firestore errors
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to delete this division.';
+						break;
+					case 'not-found':
+						error = 'Division not found. It may have already been deleted or the ID is incorrect.';
+						break;
+					case 'failed-precondition':
+						error = 'Cannot delete division. There may be users or assignments still associated with this division.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in and try again.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to delete division. Please try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to permanently delete division')) {
+					error = 'Failed to delete division. Please ensure there are no users or assignments linked to this division.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'An unexpected error occurred while deleting the division.';
+			}
 		}
 	}
 
@@ -144,12 +228,16 @@
 	<div class="flex items-center justify-center p-6">
 		<div class="text-lg">Loading divisions...</div>
 	</div>
-{:else if error}
-	<div class="p-6">
-		<Message type="error" message={error} />
-	</div>
 {:else}
 	<div class="space-y-6 p-6">
+		<!-- Error and Success Messages at Top -->
+		{#if error}
+			<Message type="error" message={error} />
+		{/if}
+		{#if successMessage}
+			<Message type="success" message={successMessage} />
+		{/if}
+
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-semibold text-gray-900">Divisions</h1>
 			<p class="text-sm text-gray-600">Manage organization divisions and locations</p>
@@ -262,8 +350,7 @@
 		</div>
 
 		<!-- Messages -->
-		<Message type="error" message={error || undefined} />
-		<Message type="success" message={successMessage || undefined} />
+		<!-- Messages are now shown at the top of the page -->
 
 		<!-- Divisions Table -->
 		<Card class="p-6">

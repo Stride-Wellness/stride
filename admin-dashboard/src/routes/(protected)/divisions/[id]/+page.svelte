@@ -9,7 +9,7 @@
 	import { DivisionsService } from '$lib/services/divisions';
 	import type { Division } from '$lib/services/divisions';
 	import { UsersService } from '$lib/services/users';
-	import type { User, UserType } from '$lib/services/users';
+	import type { ClientUser, EmployeeUser, User, UserType } from '$lib/services/users';
 	import Link from '$lib/components/Link.svelte';
 
 	const divisionId = $derived($page.params.id);
@@ -40,6 +40,10 @@
 	let newClientPhone = $state('');
 	let newClientDateOfBirth = $state('');
 	let creatingClient = $state(false);
+	
+	// Delete states
+	let deletingEmployees = $state(new Set<string>());
+	let deletingClients = $state(new Set<string>());
 
 	// Load division data
 	onMount(async () => {
@@ -64,9 +68,32 @@
 			// Load users for this division
 			await loadEmployees();
 			await loadClients();
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error loading division:', err);
-			error = 'Failed to load division data. Please check the ID and try again.';
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have access to view this division.';
+						break;
+					case 'not-found':
+						error = 'Division not found. Please check the ID and try again.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in and try again.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to load division data. Please try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to get division')) {
+					error = 'Failed to load division data. Please check the ID and try again.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'Failed to load division data. Please check the ID and try again.';
+			}
 		} finally {
 			loading = false;
 		}
@@ -93,12 +120,38 @@
 			// Update local state with the ID included
 			division = { id: divisionId, ...updatedDivisionData };
 			successMessage = 'Division updated successfully!';
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error:', err);
 
 			// Check if it's a JSON parse error
 			if (err instanceof SyntaxError) {
 				error = 'Invalid JSON format. Please check your syntax and try again.';
+			} else if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to update this division.';
+						break;
+					case 'not-found':
+						error = 'Division not found. It may have been deleted or the ID is incorrect.';
+						break;
+					case 'invalid-argument':
+						error = 'Invalid data provided. Please check all fields are correctly formatted.';
+						break;
+					case 'failed-precondition':
+						error = 'Update failed validation. Please ensure manager ID is valid and belongs to the organization.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in and try again.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to update division. Please try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to update division')) {
+					error = 'Failed to update division. Please check your data and try again.';
+				} else {
+					error = err.message;
+				}
 			} else {
 				error = 'Failed to update division. Please try again.';
 			}
@@ -126,8 +179,12 @@
 		try {
 			const allUsers = await UsersService.getByDivisionId(divisionId);
 			employees = allUsers.filter(user => user.type === 'employee');
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error loading employees:', err);
+			// Don't set the main error state for sub-operations, just log it
+			if (err.code === 'permission-denied') {
+				console.warn('Permission denied loading employees for division:', divisionId);
+			}
 		} finally {
 			employeesLoading = false;
 		}
@@ -141,8 +198,12 @@
 		try {
 			const allUsers = await UsersService.getByDivisionId(divisionId);
 			clients = allUsers.filter(user => user.type === 'client');
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error loading clients:', err);
+			// Don't set the main error state for sub-operations, just log it
+			if (err.code === 'permission-denied') {
+				console.warn('Permission denied loading clients for division:', divisionId);
+			}
 		} finally {
 			clientsLoading = false;
 		}
@@ -150,7 +211,10 @@
 
 	// Create new employee
 	async function createEmployee() {
-		if (!divisionId || !division || !newEmployeeName.trim() || !newEmployeeEmail.trim()) return;
+		if (!divisionId || !division || !newEmployeeName.trim() || !newEmployeeEmail.trim()) {
+			error = 'Employee name and email are required.';
+			return;
+		}
 		
 		creatingEmployee = true;
 		error = null;
@@ -175,9 +239,35 @@
 			await loadEmployees();
 			
 			successMessage = 'Employee created successfully!';
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error creating employee:', err);
-			error = 'Failed to create employee. Please try again.';
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to create employees.';
+						break;
+					case 'already-exists':
+						error = 'An employee with this email already exists.';
+						break;
+					case 'invalid-argument':
+						error = 'Invalid employee data. Please check the email format and other fields.';
+						break;
+					case 'failed-precondition':
+						error = 'Employee creation failed. Please ensure the division and organization are valid.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to create employee. Please try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to create employee')) {
+					error = 'Failed to create employee. Please check the data and try again.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'Failed to create employee. Please try again.';
+			}
 		} finally {
 			creatingEmployee = false;
 		}
@@ -185,14 +275,17 @@
 
 	// Create new client
 	async function createClient() {
-		if (!divisionId || !division || !newClientName.trim() || !newClientEmail.trim()) return;
+		if (!divisionId || !division || !newClientName.trim()) {
+			error = 'Client name is required.';
+			return;
+		}
 		
 		creatingClient = true;
 		error = null;
 		
 		try {
 			const clientData = {
-				email: newClientEmail.trim(),
+				email: newClientEmail.trim() || `${newClientName.trim().replace(/\s+/g, '').toLowerCase()}@temp.local`,
 				name: newClientName.trim(),
 				organizationId: division.organizationId,
 				divisionId: divisionId,
@@ -214,51 +307,121 @@
 			await loadClients();
 			
 			successMessage = 'Client created successfully!';
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error creating client:', err);
-			error = 'Failed to create client. Please try again.';
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to create clients.';
+						break;
+					case 'invalid-argument':
+						error = 'Invalid client data. Please check the name and other fields.';
+						break;
+					case 'failed-precondition':
+						error = 'Client creation failed. Please ensure the division and organization are valid.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to create client. Please try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to create client')) {
+					error = 'Failed to create client. Please check the data and try again.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'Failed to create client. Please try again.';
+			}
 		} finally {
 			creatingClient = false;
 		}
-	}
+	}	
 
 	// Delete employee
-	async function deleteEmployee(userId: string) {
-		if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
-			return;
-		}
+	async function deleteEmployee(employeeId: string) {
+		if (!confirm('Are you sure you want to delete this employee?')) return;
+		
+		error = null;
+		deletingEmployees.add(employeeId);
+		deletingEmployees = deletingEmployees;
 		
 		try {
-			await UsersService.hardDelete(userId);
+			await UsersService.hardDelete(employeeId);
 			await loadEmployees();
 			successMessage = 'Employee deleted successfully!';
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error deleting employee:', err);
-			error = 'Failed to delete employee. Please try again.';
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to delete employees.';
+						break;
+					case 'not-found':
+						error = 'Employee not found. They may have already been deleted.';
+						break;
+					case 'failed-precondition':
+						error = 'Cannot delete employee. They may have active assignments or other dependencies.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to delete employee. Please try again.'}`;
+				}
+			} else if (err.message) {
+				error = err.message;
+			} else {
+				error = 'Failed to delete employee. Please try again.';
+			}
+		} finally {
+			deletingEmployees.delete(employeeId);
+			deletingEmployees = deletingEmployees;
 		}
 	}
 
 	// Delete client
-	async function deleteClient(userId: string) {
-		if (!confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
-			return;
-		}
+	async function deleteClient(clientId: string) {
+		if (!confirm('Are you sure you want to delete this client?')) return;
+		
+		error = null;
+		deletingClients.add(clientId);
+		deletingClients = deletingClients;
 		
 		try {
-			await UsersService.hardDelete(userId);
+			await UsersService.hardDelete(clientId);
 			await loadClients();
 			successMessage = 'Client deleted successfully!';
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error deleting client:', err);
-			error = 'Failed to delete client. Please try again.';
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to delete clients.';
+						break;
+					case 'not-found':
+						error = 'Client not found. They may have already been deleted.';
+						break;
+					case 'failed-precondition':
+						error = 'Cannot delete client. They may have active assignments or other dependencies.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to delete client. Please try again.'}`;
+				}
+			} else if (err.message) {
+				error = err.message;
+			} else {
+				error = 'Failed to delete client. Please try again.';
+			}
+		} finally {
+			deletingClients.delete(clientId);
+			deletingClients = deletingClients;
 		}
 	}
-
 	// Get formatted employee data for table
 	const employeeTableData = $derived(employees.map(employee => ({
 		name: { name: employee.name, href: `/users/${employee.id}` },
 		email: employee.email,
-		role: employee.type === 'employee' ? employee.employeeRole.join(', ') : '',
+		role: UsersService.isEmployee(employee) ? employee.employeeRole.join(', ') : '',
 		status: employee.status,
 		created: new Date(employee.createdAt).toLocaleDateString()
 	})));
@@ -267,7 +430,8 @@
 	const clientTableData = $derived(clients.map(client => ({
 		name: { name: client.name, href: `/users/${client.id}` },
 		email: client.email,
-		phone: client.type === 'client' ? client.profile.phone || '-' : '-',
+		phone: UsersService.isClient(client) ? client.profile.phone || '-' : '-',
+		dateOfBirth: UsersService.isClient(client) ? client.profile.dateOfBirth || '-' : '-',
 		status: client.status,
 		created: new Date(client.createdAt).toLocaleDateString()
 	})));
@@ -401,7 +565,7 @@
 					disabled={creatingClient}
 				/>
 				<Input
-					label="Email"
+					label="Email (Optional)"
 					bind:value={newClientEmail}
 					placeholder="Enter email address"
 					disabled={creatingClient}
@@ -421,7 +585,7 @@
 				<div class="flex items-end">
 					<Button 
 						onclick={createClient}
-						disabled={creatingClient || !newClientName.trim() || !newClientEmail.trim()}
+						disabled={creatingClient || !newClientName.trim()}
 						class="w-full"
 					>
 						{creatingClient ? 'Creating...' : 'Create Client'}
