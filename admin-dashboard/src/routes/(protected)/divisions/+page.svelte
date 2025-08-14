@@ -138,6 +138,69 @@
 		}
 	}
 
+	// Handle soft delete division
+	async function handleSoftDeleteDivision(event: Event) {
+		event.preventDefault();
+
+		error = null;
+		successMessage = null;
+
+		if (!deleteDivisionId) {
+			error = 'Division ID is required';
+			return;
+		}
+
+		// Confirm soft deletion
+		if (
+			!confirm(
+				'Are you sure you want to soft delete this division? This will hide it from the main view but preserve all data. You can restore it later if needed.'
+			)
+		) {
+			return;
+		}
+
+		try {
+			await DivisionsService.softDelete(deleteDivisionId, false); // Don't cascade to users by default
+
+			// Reload divisions to refresh the list (soft deleted won't show)
+			divisions = await DivisionsService.getAll(1000);
+
+			deleteDivisionId = '';
+
+			successMessage = 'Division soft deleted successfully! Data has been preserved and can be restored.';
+		} catch (err: any) {
+			console.error('Error soft deleting division:', err);
+			
+			// Parse specific Firebase/Firestore errors
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to delete this division.';
+						break;
+					case 'not-found':
+						error = 'Division not found. It may have already been deleted or the ID is incorrect.';
+						break;
+					case 'failed-precondition':
+						error = 'Cannot delete division. Please check the division ID and try again.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in and try again.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to soft delete division. Please try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to delete division')) {
+					error = 'Failed to soft delete division. Please check the division ID and try again.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'An unexpected error occurred while soft deleting the division.';
+			}
+		}
+	}
+
 	// Handle delete division
 	async function handleDeleteDivision(event: Event) {
 		event.preventDefault();
@@ -231,12 +294,8 @@
 {:else}
 	<div class="space-y-6 p-6">
 		<!-- Error and Success Messages at Top -->
-		{#if error}
-			<Message type="error" message={error} />
-		{/if}
-		{#if successMessage}
-			<Message type="success" message={successMessage} />
-		{/if}
+		<Message type="error" message={error || undefined} />
+		<Message type="success" message={successMessage || undefined} />
 
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-semibold text-gray-900">Divisions</h1>
@@ -325,10 +384,10 @@
 				<div>
 					<h2 class="mb-4 text-lg font-medium text-red-900">Delete Division</h2>
 					<p class="my-2 text-xs text-red-700">
-						This will permanently delete all division data including assignments and settings.
+						Soft delete hides the division but preserves data. Hard delete permanently removes all data.
 					</p>
 				</div>
-				<form onsubmit={handleDeleteDivision} class="space-y-4">
+				<div class="space-y-4">
 					<Input
 						type="text"
 						placeholder="Division ID"
@@ -338,19 +397,28 @@
 						bind:value={deleteDivisionId}
 						required
 					/>
+					<!-- Soft Delete Button -->
 					<Button
-						type="submit"
+						type="button"
+						size="md"
+						class="w-full border-yellow-600 bg-yellow-600 text-white hover:border-yellow-700 hover:bg-yellow-700"
+						onclick={handleSoftDeleteDivision}
+					>
+						Soft Delete Division (Recoverable)
+					</Button>
+					<!-- Hard Delete Button -->
+					<Button
+						type="button"
 						size="md"
 						class="w-full border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
+						onclick={handleDeleteDivision}
 					>
-						Force Delete Division
+						Hard Delete Division (Permanent)
 					</Button>
-				</form>
+				</div>
 			</Card>
 		</div>
 
-		<!-- Messages -->
-		<!-- Messages are now shown at the top of the page -->
 
 		<!-- Divisions Table -->
 		<Card class="p-6">

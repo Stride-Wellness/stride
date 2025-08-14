@@ -59,6 +59,12 @@
 		<h1 class="text-2xl font-semibold text-gray-900">Admin Users</h1>
 		<p class="text-sm text-gray-600">Manage administrator accounts and permissions</p>
 	</div>
+		<!-- Messages -->
+	<Message type="error" message={form?.error} />
+	<Message
+		type="success"
+		message={form?.success ? 'Operation completed successfully!' : undefined}
+	/>
 
 	<!-- Summary Cards -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -163,12 +169,6 @@
 		</Card>
 	</div>
 
-	<!-- Messages -->
-	<Message type="error" message={form?.error} />
-	<Message
-		type="success"
-		message={form?.success ? 'Operation completed successfully!' : undefined}
-	/>
 
 	<!-- Admins Table -->
 	<Card class="p-6">

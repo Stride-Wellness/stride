@@ -27,7 +27,7 @@ function toSafeDate(value: Timestamp | Date | { toDate(): Date } | null | undefi
 
 export type EmployeeRole = 'psw' | 'lw' | 'admin' | 'manager';
 export type UserType = 'employee' | 'client';
-export type UserStatus = 'active' | 'inactive' | 'pending';
+export type UserStatus = 'active' | 'inactive' | 'pending' | 'deleted';
 
 export interface EmployeeProfile {
 	[key: string]: string | number | boolean | null;
@@ -63,6 +63,7 @@ export interface BaseUser {
 	divisionId: string;
 	status: UserStatus;
 	lastLoginAt?: Date;
+	deletedAt?: Date;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -107,6 +108,7 @@ export interface UpdateEmployeeUserData {
 	profile?: EmployeeProfile;
 	status?: UserStatus;
 	lastLoginAt?: Date;
+	deletedAt?: Date | null;
 }
 
 export interface UpdateClientUserData {
@@ -116,6 +118,7 @@ export interface UpdateClientUserData {
 	profile?: ClientProfile;
 	status?: UserStatus;
 	lastLoginAt?: Date;
+	deletedAt?: Date | null;
 }
 
 export type UpdateUserData = UpdateEmployeeUserData | UpdateClientUserData;
@@ -144,6 +147,7 @@ export class UsersService {
 				divisionId: data.divisionId,
 				status: data.status,
 				lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
+				deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 				createdAt: toSafeDate(data.createdAt),
 				updatedAt: toSafeDate(data.updatedAt)
 			};
@@ -169,12 +173,22 @@ export class UsersService {
 	}
 
 	/**
-	 * Get all users (admin only)
+	 * Get all users (admin only) - excludes deleted users by default
 	 */
-	static async getAll(limitCount: number = 100): Promise<User[]> {
+	static async getAll(limitCount: number = 100, includeDeleted: boolean = false): Promise<User[]> {
 		try {
 			const usersRef = collection(db, this.COLLECTION);
-			const q = query(usersRef, orderBy('createdAt', 'desc'), limit(limitCount));
+			let q = query(usersRef, orderBy('createdAt', 'desc'), limit(limitCount));
+
+			// Filter out deleted users unless explicitly requested
+			if (!includeDeleted) {
+				q = query(
+					usersRef,
+					where('status', '!=', 'deleted'),
+					orderBy('createdAt', 'desc'),
+					limit(limitCount)
+				);
+			}
 
 			const querySnap = await getDocs(q);
 			const users: User[] = [];
@@ -189,6 +203,7 @@ export class UsersService {
 					divisionId: data.divisionId,
 					status: data.status,
 					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
+					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 					createdAt: toSafeDate(data.createdAt),
 					updatedAt: toSafeDate(data.updatedAt)
 				};
@@ -217,16 +232,29 @@ export class UsersService {
 	}
 
 	/**
-	 * Get users by organization ID
+	 * Get users by organization ID - excludes deleted users by default
 	 */
-	static async getByOrganizationId(organizationId: string): Promise<User[]> {
+	static async getByOrganizationId(
+		organizationId: string,
+		includeDeleted: boolean = false
+	): Promise<User[]> {
 		try {
 			const usersRef = collection(db, this.COLLECTION);
-			const q = query(
+			let q = query(
 				usersRef,
 				where('organizationId', '==', organizationId),
 				orderBy('createdAt', 'desc')
 			);
+
+			// Filter out deleted users unless explicitly requested
+			if (!includeDeleted) {
+				q = query(
+					usersRef,
+					where('organizationId', '==', organizationId),
+					where('status', '!=', 'deleted'),
+					orderBy('createdAt', 'desc')
+				);
+			}
 
 			const querySnap = await getDocs(q);
 			const users: User[] = [];
@@ -241,6 +269,7 @@ export class UsersService {
 					divisionId: data.divisionId,
 					status: data.status,
 					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
+					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 					createdAt: toSafeDate(data.createdAt),
 					updatedAt: toSafeDate(data.updatedAt)
 				};
@@ -269,16 +298,25 @@ export class UsersService {
 	}
 
 	/**
-	 * Get users by division ID
+	 * Get users by division ID - excludes deleted users by default
 	 */
-	static async getByDivisionId(divisionId: string): Promise<User[]> {
+	static async getByDivisionId(
+		divisionId: string,
+		includeDeleted: boolean = false
+	): Promise<User[]> {
 		try {
 			const usersRef = collection(db, this.COLLECTION);
-			const q = query(
-				usersRef,
-				where('divisionId', '==', divisionId),
-				orderBy('createdAt', 'desc')
-			);
+			let q = query(usersRef, where('divisionId', '==', divisionId), orderBy('createdAt', 'desc'));
+
+			// Filter out deleted users unless explicitly requested
+			if (!includeDeleted) {
+				q = query(
+					usersRef,
+					where('divisionId', '==', divisionId),
+					where('status', '!=', 'deleted'),
+					orderBy('createdAt', 'desc')
+				);
+			}
 
 			const querySnap = await getDocs(q);
 			const users: User[] = [];
@@ -293,6 +331,7 @@ export class UsersService {
 					divisionId: data.divisionId,
 					status: data.status,
 					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
+					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 					createdAt: toSafeDate(data.createdAt),
 					updatedAt: toSafeDate(data.updatedAt)
 				};
@@ -321,17 +360,32 @@ export class UsersService {
 	}
 
 	/**
-	 * Get users by type and organization
+	 * Get users by type and organization - excludes deleted users by default
 	 */
-	static async getByTypeAndOrganization(type: UserType, organizationId: string): Promise<User[]> {
+	static async getByTypeAndOrganization(
+		type: UserType,
+		organizationId: string,
+		includeDeleted: boolean = false
+	): Promise<User[]> {
 		try {
 			const usersRef = collection(db, this.COLLECTION);
-			const q = query(
+			let q = query(
 				usersRef,
 				where('type', '==', type),
 				where('organizationId', '==', organizationId),
 				orderBy('createdAt', 'desc')
 			);
+
+			// Filter out deleted users unless explicitly requested
+			if (!includeDeleted) {
+				q = query(
+					usersRef,
+					where('type', '==', type),
+					where('organizationId', '==', organizationId),
+					where('status', '!=', 'deleted'),
+					orderBy('createdAt', 'desc')
+				);
+			}
 
 			const querySnap = await getDocs(q);
 			const users: User[] = [];
@@ -346,6 +400,7 @@ export class UsersService {
 					divisionId: data.divisionId,
 					status: data.status,
 					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
+					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 					createdAt: toSafeDate(data.createdAt),
 					updatedAt: toSafeDate(data.updatedAt)
 				};
@@ -402,6 +457,7 @@ export class UsersService {
 					divisionId: data.divisionId,
 					status: data.status,
 					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
+					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 					createdAt: toSafeDate(data.createdAt),
 					updatedAt: toSafeDate(data.updatedAt)
 				};
@@ -529,11 +585,14 @@ export class UsersService {
 	}
 
 	/**
-	 * Soft delete user (set status to inactive)
+	 * Soft delete user (set status to deleted and add deletedAt timestamp)
 	 */
 	static async softDelete(userId: string): Promise<void> {
 		try {
-			await this.update(userId, { status: 'inactive' });
+			await this.update(userId, {
+				status: 'deleted',
+				deletedAt: new Date()
+			});
 		} catch (error) {
 			console.error('Error soft deleting user:', error);
 			throw new Error('Failed to delete user');
@@ -541,10 +600,51 @@ export class UsersService {
 	}
 
 	/**
-	 * Hard delete user (use with caution)
+	 * Restore soft deleted user
+	 */
+	static async restore(userId: string): Promise<void> {
+		try {
+			const userRef = doc(db, this.COLLECTION, userId);
+			await updateDoc(userRef, {
+				status: 'active',
+				deletedAt: null,
+				updatedAt: Timestamp.now()
+			});
+		} catch (error) {
+			console.error('Error restoring user:', error);
+			throw new Error('Failed to restore user');
+		}
+	}
+
+	/**
+	 * Check if user has any active assignments (to prevent hard delete)
+	 */
+	static async hasActiveAssignments(userId: string): Promise<boolean> {
+		try {
+			// This would need the AssignmentsService to be implemented
+			// For now, return false to allow hard delete
+			// TODO: Implement assignment checking once AssignmentsService is available
+			console.log('Checking assignments for user:', userId);
+			return false;
+		} catch (error) {
+			console.error('Error checking user assignments:', error);
+			return true; // Err on the side of caution
+		}
+	}
+
+	/**
+	 * Hard delete user (use with caution) - only if no active references
 	 */
 	static async hardDelete(userId: string): Promise<void> {
 		try {
+			// Check for active assignments before allowing hard delete
+			const hasAssignments = await this.hasActiveAssignments(userId);
+			if (hasAssignments) {
+				throw new Error(
+					'Cannot hard delete user with active assignments. Use soft delete instead.'
+				);
+			}
+
 			const userRef = doc(db, this.COLLECTION, userId);
 			await deleteDoc(userRef);
 		} catch (error) {

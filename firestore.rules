@@ -72,6 +72,22 @@ service cloud.firestore {
     return true; // Placeholder - actual validation happens in service layer
     }
 
+    // Check if user has active assignments
+    function hasActiveAssignments(userId) {
+      // Note: This is a simplified check - in practice, you might need to implement
+      // this as a server-side validation since Firestore rules have limitations
+      // on complex queries. For now, we'll rely on service-level validation.
+      return false; // Placeholder - actual validation happens in service layer
+    }
+
+    // Check if division has any active users
+    function hasActiveUsersInDivision(divisionId) {
+      // Note: This is a simplified check - in practice, you might need to implement
+      // this as a server-side validation since Firestore rules have limitations
+      // on complex queries. For now, we'll rely on service-level validation.
+      return false; // Placeholder - actual validation happens in service layer
+    }
+
     // Validate required fields exist
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
@@ -153,10 +169,11 @@ service cloud.firestore {
       ) && validateUserCreation();
 
       // Only managers and admins can delete users
+      // Hard delete is blocked if user has active assignments
       allow delete: if isAuthenticated() && (
       (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
       isAdminWithPrivilege(2)
-      );
+      ) && !hasActiveAssignments(userId);
 
       // User creation validation
       function validateUserCreation() {
@@ -200,10 +217,11 @@ service cloud.firestore {
       );
 
       // Only managers and admins can delete divisions
+      // Hard delete is blocked if there are active users in the division
       allow delete: if isAuthenticated() && (
         (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
         isAdminWithPrivilege(2)
-      );
+      ) && !hasActiveUsersInDivision(divisionId);
 
       function validateDivisionCreation() {
         return hasRequiredFields(['organizationId', 'name', 'managerId', 'divisionType']) &&

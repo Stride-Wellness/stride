@@ -27,6 +27,8 @@ export interface Division {
 	managerId: string;
 	divisionType: 'retirement_home' | 'homecare_provider';
 	settings: DivisionSettings;
+	status: 'active' | 'inactive' | 'deleted';
+	deletedAt?: Date;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -44,6 +46,8 @@ export interface UpdateDivisionData {
 	managerId?: string;
 	divisionType?: 'retirement_home' | 'homecare_provider';
 	settings?: DivisionSettings;
+	status?: 'active' | 'inactive' | 'deleted';
+	deletedAt?: Date | null;
 }
 
 export class DivisionsService {
@@ -69,6 +73,8 @@ export class DivisionsService {
 				managerId: data.managerId,
 				divisionType: data.divisionType,
 				settings: data.settings || {},
+				status: data.status || 'active',
+				deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 				createdAt: toSafeDate(data.createdAt),
 				updatedAt: toSafeDate(data.updatedAt)
 			};
@@ -79,12 +85,25 @@ export class DivisionsService {
 	}
 
 	/**
-	 * Get all divisions (admin only)
+	 * Get all divisions (admin only) - excludes deleted divisions by default
 	 */
-	static async getAll(limitCount: number = 100): Promise<Division[]> {
+	static async getAll(
+		limitCount: number = 100,
+		includeDeleted: boolean = false
+	): Promise<Division[]> {
 		try {
 			const divisionsRef = collection(db, this.COLLECTION);
-			const q = query(divisionsRef, orderBy('createdAt', 'desc'), limit(limitCount));
+			let q = query(divisionsRef, orderBy('createdAt', 'desc'), limit(limitCount));
+
+			// Filter out deleted divisions unless explicitly requested
+			if (!includeDeleted) {
+				q = query(
+					divisionsRef,
+					where('status', '!=', 'deleted'),
+					orderBy('createdAt', 'desc'),
+					limit(limitCount)
+				);
+			}
 
 			const querySnap = await getDocs(q);
 			const divisions: Division[] = [];
@@ -98,6 +117,8 @@ export class DivisionsService {
 					managerId: data.managerId,
 					divisionType: data.divisionType,
 					settings: data.settings || {},
+					status: data.status || 'active',
+					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 					createdAt: toSafeDate(data.createdAt),
 					updatedAt: toSafeDate(data.updatedAt)
 				});
@@ -111,12 +132,29 @@ export class DivisionsService {
 	}
 
 	/**
-	 * Get divisions by organization ID
+	 * Get divisions by organization ID - excludes deleted divisions by default
 	 */
-	static async getByOrganizationId(organizationId: string): Promise<Division[]> {
+	static async getByOrganizationId(
+		organizationId: string,
+		includeDeleted: boolean = false
+	): Promise<Division[]> {
 		try {
 			const divisionsRef = collection(db, this.COLLECTION);
-			const q = query(divisionsRef, where('organizationId', '==', organizationId), orderBy('createdAt', 'desc'));
+			let q = query(
+				divisionsRef,
+				where('organizationId', '==', organizationId),
+				orderBy('createdAt', 'desc')
+			);
+
+			// Filter out deleted divisions unless explicitly requested
+			if (!includeDeleted) {
+				q = query(
+					divisionsRef,
+					where('organizationId', '==', organizationId),
+					where('status', '!=', 'deleted'),
+					orderBy('createdAt', 'desc')
+				);
+			}
 
 			const querySnap = await getDocs(q);
 			const divisions: Division[] = [];
@@ -130,6 +168,8 @@ export class DivisionsService {
 					managerId: data.managerId,
 					divisionType: data.divisionType,
 					settings: data.settings || {},
+					status: data.status || 'active',
+					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
 					createdAt: toSafeDate(data.createdAt),
 					updatedAt: toSafeDate(data.updatedAt)
 				});
@@ -154,6 +194,7 @@ export class DivisionsService {
 				managerId: data.managerId,
 				divisionType: data.divisionType,
 				settings: data.settings || {},
+				status: 'active' as const,
 				createdAt: now,
 				updatedAt: now
 			};
@@ -191,10 +232,74 @@ export class DivisionsService {
 	}
 
 	/**
-	 * Hard delete division (use with caution)
+	 * Soft delete division (set status to deleted and add deletedAt timestamp)
+	 */
+	static async softDelete(divisionId: string, cascadeUsers: boolean = false): Promise<void> {
+		try {
+			// Soft delete the division
+			await this.update(divisionId, {
+				status: 'deleted',
+				deletedAt: new Date()
+			});
+
+			// Optionally cascade soft delete to all users in the division
+			if (cascadeUsers) {
+				const { UsersService } = await import('./users');
+				const users = await UsersService.getByDivisionId(divisionId, false); // Get active users only
+
+				// Soft delete all users in this division
+				for (const user of users) {
+					await UsersService.softDelete(user.id);
+				}
+			}
+		} catch (error) {
+			console.error('Error soft deleting division:', error);
+			throw new Error('Failed to delete division');
+		}
+	}
+
+	/**
+	 * Restore soft deleted division
+	 */
+	static async restore(divisionId: string): Promise<void> {
+		try {
+			const divisionRef = doc(db, this.COLLECTION, divisionId);
+			await updateDoc(divisionRef, {
+				status: 'active',
+				deletedAt: null,
+				updatedAt: Timestamp.now()
+			});
+		} catch (error) {
+			console.error('Error restoring division:', error);
+			throw new Error('Failed to restore division');
+		}
+	}
+
+	/**
+	 * Check if division has any active users (to prevent hard delete)
+	 */
+	static async hasActiveUsers(divisionId: string): Promise<boolean> {
+		try {
+			const { UsersService } = await import('./users');
+			const users = await UsersService.getByDivisionId(divisionId, false); // Get active users only
+			return users.length > 0;
+		} catch (error) {
+			console.error('Error checking division users:', error);
+			return true; // Err on the side of caution
+		}
+	}
+
+	/**
+	 * Hard delete division (use with caution) - only if no active references
 	 */
 	static async hardDelete(divisionId: string): Promise<void> {
 		try {
+			// Check for active users before allowing hard delete
+			const hasUsers = await this.hasActiveUsers(divisionId);
+			if (hasUsers) {
+				throw new Error('Cannot hard delete division with active users. Use soft delete instead.');
+			}
+
 			const divisionRef = doc(db, this.COLLECTION, divisionId);
 			await deleteDoc(divisionRef);
 		} catch (error) {

@@ -180,6 +180,60 @@
 		}
 	}
 
+	// Handle soft delete user
+	async function handleSoftDeleteUser(event: Event) {
+		event.preventDefault();
+
+		error = null;
+		successMessage = null;
+
+		if (!deleteUserId) {
+			error = 'User ID is required';
+			return;
+		}
+
+		if (
+			!confirm(
+				'Are you sure you want to soft delete this user? This will hide them from the main view but preserve all data. You can restore them later if needed.'
+			)
+		) {
+			return;
+		}
+
+		try {
+			await UsersService.softDelete(deleteUserId);
+
+			// Reload users to refresh the list (soft deleted won't show)
+			users = await UsersService.getAll(1000);
+
+			deleteUserId = '';
+
+			successMessage = 'User soft deleted successfully! Data has been preserved and can be restored.';
+		} catch (err: any) {
+			console.error('Error soft deleting user:', err);
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to delete this user.';
+						break;
+					case 'not-found':
+						error = 'User not found. They may have already been deleted or the ID is incorrect.';
+						break;
+					case 'failed-precondition':
+						error = 'Cannot delete user. They may have active assignments or other dependencies.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to soft delete user. Please try again.'}`;
+				}
+			} else if (err.message) {
+				error = err.message;
+			} else {
+				error = 'Failed to soft delete user. Please try again.';
+			}
+		}
+	}
+
 	// Handle delete user
 	async function handleDeleteUser(event: Event) {
 		event.preventDefault();
@@ -290,16 +344,16 @@
 	<div class="flex items-center justify-center p-6">
 		<div class="text-lg">Loading users...</div>
 	</div>
-{:else if error}
-	<div class="p-6">
-		<Message type="error" message={error} />
-	</div>
 {:else}
 	<div class="space-y-6 p-6">
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-semibold text-gray-900">Users</h1>
 			<p class="text-sm text-gray-600">Manage employees and clients across all organizations</p>
 		</div>
+
+						<!-- Messages -->
+		<Message type="error" message={error || undefined} />
+		<Message type="success" message={successMessage || undefined} />
 
 		<!-- Summary Cards -->
 		<div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
@@ -345,6 +399,7 @@
 				</div>
 			</Card>
 		</div>
+
 
 		<!-- Filters -->
 		<Card class="p-6">
@@ -539,32 +594,40 @@
 				<div>
 					<h2 class="mb-4 text-lg font-medium text-red-900">Delete User</h2>
 					<p class="my-2 text-xs text-red-700">
-						This will permanently delete all user data including sessions, assessments, and profile information.
+						Soft delete hides the user but preserves data. Hard delete permanently removes all data.
 					</p>
 				</div>
-				<form onsubmit={handleDeleteUser} class="space-y-4">
+				<div class="space-y-4">
 					<Input
 						type="text"
 						placeholder="User ID"
 						size="md"
 						variant="outline"
+						name="deleteId"
 						bind:value={deleteUserId}
 						required
 					/>
+					<!-- Soft Delete Button -->
 					<Button
-						type="submit"
+						type="button"
+						size="md"
+						class="w-full border-yellow-600 bg-yellow-600 text-white hover:border-yellow-700 hover:bg-yellow-700"
+						onclick={handleSoftDeleteUser}
+					>
+						Soft Delete User (Recoverable)
+					</Button>
+					<!-- Hard Delete Button -->
+					<Button
+						type="button"
 						size="md"
 						class="w-full border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
+						onclick={handleDeleteUser}
 					>
-						Force Delete User
+						Hard Delete User (Permanent)
 					</Button>
-				</form>
+				</div>
 			</Card>
 		</div>
-
-		<!-- Messages -->
-		<Message type="error" message={error || undefined} />
-		<Message type="success" message={successMessage || undefined} />
 
 		<!-- Users Table -->
 		<Card class="p-6">

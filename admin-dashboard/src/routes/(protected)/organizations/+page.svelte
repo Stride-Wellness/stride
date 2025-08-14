@@ -160,6 +160,68 @@
 		}
 	}
 
+	// Handle soft delete organization
+	async function handleSoftDeleteOrganization(event: Event) {
+		event.preventDefault();
+
+		error = null;
+		successMessage = null;
+
+		if (!deleteOrgId) {
+			error = 'Organization ID is required';
+			return;
+		}
+
+		// Confirm soft deletion
+		if (
+			!confirm(
+				'Are you sure you want to soft delete this organization? This will hide it from the main view but preserve all data. You can restore it later if needed.'
+			)
+		) {
+			return;
+		}
+
+		try {
+			await OrganizationsService.softDelete(deleteOrgId);
+
+			// Reload organizations to refresh the list (soft deleted won't show)
+			organizations = await OrganizationsService.getAll(1000);
+
+			deleteOrgId = '';
+
+			successMessage = 'Organization soft deleted successfully! Data has been preserved and can be restored.';
+		} catch (err: any) {
+			console.error('Error soft deleting organization:', err);
+			
+			if (err.code) {
+				switch (err.code) {
+					case 'permission-denied':
+						error = 'Permission denied. You may not have the required permissions to delete this organization.';
+						break;
+					case 'not-found':
+						error = 'Organization not found. It may have already been deleted or the ID is incorrect.';
+						break;
+					case 'failed-precondition':
+						error = 'Cannot delete organization. There may be users or divisions still associated with this organization.';
+						break;
+					case 'unauthenticated':
+						error = 'You are not authenticated. Please log in and try again.';
+						break;
+					default:
+						error = `Error: ${err.message || 'Failed to soft delete organization. Please try again.'}`;
+				}
+			} else if (err.message) {
+				if (err.message.includes('Failed to delete organization')) {
+					error = 'Failed to soft delete organization. Please check the organization ID and try again.';
+				} else {
+					error = err.message;
+				}
+			} else {
+				error = 'An unexpected error occurred while soft deleting the organization.';
+			}
+		}
+	}
+
 	// Handle delete organization
 	async function handleDeleteOrganization(event: Event) {
 		event.preventDefault();
@@ -228,17 +290,15 @@
 	<div class="flex items-center justify-center p-6">
 		<div class="text-lg">Loading organizations...</div>
 	</div>
-{:else if error}
-	<div class="p-6">
-		<Message type="error" message={error} />
-	</div>
 {:else}
 	<div class="space-y-6 p-6">
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-semibold text-gray-900">Organizations</h1>
 			<p class="text-sm text-gray-600">Manage and monitor client organizations</p>
 		</div>
-
+				<!-- Messages -->
+		<Message type="error" message={error || undefined} />
+		<Message type="success" message={successMessage || undefined} />
 		<!-- Summary Cards -->
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 			<Card class="flex items-center justify-between p-4">
@@ -369,11 +429,10 @@
 				<div>
 					<h2 class="mb-4 text-lg font-medium text-red-900">Delete Organization</h2>
 					<p class="my-2 text-xs text-red-700">
-						This will permanently delete all organization data including users, sessions, and
-						assessments.
+						Soft delete hides the organization but preserves data. Hard delete permanently removes all data.
 					</p>
 				</div>
-				<form onsubmit={handleDeleteOrganization} class="space-y-4">
+				<div class="space-y-4">
 					<Input
 						type="text"
 						placeholder="Organization ID"
@@ -383,20 +442,29 @@
 						bind:value={deleteOrgId}
 						required
 					/>
+					<!-- Soft Delete Button -->
 					<Button
-						type="submit"
+						type="button"
+						size="md"
+						class="w-full border-yellow-600 bg-yellow-600 text-white hover:border-yellow-700 hover:bg-yellow-700"
+						onclick={handleSoftDeleteOrganization}
+					>
+						Soft Delete Organization (Recoverable)
+					</Button>
+					<!-- Hard Delete Button -->
+					<Button
+						type="button"
 						size="md"
 						class="w-full border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
+						onclick={handleDeleteOrganization}
 					>
-						Force Delete Organization
+						Hard Delete Organization (Permanent)
 					</Button>
-				</form>
+				</div>
 			</Card>
 		</div>
 
-		<!-- Messages -->
-		<Message type="error" message={error || undefined} />
-		<Message type="success" message={successMessage || undefined} />
+
 
 		<!-- Organizations Table -->
 		<Card class="p-6">
