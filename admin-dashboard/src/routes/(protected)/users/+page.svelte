@@ -381,7 +381,7 @@
 			<Card class="flex items-center justify-between p-4">
 				<div>
 					<h4>Active Users</h4>
-					<p class="text-2xl font-bold text-green-600">{summaryStats().active}</p>
+					<p class="text-2xl font-bold">{summaryStats().active}</p>
 				</div>
 			</Card>
 

@@ -17,7 +17,8 @@
         { name: 'Organizations', href: '/organizations' },
         { name: 'Divisions', href: '/divisions' },
         { name: 'Users', href: '/users' },
-        { name: 'Admins', href: '/admins' }
+        { name: 'Assignments', href: '/assignments' },
+        { name: 'Admins', href: '/admins' },
     ];
 
     async function handleSignOut() {

@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '$lib/firebase/config';
 import { toSafeDate } from './utils';
+import { DivisionsService } from './divisions';
 
 export interface AssignmentPermissions {
 	canModifyExercises: boolean;
@@ -23,7 +24,6 @@ export interface AssignmentPermissions {
 
 export interface Assignment {
 	id: string;
-	organizationId: string;
 	clientId: string;
 	workerId: string;
 	divisionId: string; // Based on database design, should be divisionId not locationId
@@ -37,7 +37,6 @@ export interface Assignment {
 }
 
 export interface CreateAssignmentData {
-	organizationId: string;
 	clientId: string;
 	workerId: string;
 	divisionId: string;
@@ -55,6 +54,45 @@ export class AssignmentsService {
 	private static COLLECTION = 'assignments';
 
 	/**
+	 * Get all assignments with optional limit
+	 */
+	static async getAll(limitCount: number = 1000): Promise<Assignment[]> {
+		try {
+			const assignmentsRef = collection(db, this.COLLECTION);
+			const q = query(assignmentsRef, orderBy('createdAt', 'desc'), limit(limitCount));
+
+			const querySnap = await getDocs(q);
+			const assignments: Assignment[] = [];
+
+			querySnap.forEach((doc) => {
+				const data = doc.data();
+				assignments.push({
+					id: doc.id,
+					clientId: data.clientId,
+					workerId: data.workerId,
+					divisionId: data.divisionId,
+					assignedBy: data.assignedBy,
+					status: data.status,
+					permissions: data.permissions || {
+						canModifyExercises: false,
+						canViewMedicalInfo: false,
+						canScheduleSessions: false
+					},
+					assignedAt: toSafeDate(data.assignedAt),
+					lastSessionAt: data.lastSessionAt ? toSafeDate(data.lastSessionAt) : undefined,
+					createdAt: toSafeDate(data.createdAt),
+					updatedAt: toSafeDate(data.updatedAt)
+				});
+			});
+
+			return assignments;
+		} catch (error) {
+			console.error('Error getting assignments:', error);
+			throw new Error('Failed to get assignments');
+		}
+	}
+
+	/**
 	 * Get assignment by ID
 	 */
 	static async getById(assignmentId: string): Promise<Assignment | null> {
@@ -69,7 +107,6 @@ export class AssignmentsService {
 			const data = assignmentSnap.data();
 			return {
 				id: assignmentSnap.id,
-				organizationId: data.organizationId,
 				clientId: data.clientId,
 				workerId: data.workerId,
 				divisionId: data.divisionId,
@@ -92,14 +129,23 @@ export class AssignmentsService {
 	}
 
 	/**
-	 * Get assignments by organization ID
+	 * Get assignments by organization ID (via divisions)
 	 */
 	static async getByOrganizationId(organizationId: string): Promise<Assignment[]> {
 		try {
+			// First get all divisions for this organization
+			const divisions = await DivisionsService.getByOrganizationId(organizationId);
+			const divisionIds = divisions.map((d) => d.id);
+
+			if (divisionIds.length === 0) {
+				return [];
+			}
+
+			// Query assignments that belong to any of these divisions
 			const assignmentsRef = collection(db, this.COLLECTION);
 			const q = query(
 				assignmentsRef,
-				where('organizationId', '==', organizationId),
+				where('divisionId', 'in', divisionIds),
 				orderBy('createdAt', 'desc')
 			);
 
@@ -110,7 +156,6 @@ export class AssignmentsService {
 				const data = doc.data();
 				assignments.push({
 					id: doc.id,
-					organizationId: data.organizationId,
 					clientId: data.clientId,
 					workerId: data.workerId,
 					divisionId: data.divisionId,
@@ -154,7 +199,6 @@ export class AssignmentsService {
 				const data = doc.data();
 				assignments.push({
 					id: doc.id,
-					organizationId: data.organizationId,
 					clientId: data.clientId,
 					workerId: data.workerId,
 					divisionId: data.divisionId,
@@ -198,7 +242,6 @@ export class AssignmentsService {
 				const data = doc.data();
 				assignments.push({
 					id: doc.id,
-					organizationId: data.organizationId,
 					clientId: data.clientId,
 					workerId: data.workerId,
 					divisionId: data.divisionId,
@@ -230,7 +273,6 @@ export class AssignmentsService {
 		try {
 			const now = Timestamp.now();
 			const assignmentData = {
-				organizationId: data.organizationId,
 				clientId: data.clientId,
 				workerId: data.workerId,
 				divisionId: data.divisionId,

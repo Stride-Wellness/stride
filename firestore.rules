@@ -373,32 +373,42 @@ service cloud.firestore {
       ) && validateAssignmentUpdate();
 
       function validateAssignmentCreation() {
-        return hasRequiredFields(['organizationId', 'clientId', 'workerId', 'divisionId', 'assignedBy', 'status']) &&
+        return hasRequiredFields(['clientId', 'workerId', 'divisionId', 'assignedBy', 'status']) &&
                isValidAssignmentStatus(request.resource.data.status) &&
-               // Organization must exist
-               exists(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)) &&
                // Division must exist
                exists(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)) &&
-               // Division must belong to the organization
-               get(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)).data.organizationId == request.resource.data.organizationId &&
                // Client and worker must exist
                exists(/databases/$(database)/documents/users/$(request.resource.data.clientId)) &&
                exists(/databases/$(database)/documents/users/$(request.resource.data.workerId)) &&
-               // Client and worker must belong to the same organization
-               get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.organizationId == request.resource.data.organizationId &&
-               get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.organizationId == request.resource.data.organizationId &&
-               // Client and worker must belong to the same division
-               get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.divisionId == request.resource.data.divisionId &&
-               get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.divisionId == request.resource.data.divisionId &&
+               // Get division data to determine organization
+               validateAssignmentUsersInSameDivision() &&
                // Client must be client type and worker must be employee type
                get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.type == 'client' &&
                get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.type == 'employee' &&
                // Worker must have PSW or LW role
                (get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.employeeRole.hasAny(['psw', 'lw'])) &&
                // Creator must belong to organization (unless site admin)
-               (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId)) &&
+               (isAdminWithPrivilege(2) || validateAssignmentCreatorPermissions()) &&
                // Validate permissions if provided
                (!('permissions' in request.resource.data) || validateAssignmentPermissions());
+      }
+
+      function validateAssignmentUsersInSameDivision() {
+        let division = get(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId));
+        let client = get(/databases/$(database)/documents/users/$(request.resource.data.clientId));
+        let worker = get(/databases/$(database)/documents/users/$(request.resource.data.workerId));
+        
+        return // All users must belong to the same organization (via division)
+               client.data.organizationId == division.data.organizationId &&
+               worker.data.organizationId == division.data.organizationId &&
+               // All users must belong to the same division
+               client.data.divisionId == request.resource.data.divisionId &&
+               worker.data.divisionId == request.resource.data.divisionId;
+      }
+
+      function validateAssignmentCreatorPermissions() {
+        let division = get(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId));
+        return belongsToOrganization(division.data.organizationId);
       }
 
       function validateAssignmentUpdate() {
