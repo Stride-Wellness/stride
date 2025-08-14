@@ -13,6 +13,7 @@ import {
 	Timestamp
 } from 'firebase/firestore';
 import { db } from '$lib/firebase/config';
+import type { EmployeeRole, EmployeeProfile } from './users';
 
 import { toSafeDate } from './utils'; // Import the utility function
 
@@ -24,7 +25,7 @@ export interface Division {
 	id: string;
 	organizationId: string;
 	name: string;
-	managerId: string;
+	managerId: string | null; // Allow null during initial setup
 	divisionType: 'retirement_home' | 'homecare_provider';
 	settings: DivisionSettings;
 	status: 'active' | 'inactive' | 'deleted';
@@ -36,7 +37,7 @@ export interface Division {
 export interface CreateDivisionData {
 	organizationId: string;
 	name: string;
-	managerId: string;
+	managerId?: string | null; // Optional during creation
 	divisionType: 'retirement_home' | 'homecare_provider';
 	settings?: DivisionSettings;
 }
@@ -191,7 +192,7 @@ export class DivisionsService {
 			const divisionData = {
 				organizationId: data.organizationId,
 				name: data.name,
-				managerId: data.managerId,
+				managerId: data.managerId || null, // Default to null if not provided
 				divisionType: data.divisionType,
 				settings: data.settings || {},
 				status: 'active' as const,
@@ -228,6 +229,65 @@ export class DivisionsService {
 		} catch (error) {
 			console.error('Error updating division:', error);
 			throw new Error('Failed to update division');
+		}
+	}
+
+	/**
+	 * Assign a manager to a division (useful for breaking circular dependency)
+	 */
+	static async assignManager(divisionId: string, managerId: string): Promise<void> {
+		try {
+			await this.update(divisionId, { managerId });
+		} catch (error) {
+			console.error('Error assigning manager to division:', error);
+			throw new Error('Failed to assign manager to division');
+		}
+	}
+
+	/**
+	 * Create a division and its first manager in one transaction-like operation
+	 * This helps break the circular dependency
+	 */
+	static async createWithManager(
+		divisionData: Omit<CreateDivisionData, 'managerId'>,
+		managerData: {
+			email: string;
+			name: string;
+			employeeRole: EmployeeRole[];
+			profile?: EmployeeProfile;
+		}
+	): Promise<{ division: Division; managerId: string }> {
+		try {
+			// Step 1: Create division without manager
+			const division = await this.create({
+				...divisionData,
+				managerId: null
+			});
+
+			// Step 2: Create manager user for this division
+			const { UsersService } = await import('./users');
+			const manager = await UsersService.createEmployee({
+				...managerData,
+				organizationId: divisionData.organizationId,
+				divisionId: division.id,
+				employeeRole: managerData.employeeRole.includes('manager')
+					? managerData.employeeRole
+					: [...managerData.employeeRole, 'manager' as EmployeeRole] // Ensure manager role is included
+			});
+
+			// Step 3: Assign the manager to the division
+			await this.assignManager(division.id, manager.id);
+
+			// Return updated division with manager assigned
+			const updatedDivision = await this.getById(division.id);
+
+			return {
+				division: updatedDivision!,
+				managerId: manager.id
+			};
+		} catch (error) {
+			console.error('Error creating division with manager:', error);
+			throw new Error('Failed to create division with manager');
 		}
 	}
 

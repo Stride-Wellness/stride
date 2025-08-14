@@ -67,8 +67,8 @@
 		successMessage = null;
 
 		// Validation
-		if (!name || !organizationId || !managerId) {
-			error = 'All fields are required';
+		if (!name || !organizationId) {
+			error = 'Name and Organization ID are required';
 			return;
 		}
 
@@ -81,7 +81,7 @@
 			const newDivision = await DivisionsService.create({
 				name,
 				organizationId,
-				managerId,
+				managerId: managerId || null, // Allow empty manager ID
 				divisionType
 			});
 
@@ -350,12 +350,11 @@
 				/>
 				<Input
 					type="text"
-					placeholder="Manager ID"
+					placeholder="Manager ID (optional - can be assigned later)"
 					size="md"
 					variant="outline"
 					name="managerId"
 					bind:value={managerId}
-					required
 				/>
 				<Input
 					as="select"

@@ -297,20 +297,27 @@ service cloud.firestore {
       ) && !hasActiveUsersInDivision(divisionId);
 
       function validateDivisionCreation() {
-        return hasRequiredFields(['organizationId', 'name', 'managerId', 'divisionType', 'status']) &&
+        return hasRequiredFields(['organizationId', 'name', 'divisionType', 'status']) &&
                isValidDivisionType(request.resource.data.divisionType) &&
                isValidDivisionStatus(request.resource.data.status) &&
                // Organization must exist
                exists(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)) &&
-               // Manager must exist
-               exists(/databases/$(database)/documents/users/$(request.resource.data.managerId)) &&
-               // Manager must belong to the same organization
-               get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.organizationId == request.resource.data.organizationId &&
-               // Manager must have manager role
-               get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.type == 'employee' &&
-               'manager' in get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.employeeRole &&
+               // Manager validation (if provided)
+               validateDivisionManager() &&
                // Creator must belong to the organization (unless site admin)
                (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId));
+      }
+
+      function validateDivisionManager() {
+        return // If managerId is null, it's allowed (for initial setup)
+               request.resource.data.managerId == null ||
+               // If managerId is provided, validate it
+               (exists(/databases/$(database)/documents/users/$(request.resource.data.managerId)) &&
+                // Manager must belong to the same organization
+                get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.organizationId == request.resource.data.organizationId &&
+                // Manager must have manager role
+                get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.type == 'employee' &&
+                'manager' in get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.employeeRole);
       }
 
       function validateDivisionUpdate() {
