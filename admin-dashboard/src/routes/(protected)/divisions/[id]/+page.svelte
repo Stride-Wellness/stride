@@ -11,6 +11,8 @@
 	import { UsersService } from '$lib/services/users';
 	import type { ClientUser, EmployeeUser, User, UserType } from '$lib/services/users';
 	import Link from '$lib/components/Link.svelte';
+	import CreateEmployeeForm from '$lib/components/compound/CreateEmployeeForm.svelte';
+	import CreateClientForm from '$lib/components/compound/CreateClientForm.svelte';
 
 	const divisionId = $derived($page.params.id);
 
@@ -497,42 +499,10 @@
 			</div>
 			
 			<!-- Create Employee Form -->
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 py-4">
-				<Input
-					label="Employee Name"
-					bind:value={newEmployeeName}
-					placeholder="Enter employee name"
-					disabled={creatingEmployee}
-				/>
-				<Input
-					label="Email"
-					bind:value={newEmployeeEmail}
-					placeholder="Enter email address"
-					disabled={creatingEmployee}
-				/>
-				<Input
-					as="select"
-					label="Employee Role"
-					bind:value={newEmployeeRole}
-					disabled={creatingEmployee}
-					options={[
-						{ value: 'psw', label: 'PSW' },
-						{ value: 'lw', label: 'LW' },
-						{ value: 'admin', label: 'Admin' },
-						{ value: 'manager', label: 'Manager' }
-					]}
-				/>
-				<div class="flex items-end">
-					<Button 
-						onclick={createEmployee}
-						disabled={creatingEmployee || !newEmployeeName.trim() || !newEmployeeEmail.trim()}
-						class="w-full"
-					>
-						{creatingEmployee ? 'Creating...' : 'Create Employee'}
-					</Button>
-				</div>
+			<div class="mb-4">
+				<CreateEmployeeForm variant="complementary" bind:error bind:successMessage callback={(_) => loadEmployees()} constantDivisionId={divisionId} constantOrganizationId={division?.organizationId} />
 			</div>
-			
+
 			<!-- Employees Table -->
 			{#if employeesLoading}
 				<div class="text-center py-8">
@@ -543,7 +513,7 @@
 					<div class="text-gray-500">No employees found. Create one above to get started.</div>
 				</div>
 			{:else}
-				<Table data={employeeTableData} />
+				<Table data={employeeTableData} /> 
 			{/if}
 		</Card>
 
@@ -556,41 +526,8 @@
 				</div>
 			</div>
 			
-			<!-- Create Client Form -->
-			<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 py-4">
-				<Input
-					label="Client Name"
-					bind:value={newClientName}
-					placeholder="Enter client name"
-					disabled={creatingClient}
-				/>
-				<Input
-					label="Email (Optional)"
-					bind:value={newClientEmail}
-					placeholder="Enter email address"
-					disabled={creatingClient}
-				/>
-				<Input
-					label="Phone (Optional)"
-					bind:value={newClientPhone}
-					placeholder="Enter phone number"
-					disabled={creatingClient}
-				/>
-				<Input
-					label="Date of Birth (Optional)"
-					type="date"
-					bind:value={newClientDateOfBirth}
-					disabled={creatingClient}
-				/>
-				<div class="flex items-end">
-					<Button 
-						onclick={createClient}
-						disabled={creatingClient || !newClientName.trim()}
-						class="w-full"
-					>
-						{creatingClient ? 'Creating...' : 'Create Client'}
-					</Button>
-				</div>
+			<div>
+				<CreateClientForm bind:error bind:successMessage callback={(_) => loadClients()} constantDivisionId={divisionId} />
 			</div>
 			
 			<!-- Clients Table -->

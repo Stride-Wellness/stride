@@ -12,6 +12,7 @@
 	import type { Division } from '$lib/services/divisions';
 	import { UsersService } from '$lib/services/users';
 	import type { User, UserType } from '$lib/services/users';
+	import CreateDivisionForm from '$lib/components/compound/CreateDivisionForm.svelte';
 
 	const organizationId = $derived($page.params.id);
 
@@ -144,40 +145,6 @@
 		}
 	}
 
-	// Create new division
-	async function createDivision() {
-		if (!organizationId || !newDivisionName.trim() ) return;
-		
-		creatingDivision = true;
-		error = null;
-		
-		try {
-			const divisionData = {
-				name: newDivisionName.trim(),
-				managerId: newDivisionManagerId.trim() || null,
-				divisionType: newDivisionType,
-				organizationId: organizationId
-			};
-			
-			console.log('Creating division with data:', divisionData);
-			await DivisionsService.create(divisionData);
-			
-			// Reset form
-			newDivisionName = '';
-			newDivisionManagerId = '';
-			newDivisionType = 'retirement_home';
-			
-			// Reload divisions
-			await loadDivisions();
-			
-			successMessage = 'Division created successfully!';
-		} catch (err) {
-			console.error('Error creating division:', err);
-			error = 'Failed to create division. Please try again.';
-		} finally {
-			creatingDivision = false;
-		}
-	}
 
 	// Delete division
 	async function deleteDivision(divisionId: string) {
@@ -434,42 +401,11 @@
 					{divisions.length} division{divisions.length !== 1 ? 's' : ''}
 				</div>
 			</div>
-			
-			<!-- Create Division Form -->
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 py-4">
-				<Input
-					label="Division Name"
-					bind:value={newDivisionName}
-					placeholder="Enter division name"
-					disabled={creatingDivision}
-				/>
-				<Input
-					label="Manager ID"
-					bind:value={newDivisionManagerId}
-					placeholder="Enter manager ID"
-					disabled={creatingDivision}
-				/>
-				<Input
-					as="select"
-					label="Division Type"
-					bind:value={newDivisionType}
-					disabled={creatingDivision}
-					options={[
-						{ value: 'retirement_home', label: 'Retirement Home' },
-						{ value: 'homecare_provider', label: 'Homecare Provider' }
-					]}
-				/>
-				<div class="flex items-end">
-					<Button 
-						onclick={createDivision}
-						disabled={creatingDivision || !newDivisionName.trim() }
-						class="w-full"
-					>
-						{creatingDivision ? 'Creating...' : 'Create Division'}
-					</Button>
-				</div>
+
+			<div class="mb-4">
+				<CreateDivisionForm variant="complementary" bind:error bind:successMessage constantOrganizationId={organizationId} callback={async (_) => await loadDivisions()} />
 			</div>
-			
+
 			<!-- Divisions Table -->
 			{#if divisionsLoading}
 				<div class="text-center py-8">

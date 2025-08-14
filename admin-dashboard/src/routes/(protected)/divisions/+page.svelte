@@ -8,6 +8,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
+	import CreateDivisionForm from '$lib/components/compound/CreateDivisionForm.svelte';
 
 	const { form }: { form: any } = $props();
 
@@ -16,12 +17,6 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
-
-	// Form state for creating divisions
-	let name = $state('');
-	let organizationId = $state('');
-	let managerId = $state('');
-	let divisionType = $state<'retirement_home' | 'homecare_provider'>('retirement_home');
 
 	// Form state for deleting division
 	let deleteDivisionId = $state('');
@@ -61,86 +56,6 @@
 			loading = false;
 		}
 	});
-
-	// Handle create division
-	async function handleCreateDivision(event: Event) {
-		event.preventDefault();
-
-		// Clear previous messages
-		error = null;
-		successMessage = null;
-
-		// Validation
-		if (!name || !organizationId) {
-			error = 'Name and Organization ID are required';
-			return;
-		}
-
-		if (name.length < 2) {
-			error = 'Division name must be at least 2 characters';
-			return;
-		}
-
-		try {
-			const newDivision = await DivisionsService.create({
-				name,
-				organizationId,
-				managerId: managerId || null, // Allow empty manager ID
-				divisionType
-			});
-
-			// Reset form
-			name = '';
-			organizationId = '';
-			managerId = '';
-			divisionType = 'retirement_home';
-
-			// Update local state immediately
-			divisions = [...divisions, newDivision];
-
-			successMessage = 'Division created successfully!';
-		} catch (err: any) {
-			console.error('Error creating division:', err);
-			
-			// Parse specific Firebase/Firestore errors
-			if (err.code) {
-				switch (err.code) {
-					case 'permission-denied':
-						error = 'Permission denied. You may not have the required permissions or the organization/manager may not exist.';
-						break;
-					case 'not-found':
-						error = 'Organization or manager not found. Please verify the IDs are correct.';
-						break;
-					case 'already-exists':
-						error = 'A division with this name already exists in the organization.';
-						break;
-					case 'invalid-argument':
-						error = 'Invalid data provided. Please check all fields are correctly filled.';
-						break;
-					case 'failed-precondition':
-						error = 'Division creation failed validation. The manager must exist, belong to the organization, and have manager role.';
-						break;
-					case 'resource-exhausted':
-						error = 'Too many requests. Please wait a moment and try again.';
-						break;
-					case 'unauthenticated':
-						error = 'You are not authenticated. Please log in and try again.';
-						break;
-					default:
-						error = `Error: ${err.message || 'Failed to create division. Please try again.'}`;
-				}
-			} else if (err.message) {
-				// Handle generic errors from the service
-				if (err.message.includes('Failed to create division')) {
-					error = 'Failed to create division. Please verify the organization and manager IDs exist and try again.';
-				} else {
-					error = err.message;
-				}
-			} else {
-				error = 'An unexpected error occurred. Please try again.';
-			}
-		}
-	}
 
 	// Handle soft delete division
 	async function handleSoftDeleteDivision(event: Event) {
@@ -389,51 +304,7 @@
 		</div>
 
 		<!-- Create Division Form -->
-		<Card class="p-6">
-			<h2>Add New Division</h2>
-			<p class="mb-4 text-sm text-gray-600">
-				You can create a division without a manager and assign one later, or specify a manager ID if you already have one.
-			</p>
-			<form onsubmit={handleCreateDivision} class="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<Input
-					type="text"
-					placeholder="Division Name"
-					size="md"
-					variant="outline"
-					name="name"
-					bind:value={name}
-					required
-				/>
-				<Input
-					type="text"
-					placeholder="Organization ID"
-					size="md"
-					variant="outline"
-					name="organizationId"
-					bind:value={organizationId}
-					required
-				/>
-				<Input
-					type="text"
-					placeholder="Manager ID (optional - can be assigned later)"
-					size="md"
-					variant="outline"
-					name="managerId"
-					bind:value={managerId}
-				/>
-				<Input
-					as="select"
-					variant="outline"
-					name="divisionType"
-					bind:value={divisionType}
-					required
-				>
-					<option value="retirement_home">Retirement Home</option>
-					<option value="homecare_provider">Homecare Provider</option>
-				</Input>
-				<Button type="submit" size="md" class="md:col-span-2">Create Division</Button>
-			</form>
-		</Card>
+		<CreateDivisionForm bind:error bind:successMessage callback={(newDivision) => { divisions.push(newDivision); }} />
 
 		<!-- Management Actions -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">

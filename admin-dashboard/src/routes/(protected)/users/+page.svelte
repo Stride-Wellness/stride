@@ -1,5 +1,12 @@
 <script lang="ts">
-	import type { User, EmployeeUser, ClientUser, EmployeeRole, UserType, UserStatus } from '$lib/services/users';
+	import type {
+		User,
+		EmployeeUser,
+		ClientUser,
+		EmployeeRole,
+		UserType,
+		UserStatus
+	} from '$lib/services/users';
 	import { UsersService } from '$lib/services/users';
 	import Table from '$lib/components/Table.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -7,6 +14,8 @@
 	import Message from '$lib/components/Message.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import { onMount } from 'svelte';
+	import CreateEmployeeForm from '$lib/components/compound/CreateEmployeeForm.svelte';
+	import CreateClientForm from '$lib/components/compound/CreateClientForm.svelte';
 
 	// State for users data
 	let users = $state<User[]>([]);
@@ -63,7 +72,13 @@
 		error = null;
 		successMessage = null;
 
-		if (!employeeName || !employeeEmail || !employeeOrganizationId || !employeeDivisionId || employeeRoles.length === 0) {
+		if (
+			!employeeName ||
+			!employeeEmail ||
+			!employeeOrganizationId ||
+			!employeeDivisionId ||
+			employeeRoles.length === 0
+		) {
 			error = 'All fields are required and at least one role must be selected';
 			return;
 		}
@@ -117,10 +132,13 @@
 		}
 
 		try {
-			const profile = clientPhone || clientDateOfBirth ? {
-				...(clientPhone && { phone: clientPhone }),
-				...(clientDateOfBirth && { dateOfBirth: clientDateOfBirth })
-			} : undefined;
+			const profile =
+				clientPhone || clientDateOfBirth
+					? {
+							...(clientPhone && { phone: clientPhone }),
+							...(clientDateOfBirth && { dateOfBirth: clientDateOfBirth })
+						}
+					: undefined;
 
 			const newUser = await UsersService.createClient({
 				name: clientName,
@@ -164,10 +182,8 @@
 			await UsersService.update(updateStatusId, { status: updateStatus });
 
 			// Update local state - create new array to trigger reactivity
-			users = users.map(user => 
-				user.id === updateStatusId 
-					? { ...user, status: updateStatus }
-					: user
+			users = users.map((user) =>
+				user.id === updateStatusId ? { ...user, status: updateStatus } : user
 			);
 
 			updateStatusId = '';
@@ -208,14 +224,16 @@
 
 			deleteUserId = '';
 
-			successMessage = 'User soft deleted successfully! Data has been preserved and can be restored.';
+			successMessage =
+				'User soft deleted successfully! Data has been preserved and can be restored.';
 		} catch (err: any) {
 			console.error('Error soft deleting user:', err);
-			
+
 			if (err.code) {
 				switch (err.code) {
 					case 'permission-denied':
-						error = 'Permission denied. You may not have the required permissions to delete this user.';
+						error =
+							'Permission denied. You may not have the required permissions to delete this user.';
 						break;
 					case 'not-found':
 						error = 'User not found. They may have already been deleted or the ID is incorrect.';
@@ -274,7 +292,7 @@
 		if (checked) {
 			employeeRoles = [...employeeRoles, role];
 		} else {
-			employeeRoles = employeeRoles.filter(r => r !== role);
+			employeeRoles = employeeRoles.filter((r) => r !== role);
 		}
 	}
 
@@ -284,21 +302,22 @@
 
 		// Filter by type
 		if (filterType !== 'all') {
-			filtered = filtered.filter(user => user.type === filterType);
+			filtered = filtered.filter((user) => user.type === filterType);
 		}
 
 		// Filter by status
 		if (filterStatus !== 'all') {
-			filtered = filtered.filter(user => user.status === filterStatus);
+			filtered = filtered.filter((user) => user.status === filterStatus);
 		}
 
 		// Filter by search term
 		if (searchTerm) {
 			const term = searchTerm.toLowerCase();
-			filtered = filtered.filter(user => 
-				user.name.toLowerCase().includes(term) ||
-				user.email.toLowerCase().includes(term) ||
-				user.id.toLowerCase().includes(term)
+			filtered = filtered.filter(
+				(user) =>
+					user.name.toLowerCase().includes(term) ||
+					user.email.toLowerCase().includes(term) ||
+					user.id.toLowerCase().includes(term)
 			);
 		}
 
@@ -329,12 +348,20 @@
 		const active = users.filter((user) => user.status === 'active').length;
 		const inactive = users.filter((user) => user.status === 'inactive').length;
 		const pending = users.filter((user) => user.status === 'pending').length;
-		
+
 		// Employee role breakdown
-		const psws = users.filter((user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'psw')).length;
-		const managers = users.filter((user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'manager')).length;
-		const admins = users.filter((user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'admin')).length;
-		const lws = users.filter((user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'lw')).length;
+		const psws = users.filter(
+			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'psw')
+		).length;
+		const managers = users.filter(
+			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'manager')
+		).length;
+		const admins = users.filter(
+			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'admin')
+		).length;
+		const lws = users.filter(
+			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'lw')
+		).length;
 
 		return { total, employees, clients, active, inactive, pending, psws, managers, admins, lws };
 	});
@@ -351,7 +378,7 @@
 			<p class="text-sm text-gray-600">Manage employees and clients across all organizations</p>
 		</div>
 
-						<!-- Messages -->
+		<!-- Messages -->
 		<Message type="error" message={error || undefined} />
 		<Message type="success" message={successMessage || undefined} />
 
@@ -400,165 +427,12 @@
 			</Card>
 		</div>
 
-
-		<!-- Filters -->
-		<Card class="p-6">
-			<h2>Filter Users</h2>
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-				<Input
-					type="text"
-					placeholder="Search by name, email, or ID..."
-					size="md"
-					variant="outline"
-					bind:value={searchTerm}
-				/>
-				<Input
-					as="select"
-					variant="outline"
-					bind:value={filterType}
-				>
-					<option value="all">All Types</option>
-					<option value="employee">Employees</option>
-					<option value="client">Clients</option>
-				</Input>
-				<Input
-					as="select"
-					variant="outline"
-					bind:value={filterStatus}
-				>
-					<option value="all">All Statuses</option>
-					<option value="active">Active</option>
-					<option value="inactive">Inactive</option>
-					<option value="pending">Pending</option>
-				</Input>
-				<Button 
-					size="md" 
-					variant="secondary"
-					onclick={() => {
-						searchTerm = '';
-						filterType = 'all';
-						filterStatus = 'all';
-					}}
-				>
-					Clear Filters
-				</Button>
-			</div>
-		</Card>
-
 		<!-- Create User Forms -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<!-- Create Employee Form -->
-			<Card class="p-6">
-				<h2>Add New Employee</h2>
-				<form onsubmit={handleCreateEmployee} class="space-y-4">
-					<Input
-						type="text"
-						placeholder="Employee Name"
-						size="md"
-						variant="outline"
-						bind:value={employeeName}
-						required
-					/>
-					<Input
-						type="email"
-						placeholder="Employee Email"
-						size="md"
-						variant="outline"
-						bind:value={employeeEmail}
-						required
-					/>
-					<Input
-						type="text"
-						placeholder="Organization ID"
-						size="md"
-						variant="outline"
-						bind:value={employeeOrganizationId}
-						required
-					/>
-					<Input
-						type="text"
-						placeholder="Division ID"
-						size="md"
-						variant="outline"
-						bind:value={employeeDivisionId}
-						required
-					/>
-					
-					<!-- Role Checkboxes -->
-					<div>
-						<p class="block text-sm font-medium text-gray-700 mb-2">Employee Roles</p>
-						<div class="space-y-2">
-							{#each availableRoles as role}
-								<label class="flex items-center">
-									<input
-										type="checkbox"
-										class="mr-2 rounded border-gray-300"
-										checked={employeeRoles.includes(role)}
-										onchange={(e) => handleRoleChange(role, e.currentTarget.checked)}
-									/>
-									<span class="text-sm capitalize">{role}</span>
-								</label>
-							{/each}
-						</div>
-					</div>
-
-					<Button type="submit" size="md" class="w-full">Create Employee</Button>
-				</form>
-			</Card>
+			<CreateEmployeeForm bind:error bind:successMessage callback={(newUser) => users.push(newUser)} />
 
 			<!-- Create Client Form -->
-			<Card class="p-6">
-				<h2>Add New Client</h2>
-				<form onsubmit={handleCreateClient} class="space-y-4">
-					<Input
-						type="text"
-						placeholder="Client Name"
-						size="md"
-						variant="outline"
-						bind:value={clientName}
-						required
-					/>
-					<Input
-						type="email"
-						placeholder="Client Email"
-						size="md"
-						variant="outline"
-						bind:value={clientEmail}
-						required
-					/>
-					<Input
-						type="text"
-						placeholder="Organization ID"
-						size="md"
-						variant="outline"
-						bind:value={clientOrganizationId}
-						required
-					/>
-					<Input
-						type="text"
-						placeholder="Division ID"
-						size="md"
-						variant="outline"
-						bind:value={clientDivisionId}
-						required
-					/>
-					<Input
-						type="tel"
-						placeholder="Phone (optional)"
-						size="md"
-						variant="outline"
-						bind:value={clientPhone}
-					/>
-					<Input
-						type="date"
-						placeholder="Date of Birth (optional)"
-						size="md"
-						variant="outline"
-						bind:value={clientDateOfBirth}
-					/>
-					<Button type="submit" size="md" class="w-full">Create Client</Button>
-				</form>
-			</Card>
+			<CreateClientForm bind:error bind:successMessage callback={(newUser) => users.push(newUser)} />
 		</div>
 
 		<!-- Management Actions -->
@@ -575,12 +449,7 @@
 						bind:value={updateStatusId}
 						required
 					/>
-					<Input
-						as="select" 
-						variant="outline"
-						bind:value={updateStatus}
-						required
-					>
+					<Input as="select" variant="outline" bind:value={updateStatus} required>
 						<option value="active">Active</option>
 						<option value="inactive">Inactive</option>
 						<option value="pending">Pending</option>
@@ -590,7 +459,7 @@
 			</Card>
 
 			<!-- Delete User -->
-			<Card class="border-red-200 bg-red-50 p-6 flex flex-col justify-between">
+			<Card class="flex flex-col justify-between border-red-200 bg-red-50 p-6">
 				<div>
 					<h2 class="mb-4 text-lg font-medium text-red-900">Delete User</h2>
 					<p class="my-2 text-xs text-red-700">
