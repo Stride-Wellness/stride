@@ -6,20 +6,27 @@ import 'package:stride_app/controllers/onboarding_controller.dart';
 import 'package:stride_app/widgets/button.dart';
 import 'package:stride_app/widgets/select.dart';
 
-class OnboardingPage extends StatelessWidget {
+class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
+
+  @override
+  State<OnboardingPage> createState() => _OnboardingPageState();
+}
+
+class _OnboardingPageState extends State<OnboardingPage> {
+  int currentPage = 0;
 
   @override
   Widget build(BuildContext context) {
     var onboardingController = context.watch<OnboardingController>();
-    var currentPage = 0;
+    
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             SmoothPageIndicator(
               controller: onboardingController.pageController,
-              count: 5,
+              count: onboardingController.questionList.length,
               effect: WormEffect(
                 activeDotColor: Theme.of(context).primaryColor,
               ),
@@ -31,9 +38,10 @@ class OnboardingPage extends StatelessWidget {
                     ? null
                     : NeverScrollableScrollPhysics(),
                 onPageChanged: (value) {
-                  currentPage = value;
+                  setState(() {
+                    currentPage = value;
+                  });
                 },
-                itemCount: onboardingController.questionList.length,
                 itemBuilder: (context, index) {
                   return MultipleSelectQuestion(
                     question: onboardingController.getQuestion(index).text( onboardingController.answers),
@@ -48,7 +56,7 @@ class OnboardingPage extends StatelessWidget {
                 },
               ),
             ),
-            OnboardingNavigation(),
+            OnboardingNavigation(currentPage: currentPage),
           ],
         ),
       ),
@@ -100,10 +108,13 @@ class MultipleSelectQuestion extends StatelessWidget {
 }
 
 class OnboardingNavigation extends StatelessWidget {
-  const OnboardingNavigation({super.key});
+  final int currentPage;
+
+  const OnboardingNavigation({super.key, required this.currentPage});
 
   @override
   Widget build(BuildContext context) {
+    var onboardingController = context.watch<OnboardingController>();
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: KPadding.pagePadding,
@@ -115,7 +126,10 @@ class OnboardingNavigation extends StatelessWidget {
             child: Button(
               varient: ButtonVarient.secondary,
               onPressed: () {
-                // Handle back action
+                onboardingController.pageController.previousPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
               },
               child: const Text("Back"),
             ),
@@ -125,7 +139,12 @@ class OnboardingNavigation extends StatelessWidget {
             child: Button(
               varient: ButtonVarient.primary,
               onPressed: () {
-                // Handle next action
+                if (onboardingController.canProceed(currentPage)) {
+                  onboardingController.pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
               },
               child: const Text("Next"),
             ),
