@@ -1,19 +1,31 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_app/controllers/onboarding_controller.dart';
-import 'package:stride_app/screens/favourites_page.dart';
-import 'package:stride_app/screens/generator_page.dart';
-import 'package:stride_app/screens/greeting_page.dart';
-import 'package:stride_app/screens/onboarding_page.dart';
+import 'package:stride_app/repositories/user_repo.dart';
+import 'package:stride_app/services/storage_service.dart';
+import 'package:stride_app/view_models/onboarding_vm.dart';
+import 'package:stride_app/views/account_screen_v.dart';
+import 'package:stride_app/views/favourites_v.dart';
+import 'package:stride_app/views/generator_v.dart';
+import 'package:stride_app/views/greeting_v.dart';
+import 'package:stride_app/views/onboarding_v.dart';
 
-void main() {
-  runApp(MultiProvider(providers: [
-    ChangeNotifierProvider(create: (context) => MyAppState()),
-    ChangeNotifierProvider(create: (context) => OnboardingController())
-  ],
-  child: MyApp(key: Key("HomePage"),),
-  ));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize storage service
+  await StorageService().init();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => MyAppState()),
+        ChangeNotifierProvider(create: (context) => OnboardingViewModel()),
+        Provider(create: (context) => UserRepository()),
+      ],
+      child: MyApp(key: Key("HomePage")),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -22,19 +34,22 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Stride',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-          textTheme: Theme.of(context).textTheme.apply(
-                fontSizeFactor: 1.2, // 20% bigger for better readability
-              ),
+      title: 'Stride',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+        textTheme: Theme.of(context).textTheme.apply(
+          fontSizeFactor: 1.2, // 20% bigger for better readability
         ),
-        // SignInPage decides whether to start onboarding (wizard) or login.
-        home: GreetingPage(),
-        routes: {'/home': (context) => MyHomePage()
-          , '/onboarding': (context) => OnboardingPage()},
-      );
+      ),
+      // SignInPage decides whether to start onboarding (wizard) or login.
+      home: GreetingPage(),
+      routes: {
+        '/home': (context) => MyHomePage(),
+        '/onboarding': (context) => OnboardingPage(),
+        '/account': (context) => AccountScreen(),
+      },
+    );
   }
 }
 

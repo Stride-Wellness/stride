@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:stride_app/constants/layout.dart';
-import 'package:stride_app/controllers/onboarding_controller.dart';
+import 'package:stride_app/models/question_node_m.dart';
+import 'package:stride_app/repositories/user_repo.dart';
+import 'package:stride_app/view_models/onboarding_vm.dart';
 import 'package:stride_app/widgets/button.dart';
-import 'package:stride_app/widgets/select.dart';
+import 'package:stride_app/widgets/list_options.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -18,40 +20,46 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    var onboardingController = context.watch<OnboardingController>();
+    var onboardingViewModel = context.watch<OnboardingViewModel>();
     
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             SmoothPageIndicator(
-              controller: onboardingController.pageController,
-              count: onboardingController.questionList.length,
+              controller: onboardingViewModel.pageController,
+              count: onboardingViewModel.questionList.length,
               effect: WormEffect(
                 activeDotColor: Theme.of(context).primaryColor,
               ),
             ),
             Expanded(
               child: PageView.builder(
-                controller: onboardingController.pageController,
-                physics: onboardingController.canProceed(currentPage)
+                controller: onboardingViewModel.pageController,
+                physics: onboardingViewModel.canProceed(currentPage)
                     ? null
                     : NeverScrollableScrollPhysics(),
                 onPageChanged: (value) {
+                  if (onboardingViewModel.quizComplete) {
+                    Navigator.pushReplacementNamed(context, '/home');
+                  }
                   setState(() {
                     currentPage = value;
                   });
                 },
                 itemBuilder: (context, index) {
+                  var question = onboardingViewModel.getQuestion(index);
                   return MultipleSelectQuestion(
-                    question: onboardingController.getQuestion(index).text( onboardingController.answers),
-                    options: onboardingController.getQuestion(index).options( onboardingController.answers),
-                    maxSelected: onboardingController.getQuestion(index).maxSelected,
-                    minSelected: onboardingController.getQuestion(index).minSelected,
+                    question: question.text(onboardingViewModel.answers),
+                    options: question.options(onboardingViewModel.answers),
+                    maxSelected: question.maxSelected,
+                    minSelected: question.minSelected,
+                    isMultiField: question.isMultiField,
+                    fieldValues: onboardingViewModel.getFieldValues(index),
                     onSelectionChanged: (selections) {
-                      onboardingController.updateAnswers(index, selections);
+                      onboardingViewModel.updateAnswers(index, selections);
                     },
-                    alreadySelected: onboardingController.answers[onboardingController.getQuestion(index).questionId] ?? [],
+                    alreadySelected: onboardingViewModel.answers[question.questionId] ?? [],
                   );  
                 },
               ),
@@ -73,13 +81,17 @@ class MultipleSelectQuestion extends StatelessWidget {
     this.maxSelected = 1,
     this.minSelected = 1,
     this.alreadySelected = const [],
+    this.isMultiField = false,
+    this.fieldValues = const {},
   });
 
   final List<String> alreadySelected;
   final String question;
-  final List<String> options;
+  final List<QuestionOption> options;
   final int maxSelected;
   final int minSelected;
+  final bool isMultiField;
+  final Map<String, String> fieldValues;
   final Function(List<String>) onSelectionChanged;
 
   @override
@@ -92,10 +104,12 @@ class MultipleSelectQuestion extends StatelessWidget {
             SizedBox(height: 100),
             Text(question, style: Theme.of(context).textTheme.headlineMedium),
             SizedBox(height: 50),
-            MultiSelectWidget(
+            ListOptionsWidget(
               options: options,
               maxSelected: maxSelected,
               minSelected: minSelected,
+              isMultiField: isMultiField,
+              fieldValues: fieldValues,
               onSelectionChanged: onSelectionChanged,
               alreadySelected: alreadySelected,
             ),
@@ -114,7 +128,8 @@ class OnboardingNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var onboardingController = context.watch<OnboardingController>();
+    var onboardingController = context.watch<OnboardingViewModel>();
+    var userRepository = context.read<UserRepository>();
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: KPadding.pagePadding,
@@ -138,8 +153,13 @@ class OnboardingNavigation extends StatelessWidget {
           Expanded(
             child: Button(
               varient: ButtonVarient.primary,
-              onPressed: () {
-                if (onboardingController.canProceed(currentPage)) {
+              onPressed: () async {
+                onboardingController.answers;
+                if (onboardingController.quizComplete) {
+                  Navigator.pushReplacementNamed(context, '/account');
+                  var userId = await userRepository.createUser(name: onboardingController.answers["personal_info_question_nickname"]![0], quizAnswers: onboardingController.answers, email: "");
+                  userRepository.loginUser(userId);
+                } else if (onboardingController.canProceed(currentPage)) {
                   onboardingController.pageController.nextPage(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
