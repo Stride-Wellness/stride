@@ -1,63 +1,21 @@
-
 import 'package:stride_app/models/question_node_m.dart';
 
 final questionGraph = {
-  UserTypeQuestion.id: UserTypeQuestion(),
-  ClientProfileQuestion.id: ClientProfileQuestion(),
-  RelationshipQuestion.id: RelationshipQuestion(),
   PersonalInfoQuestion.id: PersonalInfoQuestion(),
   ActivityLevelQuestion.id: ActivityLevelQuestion(),
   HealthConditionsQuestion.id: HealthConditionsQuestion(),
   PainMobilityQuestion.id: PainMobilityQuestion(),
   ExercisePreferencesQuestion.id: ExercisePreferencesQuestion(),
   EquipmentMobilityQuestion.id: EquipmentMobilityQuestion(),
-  GoalsInterestsQuestion.id: GoalsInterestsQuestion(),
-  WellnessPreferencesQuestion.id: WellnessPreferencesQuestion(),
-  SpecialNotesQuestion.id: SpecialNotesQuestion(),
+  HobbiesGoalsQuestion.id: HobbiesGoalsQuestion(),
+  EnergyLevelQuestion.id: EnergyLevelQuestion(),
+  TimePreferenceQuestion.id: TimePreferenceQuestion(),
+  WellnessGoalsQuestion.id: WellnessGoalsQuestion(),
 };
 
-// Step 1: User Type Selection
-class UserTypeQuestion extends QuestionNode {
-  static const String id = "user_type_question";
-
-  @override
-  String get questionId => id;
-
-  @override
-  int get maxSelected => 1;
-
-  @override
-  int get minSelected => 1;
-
-  @override
-  String text(Map<String, List<String>> answers) {
-    return "Who is using the platform today?";
-  }
-
-  @override
-  List<QuestionOption> options(Map<String, List<String>> answers) {
-    return [
-      QuestionOption("I am an older adult looking for personalized movement routines", QuestionType.select),
-      QuestionOption("I am a caregiver helping someone with their wellness routine", QuestionType.select),
-    ];
-  }
-
-  @override
-  bool answered(Map<String, List<String>> answers) {
-    return ((answers[questionId]?.length ?? 0) >= minSelected) &&
-        ((answers[questionId]?.length ?? 0) <= maxSelected);
-  }
-
-  @override
-  String? getNextId(Map<String, List<String>> answers) {
-    bool isCaregiver = answers[questionId]?.contains("I am a caregiver helping someone with their wellness routine") ?? false;
-    return isCaregiver ? ClientProfileQuestion.id : PersonalInfoQuestion.id;
-  }
-}
-
-// Step 2: Client Profile (Caregiver Path Only)
-class ClientProfileQuestion extends QuestionNode {
-  static const String id = "client_profile_question";
+// Step 1: Personal Information
+class PersonalInfoQuestion extends QuestionNode {
+  static const String id = "personal_info_question";
 
   @override
   String get questionId => id;
@@ -72,99 +30,13 @@ class ClientProfileQuestion extends QuestionNode {
   bool get isMultiField => true;
   
   @override
-  List<String> get requiredFields => ['name', 'age', 'sex', 'height', 'weight'];
-
-  @override
-  String text(Map<String, List<String>> answers) {
-    return "Client Profile";
-  }
-
-  @override
-  List<QuestionOption> options(Map<String, List<String>> answers) {
-    return [
-      QuestionOption("Client's Name", QuestionType.input, fieldKey: 'name'),
-      QuestionOption("Client's Age", QuestionType.input, fieldKey: 'age'),
-      QuestionOption("Client's Sex", QuestionType.dropdown, fieldKey: 'sex', 
-        dropdownOptions: ["Male", "Female", "Prefer not to say"]),
-      QuestionOption("Client's Height (in inches or cm)", QuestionType.input, fieldKey: 'height'),
-      QuestionOption("Client's Weight (in pounds or kg)", QuestionType.input, fieldKey: 'weight'),
-    ];
-  }
-
-  @override
-  bool answered(Map<String, List<String>> answers) {
-    return requiredFields.every((field) => 
-      getFieldValue(answers, field)?.isNotEmpty == true);
-  }
-
-  @override
-  String? getNextId(Map<String, List<String>> answers) {
-    return RelationshipQuestion.id;
-  }
-}
-
-class RelationshipQuestion extends QuestionNode {
-  static const String id = "relationship_question";
-
-  @override
-  String get questionId => id;
-
-  @override
-  int get maxSelected => 1;
-
-  @override
-  int get minSelected => 1;
-
-  @override
-  String text(Map<String, List<String>> answers) {
-    return "Your Relationship to Client:";
-  }
-
-  @override
-  List<QuestionOption> options(Map<String, List<String>> answers) {
-    return [
-      QuestionOption("Family Member (Adult Child, Spouse, etc.)", QuestionType.select),
-      QuestionOption("Personal Support Worker (PSW)", QuestionType.select),
-      QuestionOption("Nurse or Healthcare Professional", QuestionType.select),
-      QuestionOption("Physiotherapist", QuestionType.select),
-      QuestionOption("Other", QuestionType.select),
-    ];
-  }
-
-  @override
-  bool answered(Map<String, List<String>> answers) {
-    return ((answers[questionId]?.length ?? 0) >= minSelected) &&
-        ((answers[questionId]?.length ?? 0) <= maxSelected);
-  }
-
-  @override
-  String? getNextId(Map<String, List<String>> answers) {
-    return PersonalInfoQuestion.id;
-  }
-}
-
-// Step 3: Personal Information
-class PersonalInfoQuestion extends QuestionNode {
-  static const String id = "personal_info_question";
-
-  @override
-  String get questionId => id;
-
-  @override
-  int get maxSelected => 5;
-
-  @override
-  int get minSelected => 3;
-  
-  @override
-  bool get isMultiField => true;
-  
-  @override
-  List<String> get requiredFields {
-    // Base required fields
-    List<String> fields = ['nickname', 'age', 'sex'];
-    return fields;
-  }
+  List<String> get requiredFields => [
+    'nickname',
+    'age',
+    'sex',
+    'height',
+    'weight',
+  ];
 
   @override
   String text(Map<String, List<String>> answers) {
@@ -173,33 +45,29 @@ class PersonalInfoQuestion extends QuestionNode {
 
   @override
   List<QuestionOption> options(Map<String, List<String>> answers) {
-    bool isOlderAdult = answers[UserTypeQuestion.id]?.contains("I am an older adult looking for personalized movement routines") ?? false;
-    
-    List<QuestionOption> baseOptions = [
+    return [
       QuestionOption("Nickname (What would you like us to call you?)", QuestionType.input, fieldKey: 'nickname'),
       QuestionOption("Age", QuestionType.input, fieldKey: 'age'),
       QuestionOption("Sex", QuestionType.dropdown, fieldKey: 'sex',
-        dropdownOptions: ["Male", "Female", "Prefer not to say"]),
+        dropdownOptions: ["Male", "Female", "Prefer not to say"],
+      ),
+      QuestionOption(
+        "Height (in inches or cm)",
+        QuestionType.input,
+        fieldKey: 'height',
+      ),
+      QuestionOption(
+        "Weight (in pounds or kg)",
+        QuestionType.input,
+        fieldKey: 'weight',
+      ),
     ];
-    
-    if (isOlderAdult) {
-      baseOptions.addAll([
-        QuestionOption("Height (in inches or cm)", QuestionType.input, fieldKey: 'height'),
-        QuestionOption("Weight (in pounds or kg)", QuestionType.input, fieldKey: 'weight'),
-      ]);
-    }
-    
-    return baseOptions;
   }
 
   @override
   bool answered(Map<String, List<String>> answers) {
-    bool isOlderAdult = answers[UserTypeQuestion.id]?.contains("I am an older adult looking for personalized movement routines") ?? false;
-    List<String> requiredForUser = ['nickname', 'age', 'sex'];
-    if (isOlderAdult) {
-      requiredForUser.addAll(['height', 'weight']);
-    }
-    return requiredForUser.every((field) => 
+    return requiredFields.every(
+      (field) => 
       getFieldValue(answers, field)?.isNotEmpty == true);
   }
 
@@ -209,7 +77,7 @@ class PersonalInfoQuestion extends QuestionNode {
   }
 }
 
-// Step 4: Current Activity Level
+// Step 2: Activity Level
 class ActivityLevelQuestion extends QuestionNode {
   static const String id = "activity_level_question";
 
@@ -224,10 +92,7 @@ class ActivityLevelQuestion extends QuestionNode {
 
   @override
   String text(Map<String, List<String>> answers) {
-    bool isCaregiver = answers[UserTypeQuestion.id]?.contains("I am a caregiver helping someone with their wellness routine") ?? false;
-    return isCaregiver 
-        ? "How often does your client currently do physical activity?"
-        : "How often do you currently do physical activity?";
+    return "How often do you currently do physical activity?";
   }
 
   @override
@@ -251,7 +116,7 @@ class ActivityLevelQuestion extends QuestionNode {
   }
 }
 
-// Step 5: Health Conditions
+// Step 3: Health Conditions
 class HealthConditionsQuestion extends QuestionNode {
   static const String id = "health_conditions_question";
 
@@ -266,10 +131,7 @@ class HealthConditionsQuestion extends QuestionNode {
 
   @override
   String text(Map<String, List<String>> answers) {
-    bool isCaregiver = answers[UserTypeQuestion.id]?.contains("I am a caregiver helping someone with their wellness routine") ?? false;
-    return isCaregiver 
-        ? "Please select any health conditions your client has (select all that apply):"
-        : "Please select any health conditions you have (select all that apply):";
+    return "Please select any health conditions you have (select all that apply)";
   }
 
   @override
@@ -299,7 +161,7 @@ class HealthConditionsQuestion extends QuestionNode {
   }
 }
 
-// Step 6: Pain & Mobility Areas
+// Step 4: Pain & Mobility Areas
 class PainMobilityQuestion extends QuestionNode {
   static const String id = "pain_mobility_question";
 
@@ -314,10 +176,7 @@ class PainMobilityQuestion extends QuestionNode {
 
   @override
   String text(Map<String, List<String>> answers) {
-    bool isCaregiver = answers[UserTypeQuestion.id]?.contains("I am a caregiver helping someone with their wellness routine") ?? false;
-    return isCaregiver 
-        ? "Does your client experience any pain or discomfort when moving or exercising? Select all areas that apply:"
-        : "Do you experience any pain or discomfort when moving or exercising? Select all areas that apply:";
+    return "Do you experience any pain or discomfort when moving or exercising? Select all areas that apply";
   }
 
   @override
@@ -346,7 +205,7 @@ class PainMobilityQuestion extends QuestionNode {
   }
 }
 
-// Step 7: Exercise Preferences
+// Step 5: Exercise Preferences
 class ExercisePreferencesQuestion extends QuestionNode {
   static const String id = "exercise_preferences_question";
 
@@ -361,10 +220,7 @@ class ExercisePreferencesQuestion extends QuestionNode {
 
   @override
   String text(Map<String, List<String>> answers) {
-    bool isCaregiver = answers[UserTypeQuestion.id]?.contains("I am a caregiver helping someone with their wellness routine") ?? false;
-    return isCaregiver 
-        ? "What types of exercise does your client enjoy or would like to try? Select all that apply:"
-        : "What types of exercise do you enjoy or would like to try? Select all that apply:";
+    return "What types of exercise do you enjoy or would like to try? Select all that apply";
   }
 
   @override
@@ -393,7 +249,7 @@ class ExercisePreferencesQuestion extends QuestionNode {
   }
 }
 
-// Step 8: Equipment & Mobility
+// Step 6: Equipment & Mobility Aids
 class EquipmentMobilityQuestion extends QuestionNode {
   static const String id = "equipment_mobility_question";
 
@@ -404,47 +260,57 @@ class EquipmentMobilityQuestion extends QuestionNode {
   int get maxSelected => 9;
 
   @override
-  int get minSelected => 2; // At least one from each category
+  int get minSelected => 2; // At least 1 equipment + 1 mobility
 
   @override
   String text(Map<String, List<String>> answers) {
-    return "Equipment & Mobility";
+    return "Equipment & Mobility Aids";
   }
 
   @override
   List<QuestionOption> options(Map<String, List<String>> answers) {
     return [
       // Equipment Available at Home
-      QuestionOption("Equipment: Sturdy Chair", QuestionType.select),
-      QuestionOption("Equipment: Resistance Bands", QuestionType.select),
-      QuestionOption("Equipment: Light Weights (1-5 lbs)", QuestionType.select),
-      QuestionOption("Equipment: Step or Stairs", QuestionType.select),
-      QuestionOption("Equipment: None - I prefer no equipment workouts", QuestionType.select),
+      QuestionOption("Equipment Sturdy Chair", QuestionType.select),
+      QuestionOption("Equipment Resistance Bands", QuestionType.select),
+      QuestionOption("Equipment Light Weights (1-5 lbs)", QuestionType.select),
+      QuestionOption("Equipment Step or Stairs", QuestionType.select),
+      QuestionOption(
+        "Equipment None - I prefer no equipment workouts",
+        QuestionType.select,
+      ),
       // Mobility Aids Used
-      QuestionOption("Mobility Aid: Wheelchair", QuestionType.select),
-      QuestionOption("Mobility Aid: Walker", QuestionType.select),
-      QuestionOption("Mobility Aid: Cane or Walking Stick", QuestionType.select),
-      QuestionOption("Mobility Aid: None - No mobility aids needed", QuestionType.select),
+      QuestionOption("Mobility Wheelchair", QuestionType.select),
+      QuestionOption("Mobility Walker", QuestionType.select),
+      QuestionOption("Mobility Cane or Walking Stick", QuestionType.select),
+      QuestionOption(
+        "Mobility None - No mobility aids needed",
+        QuestionType.select,
+      ),
     ];
   }
 
   @override
   bool answered(Map<String, List<String>> answers) {
     List<String> selectedAnswers = answers[questionId] ?? [];
-    bool hasEquipment = selectedAnswers.any((answer) => answer.startsWith("Equipment:"));
-    bool hasMobility = selectedAnswers.any((answer) => answer.startsWith("Mobility Aid:"));
+    bool hasEquipment = selectedAnswers.any(
+      (answer) => answer.startsWith("Equipment"),
+    );
+    bool hasMobility = selectedAnswers.any(
+      (answer) => answer.startsWith("Mobility"),
+    );
     return hasEquipment && hasMobility;
   }
 
   @override
   String? getNextId(Map<String, List<String>> answers) {
-    return GoalsInterestsQuestion.id;
+    return HobbiesGoalsQuestion.id;
   }
 }
 
-// Step 9: Goals & Interests
-class GoalsInterestsQuestion extends QuestionNode {
-  static const String id = "goals_interests_question";
+// Step 7: Hobbies & Goals
+class HobbiesGoalsQuestion extends QuestionNode {
+  static const String id = "hobbies_goals_question";
 
   @override
   String get questionId => id;
@@ -463,21 +329,20 @@ class GoalsInterestsQuestion extends QuestionNode {
 
   @override
   String text(Map<String, List<String>> answers) {
-    bool isCaregiver = answers[UserTypeQuestion.id]?.contains("I am a caregiver helping someone with their wellness routine") ?? false;
-    return isCaregiver 
-        ? "Goals & Interests for Your Client"
-        : "Your Goals & Interests";
+    return "Hobbies & Goals";
   }
 
   @override
   List<QuestionOption> options(Map<String, List<String>> answers) {
-    bool isCaregiver = answers[UserTypeQuestion.id]?.contains("I am a caregiver helping someone with their wellness routine") ?? false;
     return [
-      QuestionOption(isCaregiver ? "Your client's favourite hobbies or interests" : "Your favourite hobbies or interests", 
+      QuestionOption(
+        "What are some of your favourite hobbies or interests?", 
         QuestionType.input, fieldKey: 'hobbies'),
-      QuestionOption(isCaregiver ? "What are they looking forward to in the next 2-4 weeks?" : "What are you looking forward to in the next 2-4 weeks?", 
+      QuestionOption(
+        "What are you looking forward to in the next 2-4 weeks?", 
         QuestionType.input, fieldKey: 'short_goals'),
-      QuestionOption(isCaregiver ? "What are they looking forward to in the next 2-6 months?" : "What are you looking forward to in the next 2-6 months?", 
+      QuestionOption(
+        "What are you looking forward to in the next 2-6 months?", 
         QuestionType.input, fieldKey: 'long_goals'),
     ];
   }
@@ -490,63 +355,13 @@ class GoalsInterestsQuestion extends QuestionNode {
 
   @override
   String? getNextId(Map<String, List<String>> answers) {
-    return WellnessPreferencesQuestion.id;
+    return EnergyLevelQuestion.id;
   }
 }
 
-// Step 10: Wellness Preferences
-class WellnessPreferencesQuestion extends QuestionNode {
-  static const String id = "wellness_preferences_question";
-
-  @override
-  String get questionId => id;
-
-  @override
-  int get maxSelected => 7; // 1 energy + 1 time + up to 3 wellness goals + 2 extra buffer
-
-  @override
-  int get minSelected => 3; // 1 energy + 1 time + at least 1 wellness goal
-
-  @override
-  String text(Map<String, List<String>> answers) {
-    return "Wellness Preferences";
-  }
-
-  @override
-  List<QuestionOption> options(Map<String, List<String>> answers) {
-    return [
-      // Energy Level Preference
-      QuestionOption("Energy: Low - I prefer gentle movements", QuestionType.select),
-      QuestionOption("Energy: Moderate - I can handle some challenge", QuestionType.select),
-      QuestionOption("Energy: High - I want to push myself", QuestionType.select),
-      // Preferred Time of Day
-      QuestionOption("Time: Morning", QuestionType.select),
-      QuestionOption("Time: Afternoon", QuestionType.select),
-      QuestionOption("Time: Evening", QuestionType.select),
-      // Main Wellness Goals
-      QuestionOption("Goal: Joint Mobility - Improve flexibility and range of motion", QuestionType.select),
-      QuestionOption("Goal: Balance - Improve stability and prevent falls", QuestionType.select),
-      QuestionOption("Goal: Cognition - Improve mental sharpness and coordination", QuestionType.select),
-    ];
-  }
-
-  @override
-  bool answered(Map<String, List<String>> answers) {
-    List<String> selectedAnswers = answers[questionId] ?? [];
-    bool hasEnergy = selectedAnswers.any((answer) => answer.startsWith("Energy:"));
-    bool hasTime = selectedAnswers.any((answer) => answer.startsWith("Time:"));
-    bool hasGoal = selectedAnswers.any((answer) => answer.startsWith("Goal:"));
-    return hasEnergy && hasTime && hasGoal;
-  }
-
-  @override
-  String? getNextId(Map<String, List<String>> answers) {
-    return SpecialNotesQuestion.id;
-  }
-}
-
-class SpecialNotesQuestion extends QuestionNode {
-  static const String id = "special_notes_question";
+// Step 8: Energy Level Preference
+class EnergyLevelQuestion extends QuestionNode {
+  static const String id = "energy_level_question";
 
   @override
   String get questionId => id;
@@ -555,27 +370,151 @@ class SpecialNotesQuestion extends QuestionNode {
   int get maxSelected => 1;
 
   @override
-  int get minSelected => 0;
+  int get minSelected => 1;
+
+  @override
+  bool get isMultiField => false;
+
+  @override
+  List<String> get requiredFields => [];
 
   @override
   String text(Map<String, List<String>> answers) {
-    return "Special Notes & Considerations:\n\nPlease provide any additional information about safety considerations, concerns, or preferences:";
+    return "What energy level do you prefer for your workouts?";
   }
 
   @override
   List<QuestionOption> options(Map<String, List<String>> answers) {
     return [
-      QuestionOption("Additional notes", QuestionType.input),
+      QuestionOption("Low - I prefer gentle movements", QuestionType.select),
+      QuestionOption(
+        "Moderate - I can handle some challenge",
+        QuestionType.select,
+      ),
+      QuestionOption("High - I want to push myself", QuestionType.select),
     ];
   }
 
   @override
   bool answered(Map<String, List<String>> answers) {
-    return true; // This is optional
+    return ((answers[questionId]?.length ?? 0) >= minSelected) &&
+        ((answers[questionId]?.length ?? 0) <= maxSelected);
   }
 
   @override
   String? getNextId(Map<String, List<String>> answers) {
-    return null; // End of graph
+    return TimePreferenceQuestion.id;
+  }
+}
+
+// Step 9: Time Preference
+class TimePreferenceQuestion extends QuestionNode {
+  static const String id = "time_preference_question";
+
+  @override
+  String get questionId => id;
+
+  @override
+  int get maxSelected => 1;
+
+  @override
+  int get minSelected => 1;
+
+  @override
+  bool get isMultiField => false;
+
+  @override
+  List<String> get requiredFields => [];
+
+  @override
+  String text(Map<String, List<String>> answers) {
+    return "What time of day do you prefer to exercise?";
+  }
+
+  @override
+  List<QuestionOption> options(Map<String, List<String>> answers) {
+    return [
+      QuestionOption("Morning", QuestionType.select),
+      QuestionOption("Afternoon", QuestionType.select),
+      QuestionOption("Evening", QuestionType.select),
+    ];
+  }
+
+  @override
+  bool answered(Map<String, List<String>> answers) {
+    return ((answers[questionId]?.length ?? 0) >= minSelected) &&
+        ((answers[questionId]?.length ?? 0) <= maxSelected);
+  }
+
+  @override
+  String? getNextId(Map<String, List<String>> answers) {
+    return WellnessGoalsQuestion.id;
+  }
+}
+
+// Step 10: Wellness Goals & Special Notes
+class WellnessGoalsQuestion extends QuestionNode {
+  static const String id = "wellness_goals_question";
+
+  @override
+  String get questionId => id;
+
+  @override
+  int get maxSelected => 4; // 3 goals + 1 special notes
+
+  @override
+  int get minSelected => 1; // At least 1 goal
+
+  @override
+  bool get isMultiField => true;
+
+  @override
+  List<String> get requiredFields => [];
+
+  @override
+  String text(Map<String, List<String>> answers) {
+    return "What are your main wellness goals? Select all that apply";
+  }
+
+  @override
+  List<QuestionOption> options(Map<String, List<String>> answers) {
+    return [
+      QuestionOption(
+        "Joint Mobility - Improve flexibility and range of motion",
+        QuestionType.select,
+      ),
+      QuestionOption(
+        "Balance - Improve stability and prevent falls",
+        QuestionType.select,
+      ),
+      QuestionOption(
+        "Cognition - Improve mental sharpness and coordination",
+        QuestionType.select,
+      ),
+      QuestionOption(
+        "Special notes & considerations (optional)",
+        QuestionType.input,
+        fieldKey: 'special_notes',
+      ),
+    ];
+  }
+
+  @override
+  bool answered(Map<String, List<String>> answers) {
+    List<String> selectedAnswers = answers[questionId] ?? [];
+    // Must have at least one goal selected (not counting the optional special notes)
+    bool hasGoal = selectedAnswers.any(
+      (answer) =>
+          answer.startsWith("Joint Mobility") ||
+          answer.startsWith("Balance") ||
+          answer.startsWith("Cognition"),
+    );
+
+    return hasGoal;
+  }
+
+  @override
+  String? getNextId(Map<String, List<String>> answers) {
+    return null; // End of onboarding
   }
 }

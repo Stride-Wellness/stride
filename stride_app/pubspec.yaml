@@ -40,6 +40,9 @@ dependencies:
   shared_preferences: ^2.2.2  # For simple key-value storage (user ID, login status)
   hive: ^2.2.3                # For complex object storage (user data, settings)
   hive_flutter: ^1.1.0        # Hive Flutter integration
+  firebase_core: ^4.1.1
+  cloud_firestore: ^6.0.2   # Firestore database
+  firebase_auth: ^6.1.0     # Firebase Authentication
 
 dev_dependencies:
   flutter_test:

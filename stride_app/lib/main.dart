@@ -1,53 +1,81 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/repositories/division_repo.dart';
+import 'package:stride_app/repositories/organization_repo.dart';
 import 'package:stride_app/repositories/user_repo.dart';
-import 'package:stride_app/services/storage_service.dart';
+import 'package:stride_app/services/auth_service.dart';
+import 'package:stride_app/services/firebase_config.dart';
+import 'package:stride_app/view_models/auth_state_vm.dart';
+import 'package:stride_app/view_models/create_account_vm.dart';
 import 'package:stride_app/view_models/onboarding_vm.dart';
 import 'package:stride_app/views/account_screen_v.dart';
-import 'package:stride_app/views/favourites_v.dart';
-import 'package:stride_app/views/generator_v.dart';
 import 'package:stride_app/views/greeting_v.dart';
 import 'package:stride_app/views/onboarding_v.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize storage service
-  await StorageService().init();
+  // Initialize Firebase with our configuration helper
+  await FirebaseConfig.initialize();
+
 
   runApp(
     MultiProvider(
       providers: [
+        // Services
+        Provider(create: (context) => AuthService()),
+        Provider(create: (context) => UserRepository()),
+        Provider(create: (context) => OrganizationRepository()),
+        Provider(create: (context) => DivisionRepository()),
+
+        // ViewModels
         ChangeNotifierProvider(create: (context) => MyAppState()),
         ChangeNotifierProvider(create: (context) => OnboardingViewModel()),
-        Provider(create: (context) => UserRepository()),
+        ChangeNotifierProvider(
+          create: (context) =>
+              AuthStateViewModel(authService: context.read<AuthService>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => CreateAccountViewModel(
+            organizationRepo: context.read<OrganizationRepository>(),
+            divisionRepo: context.read<DivisionRepository>(),
+            userRepo: context.read<UserRepository>(),
+            authService: context.read<AuthService>(),
+          ),
+        ),
       ],
       child: MyApp(key: Key("HomePage")),
     ),
   );
 }
 
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // This widget rebuilds when AuthStateViewModel changes
+    final authState = context.watch<AuthStateViewModel>();
+
     return MaterialApp(
       title: 'Stride',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
         textTheme: Theme.of(context).textTheme.apply(
-          fontSizeFactor: 1.2, // 20% bigger for better readability
+          fontSizeFactor: 1.2,
         ),
       ),
-      // SignInPage decides whether to start onboarding (wizard) or login.
-      home: GreetingPage(),
+      home: authState.isLoading
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : authState.isSignedIn
+          ? AccountPageView()
+          : GreetingPage(),
       routes: {
-        '/home': (context) => MyHomePage(),
         '/onboarding': (context) => OnboardingPage(),
-        '/account': (context) => AccountScreen(),
+        '/account': (context) => AccountPageView(),
       },
     );
   }
@@ -71,92 +99,5 @@ class MyAppState extends ChangeNotifier {
     }
     notifyListeners();
     return favourites.contains(word);
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget page;
-    switch (selectedIndex) {
-      case 0:
-        page = GeneratorPage();
-      case 1:
-        page = FavouritesPage();
-      default:
-        throw UnimplementedError('no widget for $selectedIndex');
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Scaffold(
-          bottomNavigationBar: constraints.maxWidth >= 600
-              ? null
-              : NavigationBar(
-                  // extended: false,
-                  height: 100,
-                  destinations: [
-                    NavigationDestination(
-                      icon: Icon(Icons.home),
-                      label: "Home",
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.favorite),
-                      label: "Favorites",
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.exit_to_app),
-                      label: "Sign Out",
-                    ),
-                  ],
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: (value) {
-                    setState(() {
-                      if (value == 2) {
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                        return;
-                      }
-                      selectedIndex = value;
-                    });
-                  },
-                ),
-          body: Row(
-            children: [
-              if (constraints.maxWidth >= 600)
-                NavigationRail(
-                  extended: constraints.maxWidth >= 800,
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home),
-                      label: Text("Home"),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.favorite),
-                      label: Text("Favorites"),
-                    ),
-                  ],
-                  selectedIndex: 0,
-                  onDestinationSelected: (value) {
-                    print('selected: $value');
-                  },
-                ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 }

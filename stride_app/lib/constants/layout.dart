@@ -3,5 +3,9 @@ class KPadding {
   static const double medium = 16.0;
   static const double large = 32.0;
 
-  static const double pagePadding = small;
+  static const double pagePadding = small; 
+}
+
+class KSizes {
+  static const double buttonHeight = 50.0;
 }

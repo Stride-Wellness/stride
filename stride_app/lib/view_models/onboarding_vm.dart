@@ -7,10 +7,10 @@ class OnboardingViewModel extends ChangeNotifier {
 
   PageController pageController = PageController();
 
-  String _currentQuestionId = UserTypeQuestion.id;
+  String _currentQuestionId = PersonalInfoQuestion.id;
   Map<String, List<String>> answers = {};
   Map<String, QuestionNode> questionMap = questionGraph;
-  List<QuestionNode> questionList = [questionGraph[UserTypeQuestion.id]!];
+  List<QuestionNode> questionList = [questionGraph[PersonalInfoQuestion.id]!];
 
   bool quizComplete = false;
 

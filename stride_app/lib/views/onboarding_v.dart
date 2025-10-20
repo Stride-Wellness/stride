@@ -157,8 +157,8 @@ class OnboardingNavigation extends StatelessWidget {
                 onboardingController.answers;
                 if (onboardingController.quizComplete) {
                   Navigator.pushReplacementNamed(context, '/account');
-                  var userId = await userRepository.createUser(name: onboardingController.answers["personal_info_question_nickname"]![0], quizAnswers: onboardingController.answers, email: "");
-                  userRepository.loginUser(userId);
+                  // var userId = await userRepository.createUser(name: onboardingController.answers["personal_info_question_nickname"]![0], quizAnswers: onboardingController.answers, email: "");
+                  // userRepository.
                 } else if (onboardingController.canProceed(currentPage)) {
                   onboardingController.pageController.nextPage(
                     duration: const Duration(milliseconds: 300),
