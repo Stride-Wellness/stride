@@ -50,6 +50,8 @@
 	// Form state for deleting user
 	let deleteUserId = $state('');
 
+	let selectedUsers: Record<string, any>[] = $state([]);
+
 	// Available employee roles
 	const availableRoles: EmployeeRole[] = ['psw', 'lw', 'admin', 'manager'];
 
@@ -217,7 +219,10 @@
 		}
 
 		try {
-			await UsersService.softDelete(deleteUserId);
+			const usersToDelete = deleteUserId.split(',').map((id) => id.trim());
+			for (const id of usersToDelete) {
+				await UsersService.softDelete(id);
+			}
 
 			// Reload users to refresh the list (soft deleted won't show)
 			users = await UsersService.getAll(1000);
@@ -273,10 +278,13 @@
 		}
 
 		try {
-			await UsersService.hardDelete(deleteUserId);
+			const usersToDelete = deleteUserId.split(',').map((id) => id.trim());
+			for (const id of usersToDelete) {
+				await UsersService.hardDelete(id);
+			}
 
 			// Update local state - create new array to trigger reactivity
-			users = users.filter((user) => user.id !== deleteUserId);
+			users = users.filter((user) => !usersToDelete.includes(user.id));
 
 			deleteUserId = '';
 
@@ -364,6 +372,11 @@
 		).length;
 
 		return { total, employees, clients, active, inactive, pending, psws, managers, admins, lws };
+	});
+
+	$effect(() => {
+		deleteUserId = selectedUsers.map((user) => user.id.name).join(', ');
+		updateStatusId = selectedUsers.map((user) => user.id.name).join(', ');
 	});
 </script>
 
@@ -506,7 +519,7 @@
 					Showing {filteredUsers().length} of {users.length} users
 				</span>
 			</div>
-			<Table data={tableData} class="max-h-96" />
+			<Table data={tableData} bind:selected={selectedUsers} class="max-h-96" />
 		</Card>
 	</div>
 {/if}

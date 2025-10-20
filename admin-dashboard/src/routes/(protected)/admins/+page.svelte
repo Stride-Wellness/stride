@@ -18,6 +18,8 @@
 	let privilege = $state(0);
 	let id = $state('');
 
+	let selectedAdmins: Record<string, any>[] = $state([]);
+
 	// Reset form after successful submission
 	$effect(() => {
 		if (form?.success) {
@@ -26,6 +28,10 @@
 			privilege = 0;
 			id = '';
 		}
+	});
+
+	$effect(() => {
+		id = selectedAdmins.map((admin) => admin.id.name).join(', ');
 	});
 
 	// Transform data for table display - make this reactive too
@@ -173,6 +179,6 @@
 	<!-- Admins Table -->
 	<Card class="p-6">
 		<h2>Administrator Accounts Overview</h2>
-		<Table data={tableData} class="max-h-96" />
+		<Table data={tableData} bind:selected={selectedAdmins} class="max-h-96" />
 	</Card>
 </div>

@@ -33,6 +33,8 @@
 	// Form state for deleting assignment
 	let deleteAssignmentId = $state('');
 
+	let selectedAssignments: Record<string, any>[] = $state([]);
+
 	// Load assignments on mount
 	onMount(async () => {
 		try {
@@ -201,10 +203,13 @@
 		}
 
 		try {
-			await AssignmentsService.delete(deleteAssignmentId);
+			const assignmentsToDelete = deleteAssignmentId.split(',').map((id) => id.trim());
+			for (const id of assignmentsToDelete) {
+				await AssignmentsService.delete(id);
+			}
 
 			// Update local state immediately
-			assignments = assignments.filter((assignment) => assignment.id !== deleteAssignmentId);
+			assignments = assignments.filter((assignment) => !assignmentsToDelete.includes(assignment.id));
 
 			deleteAssignmentId = '';
 
@@ -269,6 +274,11 @@
 		const completed = assignments.filter((assignment) => assignment.status === 'completed').length;
 
 		return { total, active, inactive, completed };
+	});
+
+	$effect(() => {
+		deleteAssignmentId = selectedAssignments.map((assignment) => assignment.id.name).join(', ');
+		updateStatusId = selectedAssignments.map((assignment) => assignment.id.name).join(', ');
 	});
 </script>
 
@@ -460,7 +470,7 @@
 		<!-- Assignments Table -->
 		<Card class="p-6">
 			<h2 class="mb-4 text-lg font-medium text-gray-900">Assignments Overview</h2>
-			<Table data={tableData} class="max-h-96" />
+			<Table data={tableData} bind:selected={selectedAssignments} class="max-h-96" />
 		</Card>
 	</div>
 {/if}

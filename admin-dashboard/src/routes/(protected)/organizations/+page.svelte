@@ -33,6 +33,8 @@
 	// Form state for deleting organization
 	let deleteOrgId = $state('');
 
+	let selectedOrganizations: Record<string, any>[] = $state([]);
+
 	// Load organizations on mount
 	onMount(async () => {
 		try {
@@ -182,7 +184,10 @@
 		}
 
 		try {
-			await OrganizationsService.softDelete(deleteOrgId);
+			const orgsToDelete = deleteOrgId.split(',').map((id) => id.trim());
+			for (const id of orgsToDelete) {
+				await OrganizationsService.softDelete(id);
+			}
 
 			// Reload organizations to refresh the list (soft deleted won't show)
 			organizations = await OrganizationsService.getAll(1000);
@@ -244,10 +249,13 @@
 		}
 
 		try {
-			await OrganizationsService.hardDelete(deleteOrgId);
+			const orgsToDelete = deleteOrgId.split(',').map((id) => id.trim());
+			for (const id of orgsToDelete) {
+				await OrganizationsService.hardDelete(id);
+			}
 
 			// Update local state immediately
-			organizations = organizations.filter((org) => org.id !== deleteOrgId);
+			organizations = organizations.filter((org) => !orgsToDelete.includes(org.id));
 
 			deleteOrgId = '';
 
@@ -283,6 +291,12 @@
 		const usedSeats = organizations.reduce((sum, org) => sum + org.usedSeats, 0);
 
 		return { total, active, suspended, cancelled, totalSeats, usedSeats };
+	});
+
+	$effect(() => {
+		deleteOrgId = selectedOrganizations.map((org) => org.id.name).join(', ');
+		updateStatusId = selectedOrganizations.map((org) => org.id.name).join(', ');
+		updateSeatsId = selectedOrganizations.map((org) => org.id.name).join(', ');
 	});
 </script>
 
@@ -469,7 +483,7 @@
 		<!-- Organizations Table -->
 		<Card class="p-6">
 			<h2 class="mb-4 text-lg font-medium text-gray-900">Client Organizations Overview</h2>
-			<Table data={tableData} class="max-h-96" />
+			<Table data={tableData} bind:selected={selectedOrganizations} class="max-h-96" />
 		</Card>
 	</div>
 {/if}

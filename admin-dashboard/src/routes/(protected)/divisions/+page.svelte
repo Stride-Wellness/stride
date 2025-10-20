@@ -25,6 +25,8 @@
 	let assignDivisionId = $state('');
 	let assignManagerId = $state('');
 
+	let selectedDivisions: Record<string, any>[] = $state([]);
+
 	// Load divisions on mount
 	onMount(async () => {
 		try {
@@ -142,10 +144,13 @@
 		}
 
 		try {
-			await DivisionsService.hardDelete(deleteDivisionId);
+			const divisionsToDelete = deleteDivisionId.split(',').map((id) => id.trim());
+			for (const id of divisionsToDelete) {
+				await DivisionsService.hardDelete(id);
+			}
 
 			// Update local state immediately
-			divisions = divisions.filter((division) => division.id !== deleteDivisionId);
+			divisions = divisions.filter((division) => !divisionsToDelete.includes(division.id));
 
 			deleteDivisionId = '';
 
@@ -254,6 +259,11 @@
 		const withoutManager = divisions.filter((div) => !div.managerId).length;
 
 		return { total, retirementHomes, homecareProviders, withoutManager };
+	});
+
+	$effect(() => {
+		deleteDivisionId = selectedDivisions.map((div) => div.id.name).join(', ');
+		assignDivisionId = selectedDivisions.map((div) => div.id.name).join(', ');
 	});
 </script>
 
@@ -387,7 +397,7 @@
 		<!-- Divisions Table -->
 		<Card class="p-6">
 			<h2 class="mb-4 text-lg font-medium text-gray-900">Divisions Overview</h2>
-			<Table data={tableData} class="max-h-96" />
+			<Table data={tableData} bind:selected={selectedDivisions} class="max-h-96" />
 		</Card>
 	</div>
 {/if}
