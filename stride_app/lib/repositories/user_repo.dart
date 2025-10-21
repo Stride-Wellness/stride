@@ -1,12 +1,54 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:stride_app/models/user_m.dart';
+import 'package:stride_app/models/onboarding_quiz_result_m.dart';
+import 'package:stride_app/services/auth_service.dart';
 
 class UserRepository {
   static const String _collection = 'users';
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final AuthService _authService;
+
+  UserRepository({required AuthService authService})
+    : _authService = authService;
+
+  /// Save onboarding quiz result under user's subcollection
+  Future<void> saveQuizResult_({
+    required String userId,
+    required Map<String, dynamic> answers,
+    required String name,
+  }) async {
+    try {
+      final quizResult = OnboardingQuizResult(
+        id: '', // Firestore will auto-generate
+        name: name,
+        answers: answers,
+        userId: userId,
+        timestamp: Timestamp.now(),
+      );
+      final userRef = UserRepository._db
+          .collection(UserRepository._collection)
+          .doc(userId);
+      await userRef.collection('quiz_results').add(quizResult.toMap());
+    } catch (e) {
+      print('Error saving onboarding quiz result: $e');
+      throw Exception('Failed to save onboarding quiz result');
+    }
+  }
+
+  /// Save quiz result for currently authenticated user
+  Future<void> saveQuizResult({
+    required Map<String, dynamic> answers,
+    String name = 'onboarding',
+  }) async {
+    final userId = _authService.currentUser?.uid;
+    if (userId == null) {
+      throw Exception('User must be authenticated to save quiz results');
+    }
+    return saveQuizResult_(userId: userId, answers: answers, name: name);
+  }
 
   /// Get user by ID
-  Future<UserModel?> getById(String userId) async {
+  Future<UserModel?> get_(String userId) async {
     try {
       final userRef = _db.collection(_collection).doc(userId);
       final userSnap = await userRef.get();
@@ -23,179 +65,17 @@ class UserRepository {
     }
   }
 
-  /// Get all users (admin only) - excludes deleted users by default
-  Future<List<UserModel>> getAll({
-    int limitCount = 100,
-    bool includeDeleted = false,
-  }) async {
-    try {
-      Query query = _db
-          .collection(_collection)
-          .orderBy('createdAt', descending: true)
-          .limit(limitCount);
-
-      // Filter out deleted users unless explicitly requested
-      if (!includeDeleted) {
-        query = _db
-            .collection(_collection)
-            .where('status', isNotEqualTo: 'deleted')
-            .orderBy('createdAt', descending: true)
-            .limit(limitCount);
-      }
-
-      final querySnap = await query.get();
-      final users = <UserModel>[];
-
-      for (final doc in querySnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        users.add(UserModel.fromMap(data, doc.id));
-      }
-
-      return users;
-    } catch (error) {
-      print('Error getting users: $error');
-      throw Exception('Failed to get users');
+  /// Get currently authenticated user
+  Future<UserModel?> get() async {
+    final userId = _authService.currentUser?.uid;
+    if (userId == null) {
+      return null;
     }
+    return get_(userId);
   }
 
-  /// Get users by organization ID - excludes deleted users by default
-  Future<List<UserModel>> getByOrganizationId(
-    String organizationId, {
-    bool includeDeleted = false,
-  }) async {
-    try {
-      Query query = _db
-          .collection(_collection)
-          .where('organizationId', isEqualTo: organizationId)
-          .orderBy('createdAt', descending: true);
-
-      // Filter out deleted users unless explicitly requested
-      if (!includeDeleted) {
-        query = _db
-            .collection(_collection)
-            .where('organizationId', isEqualTo: organizationId)
-            .where('status', isNotEqualTo: 'deleted')
-            .orderBy('createdAt', descending: true);
-      }
-
-      final querySnap = await query.get();
-      final users = <UserModel>[];
-
-      for (final doc in querySnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        users.add(UserModel.fromMap(data, doc.id));
-      }
-
-      return users;
-    } catch (error) {
-      print('Error getting users by organization: $error');
-      throw Exception('Failed to get users by organization');
-    }
-  }
-
-  /// Get users by division ID - excludes deleted users by default
-  Future<List<UserModel>> getByDivisionId(
-    String divisionId, {
-    bool includeDeleted = false,
-  }) async {
-    try {
-      Query query = _db
-          .collection(_collection)
-          .where('divisionId', isEqualTo: divisionId)
-          .orderBy('createdAt', descending: true);
-
-      // Filter out deleted users unless explicitly requested
-      if (!includeDeleted) {
-        query = _db
-            .collection(_collection)
-            .where('divisionId', isEqualTo: divisionId)
-            .where('status', isNotEqualTo: 'deleted')
-            .orderBy('createdAt', descending: true);
-      }
-
-      final querySnap = await query.get();
-      final users = <UserModel>[];
-
-      for (final doc in querySnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        users.add(UserModel.fromMap(data, doc.id));
-      }
-
-      return users;
-    } catch (error) {
-      print('Error getting users by division: $error');
-      throw Exception('Failed to get users by division');
-    }
-  }
-
-  /// Get users by type and organization - excludes deleted users by default
-  Future<List<UserModel>> getByTypeAndOrganization(
-    UserType type,
-    String organizationId, {
-    bool includeDeleted = false,
-  }) async {
-    try {
-      Query query = _db
-          .collection(_collection)
-          .where('type', isEqualTo: type.name)
-          .where('organizationId', isEqualTo: organizationId)
-          .orderBy('createdAt', descending: true);
-
-      // Filter out deleted users unless explicitly requested
-      if (!includeDeleted) {
-        query = _db
-            .collection(_collection)
-            .where('type', isEqualTo: type.name)
-            .where('organizationId', isEqualTo: organizationId)
-            .where('status', isNotEqualTo: 'deleted')
-            .orderBy('createdAt', descending: true);
-      }
-
-      final querySnap = await query.get();
-      final users = <UserModel>[];
-
-      for (final doc in querySnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        users.add(UserModel.fromMap(data, doc.id));
-      }
-
-      return users;
-    } catch (error) {
-      print('Error getting users by type and organization: $error');
-      throw Exception('Failed to get users by type and organization');
-    }
-  }
-
-  /// Get users by status and organization
-  Future<List<UserModel>> getByStatusAndOrganization(
-    UserStatus status,
-    String organizationId,
-  ) async {
-    try {
-      final query = _db
-          .collection(_collection)
-          .where('status', isEqualTo: status.name)
-          .where('organizationId', isEqualTo: organizationId)
-          .orderBy('createdAt', descending: true);
-
-      final querySnap = await query.get();
-      final users = <UserModel>[];
-
-      for (final doc in querySnap.docs) {
-        final data = doc.data();
-        users.add(UserModel.fromMap(data, doc.id));
-      }
-
-      return users;
-    } catch (error) {
-      print('Error getting users by status and organization: $error');
-      throw Exception('Failed to get users by status and organization');
-    }
-  }
-
-  /// Create new employee user
-  /// Create new employee user with specific document ID (Firebase Auth UID)
-  Future<EmployeeUserModel> createEmployee(
+  /// Create new employee user with specific document ID, meant for internal use since it must be created with correct auth id.
+  Future<EmployeeUserModel> _createFirestoreEmployee(
     CreateEmployeeUserDataModel data,
   ) async {
     try {
@@ -236,8 +116,10 @@ class UserRepository {
     }
   }
 
-  /// Create new client user
-  Future<ClientUserModel> createClient(CreateClientUserDataModel data) async {
+  /// Create new client user, meant for internal use since it must be created with correct auth id.
+  Future<ClientUserModel> _createFirestoreClient(
+    CreateClientUserDataModel data,
+  ) async {
     try {
       final now = Timestamp.now();
       final userData = {
@@ -252,10 +134,10 @@ class UserRepository {
         'updatedAt': now,
       };
 
-      final docRef = await _db.collection(_collection).add(userData);
+      await _db.collection(_collection).doc(data.id).set(userData);
 
       return ClientUserModel(
-        id: docRef.id,
+        id: data.id,
         email: data.email,
         name: data.name,
         organizationId: data.organizationId,
@@ -271,146 +153,228 @@ class UserRepository {
     }
   }
 
-  /// Update employee user
-  Future<void> updateEmployee(
-    String userId,
-    UpdateEmployeeUserDataModel data,
-  ) async {
+
+  Future<bool> hardDeleteFirestore_(String userId) async {
     try {
       final userRef = _db.collection(_collection).doc(userId);
-      final updateData = data.toMap();
-      updateData['updatedAt'] = Timestamp.now();
-
-      await userRef.update(updateData);
-    } catch (error) {
-      print('Error updating employee user: $error');
-      throw Exception('Failed to update employee user');
+      await userRef.delete();
+      return true;
+    } catch (e) {
+      print('Error hard deleting user: $e');
+      return false;
     }
   }
 
-  /// Update client user
-  Future<void> updateClient(
-    String userId,
-    UpdateClientUserDataModel data,
-  ) async {
-    try {
-      final userRef = _db.collection(_collection).doc(userId);
-      final updateData = data.toMap();
-      updateData['updatedAt'] = Timestamp.now();
+  Future<bool> hardDelete() async {
+    final userId = _authService.currentUser?.uid;
+    if (userId == null) {
+      return false;
+    }
+    _authService.deleteAccount();
+    return hardDeleteFirestore_(userId);
+  }
 
-      await userRef.update(updateData);
-    } catch (error) {
-      print('Error updating client user: $error');
-      throw Exception('Failed to update client user');
+  /// Create a new employee account with authentication and Firestore user document
+  Future<EmployeeUserModel> createEmployee({
+    required String email,
+    required String password,
+    required String name,
+    required String organizationId,
+    required String divisionId,
+    required List<EmployeeRole> employeeRole,
+    Map<String, dynamic>? profile,
+    bool sendEmailVerification = true,
+  }) async {
+    late EmployeeUserModel user;
+    
+    try {
+      // 1. Create Firebase Auth account
+      final credential = await _authService.signUpWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user == null) {
+        throw Exception("Failed to create authentication account");
+      }
+
+      // 2. Send email verification if requested
+      if (sendEmailVerification) {
+        await _authService.sendEmailVerification();
+      }
+
+      // 3. Create user document in Firestore with Firebase Auth UID
+      user = await _createFirestoreEmployee(
+        CreateEmployeeUserDataModel(
+          id: credential.user!.uid,
+          email: email,
+          name: name,
+          organizationId: organizationId,
+          divisionId: divisionId,
+          employeeRole: employeeRole,
+          profile: profile,
+        ),
+      );
+
+      return user;
+    } catch (e) {
+      // Cleanup: delete auth account if Firestore operations fail
+      try {
+        await hardDelete();
+      } catch (deleteError) {
+        print('Failed to cleanup auth account: $deleteError');
+      }
+      rethrow;
     }
   }
 
-  /// Update last login timestamp
-  Future<void> updateLastLogin(String userId) async {
+  /// Create a new client account with authentication and Firestore user document. If the client is solo, leave organizationId and divisionId empty.
+  Future<ClientUserModel> createClient({
+    required String email,
+    required String password,
+    required String name,
+    required String organizationId,
+    required String divisionId,
+    ClientProfileModel? profile,
+    bool sendEmailVerification = true,
+  }) async {
+    late ClientUserModel user;
+
     try {
+      // 1. Create Firebase Auth account
+      final credential = await _authService.signUpWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user == null) {
+        throw Exception("Failed to create authentication account");
+      }
+
+      // 2. Send email verification if requested
+      if (sendEmailVerification) {
+        await _authService.sendEmailVerification();
+      }
+
+      // 3. Create user document in Firestore
+      user = await _createFirestoreClient(
+        CreateClientUserDataModel(
+          id: credential.user!.uid,
+          email: email,
+          name: name,
+          organizationId: organizationId,
+          divisionId: divisionId,
+          profile: profile,
+        ),
+      );
+
+      return user;
+    } catch (e) {
+      // Cleanup: delete auth account if Firestore operations fail
+      try {
+        await hardDelete();
+      } catch (deleteError) {
+        print('Failed to cleanup auth account: $deleteError');
+      }
+      rethrow;
+    }
+  }
+
+  /// Create account from onboarding quiz
+  Future<ClientUserModel> createClientFromOnboarding({
+    required String name,
+    required String email,
+    required String password,
+    required Map<String, dynamic> quizAnswers,
+    bool sendEmailVerification = true,
+  }) async {
+    late ClientUserModel user;
+    try {
+      user = await createClient(
+        email: email,
+        password: password,
+        name: name,
+        organizationId: '',
+        divisionId: '',
+      );
+
+      // 3. Save onboarding quiz result under user
+      await saveQuizResult_(
+        userId: user.id,
+        answers: quizAnswers,
+        name: 'onboarding',
+      );
+
+      return user;
+    } catch (e) {
+      // Cleanup: delete auth account if quiz save fails
+      try {
+        await hardDelete();
+      } catch (deleteError) {
+        print('Failed to cleanup auth account: $deleteError');
+      }
+      rethrow;
+    }
+  }
+
+  /// Sign in and update last login timestamp
+  Future<UserModel?> signIn({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // 1. Sign in with Firebase Auth
+      final credential = await _authService.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user == null) {
+        return null;
+      }
+
+      // 2. Update last login timestamp
+      await updateLastLogin();
+
+      // 3. Get and return user data
+      return await get();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<DateTime?> updateLastLogin_(String userId) async {
+    try {
+      final time = Timestamp.now();
       final userRef = _db.collection(_collection).doc(userId);
-      await userRef.update({
-        'lastLoginAt': Timestamp.now(),
-        'updatedAt': Timestamp.now(),
-      });
-    } catch (error) {
-      print('Error updating last login: $error');
+      await userRef.update({'lastLogin': time});
+      return time.toDate();
+    } catch (e) {
+      print('Error updating last login: $e');
       throw Exception('Failed to update last login');
     }
   }
 
-  /// Soft delete user (set status to deleted and add deletedAt timestamp)
-  Future<void> softDelete(String userId) async {
-    try {
-      await updateEmployee(
-        userId,
-        UpdateEmployeeUserDataModel(
-          status: UserStatus.deleted,
-          deletedAt: DateTime.now(),
-        ),
-      );
-    } catch (error) {
-      print('Error soft deleting user: $error');
-      throw Exception('Failed to delete user');
+  Future<DateTime?> updateLastLogin() async {
+    final userId = _authService.currentUser?.uid;
+    if (userId == null) {
+      return null;
     }
+    return updateLastLogin_(userId);
   }
 
-  /// Restore soft deleted user
-  Future<void> restore(String userId) async {
-    try {
-      final userRef = _db.collection(_collection).doc(userId);
-      await userRef.update({
-        'status': UserStatus.active.name,
-        'deletedAt': null,
-        'updatedAt': Timestamp.now(),
-      });
-    } catch (error) {
-      print('Error restoring user: $error');
-      throw Exception('Failed to restore user');
-    }
+  /// Sign out current user
+  Future<void> signOut() async {
+    await _authService.signOut();
   }
 
-  /// Check if user has any active assignments (to prevent hard delete)
-  Future<bool> hasActiveAssignments(String userId) async {
-    try {
-      // This would need the AssignmentsService to be implemented
-      // For now, return false to allow hard delete
-      // TODO: Implement assignment checking once AssignmentsService is available
-      print('Checking assignments for user: $userId');
-      return false;
-    } catch (error) {
-      print('Error checking user assignments: $error');
-      return true; // Err on the side of caution
-    }
+  /// Check if current user is authenticated
+  bool get isAuthenticated {
+    return _authService.currentUser != null;
   }
 
-  /// Hard delete user (use with caution) - only if no active references
-  Future<void> hardDelete(String userId) async {
-    try {
-      // Check for active assignments before allowing hard delete
-      final hasAssignments = await hasActiveAssignments(userId);
-      if (hasAssignments) {
-        throw Exception(
-          'Cannot hard delete user with active assignments. Use soft delete instead.',
-        );
-      }
-
-      final userRef = _db.collection(_collection).doc(userId);
-      await userRef.delete();
-    } catch (error) {
-      print('Error hard deleting user: $error');
-      throw Exception('Failed to permanently delete user');
-    }
-  }
-
-  /// Check if user is employee
-  bool isEmployee(UserModel user) {
-    return user.isEmployee;
-  }
-
-  /// Check if user is client
-  bool isClient(UserModel user) {
-    return user.isClient;
-  }
-
-  /// Check if employee has specific role
-  bool hasRole(UserModel user, EmployeeRole role) {
-    final employee = user.asEmployee;
-    if (employee == null) return false;
-    return employee.employeeRole.contains(role);
-  }
-
-  /// Count active users by organization
-  Future<int> countActiveByOrganization(String organizationId) async {
-    try {
-      final users = await getByStatusAndOrganization(
-        UserStatus.active,
-        organizationId,
-      );
-      return users.length;
-    } catch (error) {
-      print('Error counting active users: $error');
-      return 0;
-    }
+  /// Check if current user's email is verified
+  bool get isEmailVerified {
+    return _authService.isEmailVerified;
   }
 }

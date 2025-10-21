@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:stride_app/constants/layout.dart';
 import 'package:stride_app/models/question_node_m.dart';
-import 'package:stride_app/repositories/user_repo.dart';
 import 'package:stride_app/view_models/onboarding_vm.dart';
 import 'package:stride_app/widgets/button.dart';
 import 'package:stride_app/widgets/list_options.dart';
@@ -21,7 +20,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   Widget build(BuildContext context) {
     var onboardingViewModel = context.watch<OnboardingViewModel>();
-    
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -59,11 +58,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     onSelectionChanged: (selections) {
                       onboardingViewModel.updateAnswers(index, selections);
                     },
-                    alreadySelected: onboardingViewModel.answers[question.questionId] ?? [],
-                  );  
+                    alreadySelected:
+                        onboardingViewModel.answers[question.questionId] ?? [],
+                  );
                 },
               ),
             ),
+            if (onboardingViewModel.errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16, left: 24, right: 24),
+                child: Text(
+                  onboardingViewModel.errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             OnboardingNavigation(currentPage: currentPage),
           ],
         ),
@@ -129,7 +138,6 @@ class OnboardingNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var onboardingController = context.watch<OnboardingViewModel>();
-    var userRepository = context.read<UserRepository>();
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: KPadding.pagePadding,
@@ -153,20 +161,58 @@ class OnboardingNavigation extends StatelessWidget {
           Expanded(
             child: Button(
               varient: ButtonVarient.primary,
-              onPressed: () async {
-                onboardingController.answers;
-                if (onboardingController.quizComplete) {
-                  Navigator.pushReplacementNamed(context, '/account');
-                  // var userId = await userRepository.createUser(name: onboardingController.answers["personal_info_question_nickname"]![0], quizAnswers: onboardingController.answers, email: "");
-                  // userRepository.
-                } else if (onboardingController.canProceed(currentPage)) {
-                  onboardingController.pageController.nextPage(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
-              child: const Text("Next"),
+              onPressed:
+                  (onboardingController.isLoading ||
+                      (!onboardingController.quizComplete &&
+                          !onboardingController.canProceed(currentPage)))
+                  ? null
+                  : () async {
+                      if (onboardingController.quizComplete) {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final success = await onboardingController
+                            .createAccountAndSaveQuiz();
+                        if (success) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Account created! Please check your email for verification.',
+                              ),
+                            ),
+                          );
+                          Navigator.pushReplacementNamed(context, '/account');
+                        } else {
+                          if (onboardingController.errorMessage != null) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  onboardingController.errorMessage!,
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      } else if (onboardingController.canProceed(currentPage)) {
+                        onboardingController.pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+              child: onboardingController.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      onboardingController.quizComplete
+                          ? "Create Account"
+                          : "Next",
+                    ),
             ),
           ),
         ],

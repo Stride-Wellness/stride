@@ -25,13 +25,17 @@ void main() async {
       providers: [
         // Services
         Provider(create: (context) => AuthService()),
-        Provider(create: (context) => UserRepository()),
+        Provider(
+          create: (context) =>
+              UserRepository(authService: context.read<AuthService>()),
+        ),
         Provider(create: (context) => OrganizationRepository()),
         Provider(create: (context) => DivisionRepository()),
 
-        // ViewModels
-        ChangeNotifierProvider(create: (context) => MyAppState()),
-        ChangeNotifierProvider(create: (context) => OnboardingViewModel()),
+        ChangeNotifierProvider(
+          create: (context) =>
+              OnboardingViewModel(userRepo: context.read<UserRepository>()),
+        ),
         ChangeNotifierProvider(
           create: (context) =>
               AuthStateViewModel(authService: context.read<AuthService>()),
@@ -41,7 +45,6 @@ void main() async {
             organizationRepo: context.read<OrganizationRepository>(),
             divisionRepo: context.read<DivisionRepository>(),
             userRepo: context.read<UserRepository>(),
-            authService: context.read<AuthService>(),
           ),
         ),
       ],
@@ -78,26 +81,5 @@ class MyApp extends StatelessWidget {
         '/account': (context) => AccountPageView(),
       },
     );
-  }
-}
-
-class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
-  var favourites = <WordPair>[];
-
-  void getNext() {
-    current = WordPair.random();
-    notifyListeners();
-  }
-
-  // returns true if the word was added to favourites, otherwise false
-  bool toggleFavourite(WordPair word) {
-    if (favourites.contains(word)) {
-      favourites.remove(word);
-    } else {
-      favourites.add(word);
-    }
-    notifyListeners();
-    return favourites.contains(word);
   }
 }

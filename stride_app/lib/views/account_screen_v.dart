@@ -5,6 +5,7 @@ import 'package:stride_app/models/user_m.dart';
 import 'package:stride_app/repositories/user_repo.dart';
 import 'package:stride_app/services/auth_service.dart';
 import 'package:stride_app/view_models/auth_state_vm.dart';
+import 'package:stride_app/views/greeting_v.dart';
 import 'package:stride_app/widgets/button.dart';
 
 class AccountPageView extends StatelessWidget {
@@ -24,7 +25,7 @@ class AccountPageView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Account'), centerTitle: true),
       body: FutureBuilder<UserModel?>(
-        future: userRepo.getById(authState.user!.uid),
+        future: userRepo.get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -121,6 +122,24 @@ class AccountPageView extends StatelessWidget {
                       ),
                     ),
                   if (!authState.isEmailVerified) const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: KSizes.buttonHeight,
+                    child: Button(
+                      varient: ButtonVarient.secondary,
+                      onPressed: () async {
+                        userRepo.hardDelete();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GreetingPage(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Delete Account'),
+                    ),
+                  ), 
 
                   // Spacer
                   const Expanded(child: SizedBox()),

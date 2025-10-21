@@ -11,6 +11,7 @@ final questionGraph = {
   EnergyLevelQuestion.id: EnergyLevelQuestion(),
   TimePreferenceQuestion.id: TimePreferenceQuestion(),
   WellnessGoalsQuestion.id: WellnessGoalsQuestion(),
+  EmailPasswordQuestion.id: EmailPasswordQuestion(),
 };
 
 // Step 1: Personal Information
@@ -31,7 +32,7 @@ class PersonalInfoQuestion extends QuestionNode {
   
   @override
   List<String> get requiredFields => [
-    'nickname',
+    'name',
     'age',
     'sex',
     'height',
@@ -46,7 +47,11 @@ class PersonalInfoQuestion extends QuestionNode {
   @override
   List<QuestionOption> options(Map<String, List<String>> answers) {
     return [
-      QuestionOption("Nickname (What would you like us to call you?)", QuestionType.input, fieldKey: 'nickname'),
+      QuestionOption(
+        "Name (What would you like us to call you?)",
+        QuestionType.input,
+        fieldKey: 'name',
+      ),
       QuestionOption("Age", QuestionType.input, fieldKey: 'age'),
       QuestionOption("Sex", QuestionType.dropdown, fieldKey: 'sex',
         dropdownOptions: ["Male", "Female", "Prefer not to say"],
@@ -466,7 +471,7 @@ class WellnessGoalsQuestion extends QuestionNode {
   int get minSelected => 1; // At least 1 goal
 
   @override
-  bool get isMultiField => true;
+  bool get isMultiField => false;
 
   @override
   List<String> get requiredFields => [];
@@ -511,6 +516,51 @@ class WellnessGoalsQuestion extends QuestionNode {
     );
 
     return hasGoal;
+  }
+
+  @override
+  String? getNextId(Map<String, List<String>> answers) {
+    return EmailPasswordQuestion.id;
+  }
+}
+
+// Step 11: Email & Password
+class EmailPasswordQuestion extends QuestionNode {
+  static const String id = "email_password_question";
+
+  @override
+  String get questionId => id;
+
+  @override
+  int get maxSelected => 2;
+
+  @override
+  int get minSelected => 2;
+
+  @override
+  bool get isMultiField => true;
+
+  @override
+  List<String> get requiredFields => ['email', 'password'];
+
+  @override
+  String text(Map<String, List<String>> answers) {
+    return "Create your account";
+  }
+
+  @override
+  List<QuestionOption> options(Map<String, List<String>> answers) {
+    return [
+      QuestionOption("Email Address", QuestionType.input, fieldKey: 'email'),
+      QuestionOption("Password", QuestionType.input, fieldKey: 'password'),
+    ];
+  }
+
+  @override
+  bool answered(Map<String, List<String>> answers) {
+    return requiredFields.every(
+      (field) => getFieldValue(answers, field)?.isNotEmpty == true,
+    );
   }
 
   @override

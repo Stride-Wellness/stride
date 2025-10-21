@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/constants/layout.dart';
 import 'package:stride_app/models/question_node_m.dart';
-import 'package:stride_app/view_models/auth_state_vm.dart';
 import 'package:stride_app/view_models/create_account_vm.dart';
 import 'package:stride_app/widgets/button.dart';
 import 'package:stride_app/widgets/list_options.dart';

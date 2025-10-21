@@ -2,8 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:stride_app/constants/onboarding_question_graph.dart';
 import 'package:stride_app/models/question_node_m.dart';
+import 'package:stride_app/repositories/user_repo.dart';
 
 class OnboardingViewModel extends ChangeNotifier {
+  final UserRepository userRepo;
+
+  OnboardingViewModel({required this.userRepo});
 
   PageController pageController = PageController();
 
@@ -13,6 +17,10 @@ class OnboardingViewModel extends ChangeNotifier {
   List<QuestionNode> questionList = [questionGraph[PersonalInfoQuestion.id]!];
 
   bool quizComplete = false;
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
 
   String get currentQuestionId => _currentQuestionId;
   QuestionNode get currentQuestion => questionMap[_currentQuestionId]!;
@@ -64,7 +72,60 @@ class OnboardingViewModel extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
+  // Extracts email and password from answers map
+  String? get email => answers['email_password_question_email']?.first;
+  String? get password => answers['email_password_question_password']?.first;
+  String? get name => answers['personal_info_question_name']?.first;
+
+  // Returns quiz answers minus email/password fields
+  Map<String, dynamic> getQuizAnswersForResult() {
+    final filtered = <String, dynamic>{};
+    answers.forEach((key, value) {
+      if (!key.startsWith('email_password_question_')) {
+        filtered[key] = value;
+      }
+    });
+    return filtered;
+  }
+
+  Future<bool> createAccountAndSaveQuiz() async {
+    if (email == null ||
+        password == null ||
+        email!.isEmpty ||
+        password!.isEmpty) {
+      _errorMessage = "Email and password are required.";
+      notifyListeners();
+      return false;
+    }
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      // Use the high-level method from UserRepository
+      await userRepo.createClientFromOnboarding(
+        name: name!,
+        email: email!,
+        password: password!,
+        quizAnswers: getQuizAnswersForResult(),
+        sendEmailVerification: true,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   // Helper method to get field values for multi-field questions
   Map<String, String> getFieldValues(int index) {
     QuestionNode question = questionList[index];
