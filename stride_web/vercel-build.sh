@@ -13,7 +13,6 @@ flutter --version
 # Enable web (just in case)
 flutter config --enable-web
 
-# Get dependencies
 flutter pub get
 
 flutter build web
