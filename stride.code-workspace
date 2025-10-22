@@ -1,0 +1,34 @@
+{
+	"folders": [
+		{
+			"name": "Stride",
+			"path": "."
+		},
+		{
+			"name": "Cloud Functions",
+			"path": "functions"
+		},
+		{
+			"name": "Stride Web",
+			"path": "stride_web/lib"
+		},
+		{
+			"name": "Stride Mobile",
+			"path": "stride_app/lib"
+		},
+		{
+			"name": "Stride Admin",
+			"path": "admin-dashboard"
+		},
+		{
+			"name": "Stride Core",
+			"path": "packages/stride_core"
+		},
+		{
+			"name": "Stride UI",
+			"path": "packages/stride_ui"
+		}
+		
+	],
+	"settings": {}
+}
