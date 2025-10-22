@@ -1,0 +1,16 @@
+# packages/stride_core/pubspec.yaml
+name: stride_core
+description: Shared business logic for Stride
+
+dependencies:
+  flutter:
+    sdk: flutter
+  stride_ui:
+    path: ../stride_ui
+  firebase_core: ^4.1.1
+  cloud_firestore: ^6.0.2   # Firestore database
+  firebase_auth: ^6.1.0     # Firebase Authentication
+  provider: ^6.1.1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'

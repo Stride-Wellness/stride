@@ -461,6 +461,20 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
+  stride_core:
+    dependency: "direct main"
+    description:
+      path: "../packages/stride_core"
+      relative: true
+    source: path
+    version: "0.0.0"
+  stride_ui:
+    dependency: "direct main"
+    description:
+      path: "../packages/stride_ui"
+      relative: true
+    source: path
+    version: "0.0.0"
   string_scanner:
     dependency: transitive
     description:

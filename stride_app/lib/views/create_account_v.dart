@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_app/constants/layout.dart';
-import 'package:stride_app/models/question_node_m.dart';
-import 'package:stride_app/view_models/create_account_vm.dart';
-import 'package:stride_app/widgets/button.dart';
-import 'package:stride_app/widgets/list_options.dart';
+import 'package:stride_ui/constants/layout.dart';
+import 'package:stride_core/models/question_node_m.dart';
+import 'package:stride_core/view_models/create_account_vm.dart';
+import 'package:stride_ui/widgets/button.dart';
+import 'package:stride_ui/widgets/list_options.dart';
 
 class CreateAccountScreenView extends StatelessWidget {
   const CreateAccountScreenView({super.key});
@@ -76,7 +76,10 @@ class CreateAccountScreenView extends StatelessWidget {
                               SnackBar(content: Text('Account created for ${user.name}')),
                             );
                             // Optionally navigate to home
-                            navigator.pushNamedAndRemoveUntil('/account', (route) => false);
+                            navigator.pushNamedAndRemoveUntil(
+                              '/home',
+                              (route) => false,
+                            );
                           } else {
                             // Error is already set in errorMessage and displayed above
                             // Optionally show additional feedback

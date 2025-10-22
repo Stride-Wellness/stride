@@ -1,17 +1,21 @@
-import 'package:english_words/english_words.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_app/repositories/division_repo.dart';
-import 'package:stride_app/repositories/organization_repo.dart';
-import 'package:stride_app/repositories/user_repo.dart';
-import 'package:stride_app/services/auth_service.dart';
-import 'package:stride_app/services/firebase_config.dart';
-import 'package:stride_app/view_models/auth_state_vm.dart';
-import 'package:stride_app/view_models/create_account_vm.dart';
-import 'package:stride_app/view_models/onboarding_vm.dart';
-import 'package:stride_app/views/account_screen_v.dart';
+import 'package:stride_core/repositories/assignments_repo.dart';
+import 'package:stride_core/repositories/division_repo.dart';
+import 'package:stride_core/repositories/organization_repo.dart';
+import 'package:stride_core/repositories/user_repo.dart';
+import 'package:stride_core/services/auth_service.dart';
+import 'package:stride_core/services/firebase_config.dart';
+import 'package:stride_core/view_models/auth_state_vm.dart';
+import 'package:stride_core/view_models/create_account_vm.dart';
+import 'package:stride_core/view_models/home_page_vm.dart';
+import 'package:stride_core/view_models/onboarding_vm.dart';
+import 'package:stride_core/view_models/sign_in_vm.dart';
 import 'package:stride_app/views/greeting_v.dart';
+import 'package:stride_app/views/home_page_v.dart';
 import 'package:stride_app/views/onboarding_v.dart';
+import 'package:stride_ui/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,14 +35,21 @@ void main() async {
         ),
         Provider(create: (context) => OrganizationRepository()),
         Provider(create: (context) => DivisionRepository()),
-
+        Provider(
+          create: (context) =>
+              AssignmentsRepository(authService: context.read<AuthService>()),
+        ),
+        ChangeNotifierProvider(create: (context) => HomePageViewModel()),
         ChangeNotifierProvider(
           create: (context) =>
               OnboardingViewModel(userRepo: context.read<UserRepository>()),
         ),
         ChangeNotifierProvider(
           create: (context) =>
-              AuthStateViewModel(authService: context.read<AuthService>()),
+              AuthStateViewModel(
+            authService: context.read<AuthService>(),
+            userRepo: context.read<UserRepository>(),
+          ),
         ),
         ChangeNotifierProvider(
           create: (context) => CreateAccountViewModel(
@@ -46,6 +57,13 @@ void main() async {
             divisionRepo: context.read<DivisionRepository>(),
             userRepo: context.read<UserRepository>(),
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => SignInViewModel(
+            authService: context.read<AuthService>(),
+            userRepo: context.read<UserRepository>(),
+          ),
+          // child: const SignInScreenView(),
         ),
       ],
       child: MyApp(key: Key("HomePage")),
@@ -64,21 +82,15 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Stride',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-        textTheme: Theme.of(context).textTheme.apply(
-          fontSizeFactor: 1.2,
-        ),
-      ),
-      home: authState.isLoading
+      theme: AppTheme.lightTheme,
+      home: authState.isLoadingUser
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : authState.isSignedIn
-          ? AccountPageView()
+          ? HomePageView()
           : GreetingPage(),
       routes: {
         '/onboarding': (context) => OnboardingPage(),
-        '/account': (context) => AccountPageView(),
+        '/home': (context) => HomePageView(),
       },
     );
   }

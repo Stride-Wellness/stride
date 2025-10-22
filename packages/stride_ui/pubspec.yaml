@@ -1,0 +1,12 @@
+# packages/stride_ui/pubspec.yaml
+name: stride_ui
+description: Shared UI components and styles
+
+dependencies:
+  flutter:
+    sdk: flutter
+  stride_core:
+    path: ../stride_core
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'

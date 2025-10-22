@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:stride_app/constants/layout.dart';
-import 'package:stride_app/models/question_node_m.dart';
-import 'package:stride_app/view_models/onboarding_vm.dart';
-import 'package:stride_app/widgets/button.dart';
-import 'package:stride_app/widgets/list_options.dart';
+import 'package:stride_ui/constants/layout.dart';
+import 'package:stride_core/models/question_node_m.dart';
+import 'package:stride_core/view_models/onboarding_vm.dart';
+import 'package:stride_ui/widgets/button.dart';
+import 'package:stride_ui/widgets/list_options.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -179,7 +179,7 @@ class OnboardingNavigation extends StatelessWidget {
                               ),
                             ),
                           );
-                          Navigator.pushReplacementNamed(context, '/account');
+                          Navigator.pushReplacementNamed(context, '/home');
                         } else {
                           if (onboardingController.errorMessage != null) {
                             messenger.showSnackBar(

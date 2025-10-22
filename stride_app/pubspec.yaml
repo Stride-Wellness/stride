@@ -30,6 +30,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  stride_core:
+    path: ../packages/stride_core
+  stride_ui:
+    path: ../packages/stride_ui
+  
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

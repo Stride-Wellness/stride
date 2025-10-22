@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:stride_app/constants/layout.dart';
+import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_app/views/create_account_v.dart';
 import 'package:stride_app/views/onboarding_v.dart';
-import 'package:stride_app/widgets/button.dart';
+import 'package:stride_ui/widgets/button.dart';
 
 class GetStartedPageView extends StatelessWidget {
   const GetStartedPageView({super.key});

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:stride_app/constants/layout.dart';
+import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_app/views/get_started_options_page_v.dart';
-import 'package:stride_app/widgets/button.dart';
-import 'package:stride_app/widgets/logo.dart';
+import 'package:stride_app/views/sign_in_page_v.dart';
+import 'package:stride_ui/widgets/button.dart';
+import 'package:stride_ui/widgets/logo.dart';
 
 class GreetingPage extends StatelessWidget {
   const GreetingPage({super.key});
@@ -48,7 +49,12 @@ class GreetingPage extends StatelessWidget {
                 height: 50,
                 child: Button(
                   varient: ButtonVarient.secondary,
-                  onPressed: () => Navigator.pushNamed(context, '/home'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SignInScreenView(),
+                    ),
+                  ),
                   child: const Text("Sign In"),
                 ),
               ),
