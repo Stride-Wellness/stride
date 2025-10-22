@@ -4,7 +4,7 @@ import 'package:stride_app/views/greeting_v.dart';
 import 'package:stride_core/models/user_m.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 import 'package:stride_core/services/auth_service.dart';
-import 'package:stride_core/view_models/auth_state_vm.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/home_page_vm.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_ui/widgets/button.dart';
@@ -13,7 +13,7 @@ class AccountPageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthStateViewModel>();
+    final authState = context.watch<AuthStateViewController>();
 
     if (!authState.isSignedIn) {
       return const Scaffold(body: Center(child: Text('Not signed in')),
@@ -32,7 +32,7 @@ class _AccountContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthStateViewModel>();
+    final authState = context.watch<AuthStateViewController>();
 
     if (authState.isLoadingUser) {
       return const Center(child: CircularProgressIndicator());
@@ -102,7 +102,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthStateViewModel>();
+    final authState = context.watch<AuthStateViewController>();
 
     return Card(
       elevation: 0,
@@ -225,7 +225,7 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthStateViewModel>();
+    final authState = context.watch<AuthStateViewController>();
     final authService = context.read<AuthService>();
     final userRepo = context.read<UserRepository>();
 

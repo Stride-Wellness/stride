@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/views/provider_clients_list_v.dart';
 import 'package:stride_app/views/account_screen_v.dart';
-import 'package:stride_core/view_models/auth_state_vm.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/home_page_vm.dart';
 
 List<Widget> pages({required bool isProvider}) {
@@ -31,7 +31,7 @@ class HomePageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final homePageVM = context.watch<HomePageViewModel>();
-    final authStateVM = context.watch<AuthStateViewModel>();
+    final authStateVM = context.watch<AuthStateViewController>();
     
     // Show loading while user data is being fetched
     if (authStateVM.isLoadingUser) {

@@ -7,7 +7,7 @@ import 'package:stride_core/repositories/organization_repo.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 import 'package:stride_core/services/auth_service.dart';
 import 'package:stride_core/services/firebase_config.dart';
-import 'package:stride_core/view_models/auth_state_vm.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/create_account_vm.dart';
 import 'package:stride_core/view_models/home_page_vm.dart';
 import 'package:stride_core/view_models/onboarding_vm.dart';
@@ -46,7 +46,7 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (context) =>
-              AuthStateViewModel(
+              AuthStateViewController(
             authService: context.read<AuthService>(),
             userRepo: context.read<UserRepository>(),
           ),
@@ -78,7 +78,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // This widget rebuilds when AuthStateViewModel changes
-    final authState = context.watch<AuthStateViewModel>();
+    final authState = context.watch<AuthStateViewController>();
 
     return MaterialApp(
       title: 'Stride',

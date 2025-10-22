@@ -9,9 +9,10 @@ import 'package:stride_core/repositories/organization_repo.dart';
 import 'package:stride_core/repositories/division_repo.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
 import 'package:stride_core/services/firebase_config.dart';
-import 'package:stride_core/view_models/auth_state_vm.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/divisions_vm.dart';
 import 'package:stride_core/view_models/sign_in_vm.dart';
+import 'package:stride_core/view_models/user_vm.dart';
 import 'package:stride_ui/theme/app_theme.dart';
 import 'package:stride_web/views/sign_in_v.dart';
 import 'package:url_strategy/url_strategy.dart';
@@ -47,7 +48,13 @@ void main() async {
           divisionRepo: context.read<DivisionRepository>(),
         )),
         ChangeNotifierProvider(
-          create: (context) => AuthStateViewModel(
+          create: (context) => UsersViewModel(
+            userRepo: context.read<UserRepository>(),
+            assignmentsRepo: context.read<AssignmentsRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => AuthStateViewController(
             authService: context.read<AuthService>(),
             userRepo: context.read<UserRepository>(),
           ),
@@ -70,7 +77,7 @@ class StrideWebApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthStateViewModel>();
+    final authState = context.watch<AuthStateViewController>();
 
     // Define routes
     final router = GoRouter(

@@ -4,14 +4,14 @@ import 'package:stride_core/models/user_m.dart';
 import '../repositories/user_repo.dart';
 import '../services/auth_service.dart';
 
-class AuthStateViewModel extends ChangeNotifier {
+class AuthStateViewController extends ChangeNotifier {
   final UserRepository _userRepo;
   final AuthService _authService;
   
   UserModel? _user;
   bool _isLoadingUser = false;
 
-  AuthStateViewModel({
+  AuthStateViewController({
     required UserRepository userRepo,
     required AuthService authService,
   }) : _userRepo = userRepo,
@@ -20,6 +20,7 @@ class AuthStateViewModel extends ChangeNotifier {
     _authService.authStateChanges.listen((firebase_auth.User? firebaseUser) {
       if (firebaseUser != null) {
         _loadUser();
+        notifyListeners();
       } else {
         _user = null;
         _isLoadingUser = false;
@@ -50,13 +51,16 @@ class AuthStateViewModel extends ChangeNotifier {
   // Delegate actions to repository
   Future<void> reloadUser() async {
     await _loadUser();
+    notifyListeners();
   }
 
   Future<void> signOut() async {
     await _userRepo.signOut();
+    notifyListeners();
   }
 
   Future<void> deleteAccount() async {
     await _userRepo.hardDelete();
+    notifyListeners();
   }
 }

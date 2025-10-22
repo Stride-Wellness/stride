@@ -12,6 +12,7 @@ class DivisionSettingsModel {
   Map<String, dynamic> toMap() => data;
 }
 
+
 class DivisionModel {
   final String id;
   final String organizationId;

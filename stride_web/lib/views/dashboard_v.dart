@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_core/view_models/auth_state_vm.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
+import 'package:stride_core/models/user_m.dart';
+import 'package:stride_web/views/clients_v.dart';
 import 'package:stride_web/views/divisions_v.dart';
+import 'package:stride_web/views/employees_v.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -16,7 +19,7 @@ class _DashboardViewState extends State<DashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthStateViewModel>();
+    final authState = context.watch<AuthStateViewController>();
 
     return Scaffold(
       body: Row(
@@ -75,9 +78,9 @@ class _DashboardViewState extends State<DashboardView> {
       case 0:
         return const DivisionsView();
       case 1:
-        return const _EmployeesContent();
+        return const EmployeesView();
       case 2:
-        return const _ClientsContent();
+        return const ClientsView();
       default:
         return const DivisionsView();
     }

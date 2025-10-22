@@ -74,6 +74,30 @@ class UserRepository {
     return get_(userId);
   }
 
+
+  /// Get users by organization ID
+  Future<List<UserModel>> getByOrganization() async {
+    final organizationId = (await get())?.organizationId;
+    if (organizationId == null) {
+      return [];
+    }
+
+    try {
+      final querySnap = await _db
+          .collection(_collection)
+          .where('organizationId', isEqualTo: organizationId)
+          .get();
+
+      return querySnap.docs.map((doc) {
+        final data = doc.data();
+        return UserModel.fromMap(data, doc.id);
+      }).toList();
+    } catch (e) {
+      print('Error getting users by organization: $e');
+      throw Exception('Failed to get users by organization');
+    }
+  }
+
   /// Create new employee user with specific document ID, meant for internal use since it must be created with correct auth id.
   Future<ProviderUserModel> _createFirestoreEmployee(
     CreateEmployeeUserDataModel data,
@@ -153,7 +177,7 @@ class UserRepository {
     }
   }
 
-
+  /// Hard delete user from Firestore
   Future<bool> hardDeleteFirestore_(String userId) async {
     try {
       final userRef = _db.collection(_collection).doc(userId);
