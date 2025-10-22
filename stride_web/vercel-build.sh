@@ -16,5 +16,4 @@ flutter config --enable-web
 # Get dependencies
 flutter pub get
 
-# Build for WebAssembly (Wasm)
-flutter build web --wasm
+flutter build web
