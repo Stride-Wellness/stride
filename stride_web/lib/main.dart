@@ -99,9 +99,9 @@ class StrideWebApp extends StatelessWidget {
         if (isSignedIn &&
             isLoginRoute &&
             !isLoading &&
-            authState.user?.asEmployee != null &&
-            authState.user!.asEmployee!.employeeRole.contains(
-              EmployeeRole.admin,
+            authState.user?.asProvider != null &&
+            authState.user!.asProvider!.providerRole.contains(
+              ProviderRole.admin,
             )) {
           return '/dashboard';
         }

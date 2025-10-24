@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:stride_core/models/user_m.dart';
 import 'package:stride_core/view_models/user_vm.dart';
 
-class EmployeesView extends StatelessWidget {
-  const EmployeesView({super.key});
+class ProvidersView extends StatelessWidget {
+  const ProvidersView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +15,9 @@ class EmployeesView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _EmployeesHeader(viewModel: viewModel),
+          _ProvidersHeader(viewModel: viewModel),
           const SizedBox(height: 24),
-          _EmployeesBody(viewModel: viewModel),
+          _ProvidersBody(viewModel: viewModel),
         ],
       ),
     );
@@ -28,10 +28,10 @@ class EmployeesView extends StatelessWidget {
 // Header Section
 // ============================================================================
 
-class _EmployeesHeader extends StatelessWidget {
+class _ProvidersHeader extends StatelessWidget {
   final UsersViewModel viewModel;
 
-  const _EmployeesHeader({required this.viewModel});
+  const _ProvidersHeader({required this.viewModel});
 
   @override
   Widget build(BuildContext context) {
@@ -42,14 +42,14 @@ class _EmployeesHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Employees',
+              'Providers',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
             ),
             const SizedBox(height: 4),
             Text(
-              '${viewModel.employeeCount} active employees',
+              '${viewModel.providerCount} active providers',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
                   ),
@@ -63,7 +63,7 @@ class _EmployeesHeader extends StatelessWidget {
               width: 300,
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Search employees...',
+                  hintText: 'Search providers...',
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -96,10 +96,10 @@ class _EmployeesHeader extends StatelessWidget {
             // Add button
             ElevatedButton.icon(
               onPressed: () {
-                _showAddEmployeeDialog(context);
+                _showAddProviderDialog(context);
               },
               icon: const Icon(Icons.add),
-              label: const Text('Add Employee'),
+              label: const Text('Add Provider'),
             ),
           ],
         ),
@@ -107,13 +107,13 @@ class _EmployeesHeader extends StatelessWidget {
     );
   }
 
-  void _showAddEmployeeDialog(BuildContext context) {
-    // TODO: Implement add employee dialog
+  void _showAddProviderDialog(BuildContext context) {
+    // TODO: Implement add provider dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Employee'),
-        content: const Text('Add employee form coming soon...'),
+        title: const Text('Add Provider'),
+        content: const Text('Add provider form coming soon...'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -129,10 +129,10 @@ class _EmployeesHeader extends StatelessWidget {
 // Body Section
 // ============================================================================
 
-class _EmployeesBody extends StatelessWidget {
+class _ProvidersBody extends StatelessWidget {
   final UsersViewModel viewModel;
 
-  const _EmployeesBody({required this.viewModel});
+  const _ProvidersBody({required this.viewModel});
 
   @override
   Widget build(BuildContext context) {
@@ -152,12 +152,12 @@ class _EmployeesBody extends StatelessWidget {
       );
     }
 
-    if (!viewModel.hasEmployees) {
+    if (!viewModel.hasProviders) {
       return const _EmptyState();
     }
 
-    return _EmployeesTable(
-      employees: viewModel.employees,
+    return _ProvidersTable(
+      providers: viewModel.providers,
       viewModel: viewModel,
     );
   }
@@ -187,7 +187,7 @@ class _ErrorState extends StatelessWidget {
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              'Error loading employees',
+              'Error loading providers',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
@@ -229,14 +229,14 @@ class _EmptyState extends StatelessWidget {
             Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'No employees yet',
+              'No providers yet',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Colors.grey[600],
                   ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your first employee to get started',
+              'Add your first provider to get started',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[500],
                   ),
@@ -249,15 +249,14 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ============================================================================
-// Employees Table
+// Providers Table
 // ============================================================================
 
-class _EmployeesTable extends StatelessWidget {
-  final List<ProviderUserModel> employees;
+class _ProvidersTable extends StatelessWidget {
+  final List<ProviderUserModel> providers;
   final UsersViewModel viewModel;
 
-  const _EmployeesTable({
-    required this.employees,
+  const _ProvidersTable({required this.providers,
     required this.viewModel,
   });
 
@@ -281,7 +280,7 @@ class _EmployeesTable extends StatelessWidget {
             DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
             DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
           ],
-          rows: employees.map((employee) {
+          rows: providers.map((provider) {
             return DataRow(
               cells: [
                 DataCell(
@@ -290,7 +289,9 @@ class _EmployeesTable extends StatelessWidget {
                       CircleAvatar(
                         backgroundColor: Colors.blue[100],
                         child: Text(
-                          employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
+                          provider.name.isNotEmpty
+                              ? provider.name[0].toUpperCase()
+                              : '?',
                           style: TextStyle(
                             color: Colors.blue[700],
                             fontWeight: FontWeight.bold,
@@ -298,15 +299,15 @@ class _EmployeesTable extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text(employee.name),
+                      Text(provider.name),
                     ],
                   ),
                 ),
-                DataCell(Text(employee.email)),
+                DataCell(Text(provider.email)),
                 DataCell(
                   Wrap(
                     spacing: 4,
-                    children: employee.employeeRole.map((role) {
+                    children: provider.providerRole.map((role) {
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -328,17 +329,23 @@ class _EmployeesTable extends StatelessWidget {
                     }).toList(),
                   ),
                 ),
-                DataCell(Text(employee.divisionId)), // TODO: Show division name instead of ID
+                DataCell(
+                  Text(provider.divisionId),
+                ), // TODO: Show division name instead of ID
                 DataCell(
                   Row(
                     children: [
                       Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
-                      Text(viewModel.getClientCountForProvider(employee.id).toString()),
+                      Text(
+                        viewModel
+                            .getClientCountForProvider(provider.id)
+                            .toString(),
+                      ),
                     ],
                   ),
                 ),
-                DataCell(_StatusBadge(status: employee.status.name)),
+                DataCell(_StatusBadge(status: provider.status.name)),
                 DataCell(
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -346,20 +353,27 @@ class _EmployeesTable extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, size: 20),
                         onPressed: () {
-                          // TODO: Edit employee
+                          // TODO: Edit provider
                         },
                         tooltip: 'Edit',
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline, size: 20),
                         onPressed: () async {
-                          final confirmed = await _showDeleteConfirmation(context, employee.name);
+                          final confirmed = await _showDeleteConfirmation(
+                            context,
+                            provider.name,
+                          );
                           if (confirmed && context.mounted) {
-                            final success = await viewModel.deleteUser(employee.id);
+                            final success = await viewModel.deleteUser(
+                              provider.id,
+                            );
                             if (success && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('${employee.name} deleted successfully'),
+                                  content: Text(
+                                    '${provider.name} deleted successfully',
+                                  ),
                                   backgroundColor: Colors.green,
                                 ),
                               );
@@ -379,15 +393,15 @@ class _EmployeesTable extends StatelessWidget {
     );
   }
 
-  Color _getRoleColor(EmployeeRole role) {
+  Color _getRoleColor(ProviderRole role) {
     switch (role) {
-      case EmployeeRole.manager:
+      case ProviderRole.manager:
         return Colors.purple;
-      case EmployeeRole.admin:
+      case ProviderRole.admin:
         return Colors.orange;
-      case EmployeeRole.lw:
+      case ProviderRole.lw:
         return Colors.blue;
-      case EmployeeRole.psw:
+      case ProviderRole.psw:
         return Colors.blue;
     }
   }
@@ -396,7 +410,7 @@ class _EmployeesTable extends StatelessWidget {
     return await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Employee'),
+            title: const Text('Delete Provider'),
         content: Text('Are you sure you want to delete $name? This action cannot be undone.'),
         actions: [
           TextButton(

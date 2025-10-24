@@ -34,17 +34,17 @@
 	let creatingDivision = $state(false);
 
 	// User state
-	let employees = $state<User[]>([]);
+	let providers = $state<User[]>([]);
 	let clients = $state<User[]>([]);
-	let employeesLoading = $state(false);
+	let providersLoading = $state(false);
 	let clientsLoading = $state(false);
 	
-	// Employee form state
-	let newEmployeeName = $state('');
-	let newEmployeeEmail = $state('');
-	let newEmployeeRole = $state<string>('psw');
-	let newEmployeeDivisionId = $state('');
-	let creatingEmployee = $state(false);
+	// Provider form state
+	let newProviderName = $state('');
+	let newProviderEmail = $state('');
+	let newProviderRole = $state<string>('psw');
+	let newProviderDivisionId = $state('');
+	let creatingProvider = $state(false);
 	
 	// Client form state
 	let newClientName = $state('');
@@ -70,7 +70,7 @@
 			await loadDivisions();
 			
 			// Load users for this organization
-			await loadEmployees();
+			await loadProviders();
 			await loadClients();
 		} catch (err) {
 			console.error('Error loading organization:', err);
@@ -162,18 +162,18 @@
 		}
 	}
 
-	// Load employees
-	async function loadEmployees() {
+	// Load providers
+	async function loadProviders() {
 		if (!organizationId) return;
 		
-		employeesLoading = true;
+		providersLoading = true;
 		try {
 			const allUsers = await UsersService.getByOrganizationId(organizationId);
-			employees = allUsers.filter(user => user.type === 'employee');
+			providers = allUsers.filter(user => user.type === 'provider');
 		} catch (err) {
-			console.error('Error loading employees:', err);
+			console.error('Error loading providers:', err);
 		} finally {
-			employeesLoading = false;
+			providersLoading = false;
 		}
 	}
 
@@ -192,39 +192,39 @@
 		}
 	}
 
-	// Create new employee
-	async function createEmployee() {
-		if (!organizationId || !newEmployeeName.trim() || !newEmployeeEmail.trim() || !newEmployeeDivisionId) return;
+	// Create new provider
+	async function createProvider() {
+		if (!organizationId || !newProviderName.trim() || !newProviderEmail.trim() || !newProviderDivisionId) return;
 		
-		creatingEmployee = true;
+		creatingProvider = true;
 		error = null;
 		
 		try {
-			const employeeData = {
-				email: newEmployeeEmail.trim(),
-				name: newEmployeeName.trim(),
+			const providerData = {
+				email: newProviderEmail.trim(),
+				name: newProviderName.trim(),
 				organizationId: organizationId,
-				divisionId: newEmployeeDivisionId,
-				employeeRole: [newEmployeeRole as any]
+				divisionId: newProviderDivisionId,
+				providerRole: [newProviderRole as any]
 			};
 			
-			await UsersService.createEmployee(employeeData);
+			await UsersService.createProvider(providerData);
 			
 			// Reset form
-			newEmployeeName = '';
-			newEmployeeEmail = '';
-			newEmployeeRole = 'psw';
-			newEmployeeDivisionId = '';
+			newProviderName = '';
+			newProviderEmail = '';
+			newProviderRole = 'psw';
+			newProviderDivisionId = '';
 			
-			// Reload employees
-			await loadEmployees();
+			// Reload providers
+			await loadProviders();
 			
-			successMessage = 'Employee created successfully!';
+			successMessage = 'Provider created successfully!';
 		} catch (err) {
-			console.error('Error creating employee:', err);
-			error = 'Failed to create employee. Please try again.';
+			console.error('Error creating provider:', err);
+			error = 'Failed to create provider. Please try again.';
 		} finally {
-			creatingEmployee = false;
+			creatingProvider = false;
 		}
 	}
 
@@ -268,19 +268,19 @@
 		}
 	}
 
-	// Delete employee
-	async function deleteEmployee(userId: string) {
-		if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
+	// Delete provider
+	async function deleteProvider(userId: string) {
+		if (!confirm('Are you sure you want to delete this provider? This action cannot be undone.')) {
 			return;
 		}
 		
 		try {
 			await UsersService.hardDelete(userId);
-			await loadEmployees();
-			successMessage = 'Employee deleted successfully!';
+			await loadProviders();
+			successMessage = 'Provider deleted successfully!';
 		} catch (err) {
-			console.error('Error deleting employee:', err);
-			error = 'Failed to delete employee. Please try again.';
+			console.error('Error deleting provider:', err);
+			error = 'Failed to delete provider. Please try again.';
 		}
 	}
 
@@ -306,14 +306,14 @@
 		return division ? division.name : 'Unknown Division';
 	}
 
-	// Get formatted employee data for table
-	const employeeTableData = $derived(employees.map(employee => ({
-		name: { name: employee.name, href: `/users/${employee.id}` },
-		email: employee.email,
-		role: employee.type === 'employee' ? employee.employeeRole.join(', ') : '',
-		division: getDivisionName(employee.divisionId),
-		status: employee.status,
-		created: new Date(employee.createdAt).toLocaleDateString()
+	// Get formatted provider data for table
+	const providerTableData = $derived(providers.map(provider => ({
+		name: { name: provider.name, href: `/users/${provider.id}` },
+		email: provider.email,
+		role: provider.type === 'provider' ? provider.providerRole.join(', ') : '',
+		division: getDivisionName(provider.divisionId),
+		status: provider.status,
+		created: new Date(provider.createdAt).toLocaleDateString()
 	})));
 
 	// Get formatted client data for table
@@ -428,34 +428,34 @@
 			{/if}
 		</Card>
 
-		<!-- Employees Section -->
+		<!-- Providers Section -->
 		<Card class="p-6">
 			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-lg font-medium text-gray-900">Employees</h2>
+				<h2 class="text-lg font-medium text-gray-900">Providers</h2>
 				<div class="text-sm text-gray-600">
-					{employees.length} employee{employees.length !== 1 ? 's' : ''}
+					{providers.length} provider{providers.length !== 1 ? 's' : ''}
 				</div>
 			</div>
 			
-			<!-- Create Employee Form -->
+			<!-- Create Provider Form -->
 			<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 py-4">
 				<Input
-					label="Employee Name"
-					bind:value={newEmployeeName}
-					placeholder="Enter employee name"
-					disabled={creatingEmployee}
+					label="Provider Name"
+					bind:value={newProviderName}
+					placeholder="Enter provider name"
+					disabled={creatingProvider}
 				/>
 				<Input
 					label="Email"
-					bind:value={newEmployeeEmail}
+					bind:value={newProviderEmail}
 					placeholder="Enter email address"
-					disabled={creatingEmployee}
+					disabled={creatingProvider}
 				/>
 				<Input
 					as="select"
-					label="Employee Role"
-					bind:value={newEmployeeRole}
-					disabled={creatingEmployee}
+					label="Provider Role"
+					bind:value={newProviderRole}
+					disabled={creatingProvider}
 					options={[
 						{ value: 'psw', label: 'PSW' },
 						{ value: 'lw', label: 'LW' },
@@ -466,33 +466,33 @@
 				<Input
 					as="select"
 					label="Division"
-					bind:value={newEmployeeDivisionId}
-					disabled={creatingEmployee}
+					bind:value={newProviderDivisionId}
+					disabled={creatingProvider}
 					options={divisionOptions}
 					placeholder="Select division"
 				/>
 				<div class="flex items-end">
 					<Button 
-						onclick={createEmployee}
-						disabled={creatingEmployee || !newEmployeeName.trim() || !newEmployeeEmail.trim() || !newEmployeeDivisionId}
+						onclick={createProvider}
+						disabled={creatingProvider || !newProviderName.trim() || !newProviderEmail.trim() || !newProviderDivisionId}
 						class="w-full"
 					>
-						{creatingEmployee ? 'Creating...' : 'Create Employee'}
+						{creatingProvider ? 'Creating...' : 'Create Provider'}
 					</Button>
 				</div>
 			</div>
 			
-			<!-- Employees Table -->
-			{#if employeesLoading}
+			<!-- Providers Table -->
+			{#if providersLoading}
 				<div class="text-center py-8">
-					<div class="text-gray-500">Loading employees...</div>
+					<div class="text-gray-500">Loading providers...</div>
 				</div>
-			{:else if employees.length === 0}
+			{:else if providers.length === 0}
 				<div class="text-center py-8">
-					<div class="text-gray-500">No employees found. Create one above to get started.</div>
+					<div class="text-gray-500">No providers found. Create one above to get started.</div>
 				</div>
 			{:else}
-				<Table data={employeeTableData} />
+				<Table data={providerTableData} />
 			{/if}
 		</Card>
 

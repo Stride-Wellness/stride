@@ -24,9 +24,9 @@ class DivisionsViewModel extends ChangeNotifier {
  // Store counts for each division
   Map<String, Map<String, int>> _divisionCounts = {};
 
-  /// Get employee count for a specific division
-  int getEmployeeCount(String divisionId) {
-    return _divisionCounts[divisionId]?['employees'] ?? 0;
+  /// Get provider count for a specific division
+  int getProviderCount(String divisionId) {
+    return _divisionCounts[divisionId]?['providers'] ?? 0;
   }
 
   /// Get client count for a specific division
@@ -97,7 +97,7 @@ class DivisionsViewModel extends ChangeNotifier {
     try {
       final newDivision = await _divisionRepo.create(data);
       _divisions.insert(0, newDivision);
-      _divisionCounts[newDivision.id] = {'employees': 0, 'clients': 0};
+      _divisionCounts[newDivision.id] = {'providers': 0, 'clients': 0};
       _isLoading = false;
       notifyListeners();
       return true;

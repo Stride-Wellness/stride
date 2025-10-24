@@ -1,306 +1,47 @@
 <script lang="ts">
-	import type {
-		User,
-		EmployeeUser,
-		ClientUser,
-		EmployeeRole,
-		UserType,
-		UserStatus
-	} from '$lib/services/users';
+	import type { User, UserStatus } from '$lib/services/users';
 	import { UsersService } from '$lib/services/users';
 	import Table from '$lib/components/Table.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Message from '$lib/components/Message.svelte';
 	import Card from '$lib/components/Card.svelte';
+	import Tabs from '$lib/components/Tabs.svelte';
+	import TabPanel from '$lib/components/TabPanel.svelte';
+	import CreateProviderUserForm from '$lib/components/compound/CreateProviderUserForm.svelte';
+	import CreateClientUserForm from '$lib/components/compound/CreateClientUserForm.svelte';
+	import UpdateUserForm from '$lib/components/compound/UpdateUserForm.svelte';
+	import DeleteUserForm from '$lib/components/compound/DeleteUserForm.svelte';
 	import { onMount } from 'svelte';
-	import CreateEmployeeForm from '$lib/components/compound/CreateEmployeeForm.svelte';
-	import CreateClientForm from '$lib/components/compound/CreateClientForm.svelte';
 
-	// State for users data
+	// State
 	let users = $state<User[]>([]);
 	let loading = $state(true);
-	let error = $state<string | null>(null);
-	let successMessage = $state<string | null>(null);
+	let error = $state('');
+	let successMessage = $state('');
 
 	// Filter state
-	let filterType = $state<UserType | 'all'>('all');
+	let filterType = $state<'provider' | 'client' | 'all'>('all');
 	let filterStatus = $state<UserStatus | 'all'>('all');
 	let searchTerm = $state('');
 
-	// Form state for creating employee users
-	let employeeName = $state('');
-	let employeeEmail = $state('');
-	let employeeOrganizationId = $state('');
-	let employeeDivisionId = $state('');
-	let employeeRoles = $state<EmployeeRole[]>([]);
-
-	// Form state for creating client users
-	let clientName = $state('');
-	let clientEmail = $state('');
-	let clientOrganizationId = $state('');
-	let clientDivisionId = $state('');
-	let clientPhone = $state('');
-	let clientDateOfBirth = $state('');
-
-	// Form state for updating user status
-	let updateStatusId = $state('');
-	let updateStatus = $state<UserStatus>('active');
-
-	// Form state for deleting user
-	let deleteUserId = $state('');
-
 	let selectedUsers: Record<string, any>[] = $state([]);
-
-	// Available employee roles
-	const availableRoles: EmployeeRole[] = ['psw', 'lw', 'admin', 'manager'];
 
 	// Load users on mount
 	onMount(async () => {
-		try {
-			users = await UsersService.getAll(1000);
-		} catch (err) {
-			console.error('Error loading users:', err);
-			error = 'Failed to load users. Please refresh the page.';
-		} finally {
-			loading = false;
-		}
+		await loadUsers();
 	});
 
-	// Handle create employee user
-	async function handleCreateEmployee(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (
-			!employeeName ||
-			!employeeEmail ||
-			!employeeOrganizationId ||
-			!employeeDivisionId ||
-			employeeRoles.length === 0
-		) {
-			error = 'All fields are required and at least one role must be selected';
-			return;
-		}
-
-		if (employeeName.length < 2) {
-			error = 'Name must be at least 2 characters';
-			return;
-		}
-
+	async function loadUsers() {
 		try {
-			const newUser = await UsersService.createEmployee({
-				name: employeeName,
-				email: employeeEmail,
-				organizationId: employeeOrganizationId,
-				divisionId: employeeDivisionId,
-				employeeRole: employeeRoles
-			});
-
-			// Reset form
-			employeeName = '';
-			employeeEmail = '';
-			employeeOrganizationId = '';
-			employeeDivisionId = '';
-			employeeRoles = [];
-
-			// Update local state - use spread to trigger reactivity
-			users = [newUser, ...users];
-
-			successMessage = 'Employee user created successfully!';
+			loading = true;
+			error = '';
+			users = await UsersService.getAll(1000, false);
 		} catch (err) {
-			console.error('Error creating employee user:', err);
-			error = 'Failed to create employee user. Please try again.';
-		}
-	}
-
-	// Handle create client user
-	async function handleCreateClient(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (!clientName || !clientEmail || !clientOrganizationId || !clientDivisionId) {
-			error = 'Name, email, organization ID, and division ID are required';
-			return;
-		}
-
-		if (clientName.length < 2) {
-			error = 'Name must be at least 2 characters';
-			return;
-		}
-
-		try {
-			const profile =
-				clientPhone || clientDateOfBirth
-					? {
-							...(clientPhone && { phone: clientPhone }),
-							...(clientDateOfBirth && { dateOfBirth: clientDateOfBirth })
-						}
-					: undefined;
-
-			const newUser = await UsersService.createClient({
-				name: clientName,
-				email: clientEmail,
-				organizationId: clientOrganizationId,
-				divisionId: clientDivisionId,
-				profile
-			});
-
-			// Reset form
-			clientName = '';
-			clientEmail = '';
-			clientOrganizationId = '';
-			clientDivisionId = '';
-			clientPhone = '';
-			clientDateOfBirth = '';
-
-			// Update local state - use spread to trigger reactivity
-			users = [newUser, ...users];
-
-			successMessage = 'Client user created successfully!';
-		} catch (err) {
-			console.error('Error creating client user:', err);
-			error = 'Failed to create client user. Please try again.';
-		}
-	}
-
-	// Handle update status
-	async function handleUpdateStatus(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (!updateStatusId || !updateStatus) {
-			error = 'User ID and status are required';
-			return;
-		}
-
-		try {
-			await UsersService.update(updateStatusId, { status: updateStatus });
-
-			// Update local state - create new array to trigger reactivity
-			users = users.map((user) =>
-				user.id === updateStatusId ? { ...user, status: updateStatus } : user
-			);
-
-			updateStatusId = '';
-			updateStatus = 'active';
-
-			successMessage = 'User status updated successfully!';
-		} catch (err) {
-			console.error('Error updating user status:', err);
-			error = 'Failed to update user status. Please try again.';
-		}
-	}
-
-	// Handle soft delete user
-	async function handleSoftDeleteUser(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (!deleteUserId) {
-			error = 'User ID is required';
-			return;
-		}
-
-		if (
-			!confirm(
-				'Are you sure you want to soft delete this user? This will hide them from the main view but preserve all data. You can restore them later if needed.'
-			)
-		) {
-			return;
-		}
-
-		try {
-			const usersToDelete = deleteUserId.split(',').map((id) => id.trim());
-			for (const id of usersToDelete) {
-				await UsersService.softDelete(id);
-			}
-
-			// Reload users to refresh the list (soft deleted won't show)
-			users = await UsersService.getAll(1000);
-
-			deleteUserId = '';
-
-			successMessage =
-				'User soft deleted successfully! Data has been preserved and can be restored.';
-		} catch (err: any) {
-			console.error('Error soft deleting user:', err);
-
-			if (err.code) {
-				switch (err.code) {
-					case 'permission-denied':
-						error =
-							'Permission denied. You may not have the required permissions to delete this user.';
-						break;
-					case 'not-found':
-						error = 'User not found. They may have already been deleted or the ID is incorrect.';
-						break;
-					case 'failed-precondition':
-						error = 'Cannot delete user. They may have active assignments or other dependencies.';
-						break;
-					default:
-						error = `Error: ${err.message || 'Failed to soft delete user. Please try again.'}`;
-				}
-			} else if (err.message) {
-				error = err.message;
-			} else {
-				error = 'Failed to soft delete user. Please try again.';
-			}
-		}
-	}
-
-	// Handle delete user
-	async function handleDeleteUser(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (!deleteUserId) {
-			error = 'User ID is required';
-			return;
-		}
-
-		if (
-			!confirm(
-				'Are you sure you want to delete this user? This action cannot be undone and will permanently remove all associated data.'
-			)
-		) {
-			return;
-		}
-
-		try {
-			const usersToDelete = deleteUserId.split(',').map((id) => id.trim());
-			for (const id of usersToDelete) {
-				await UsersService.hardDelete(id);
-			}
-
-			// Update local state - create new array to trigger reactivity
-			users = users.filter((user) => !usersToDelete.includes(user.id));
-
-			deleteUserId = '';
-
-			successMessage = 'User deleted successfully!';
-		} catch (err) {
-			console.error('Error deleting user:', err);
-			error = 'Failed to delete user. Please try again.';
-		}
-	}
-
-	// Handle role checkbox changes
-	function handleRoleChange(role: EmployeeRole, checked: boolean) {
-		if (checked) {
-			employeeRoles = [...employeeRoles, role];
-		} else {
-			employeeRoles = employeeRoles.filter((r) => r !== role);
+			error = err instanceof Error ? err.message : 'Failed to load users';
+			console.error('Error loading users:', err);
+		} finally {
+			loading = false;
 		}
 	}
 
@@ -340,176 +81,190 @@
 			email: user.email,
 			type: user.type,
 			status: user.status,
-			roles: UsersService.isEmployee(user) ? user.employeeRole.join(', ') : 'N/A',
-			'Organization ID': user.organizationId,
-			'Division ID': user.divisionId,
-			'Last Login': user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never',
-			Created: user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'
+			roles: UsersService.isProvider(user) ? user.providerRole.join(', ') : 'N/A',
+			'Org ID': user.organizationId.substring(0, 8) + '...',
+			'Div ID': user.divisionId.substring(0, 8) + '...',
+			Created: new Date(user.createdAt).toLocaleDateString()
 		}))
 	);
 
-	// Calculate summary stats
+	// Calculate summary stats from all users
 	const summaryStats = $derived(() => {
 		const total = users.length;
-		const employees = users.filter((user) => user.type === 'employee').length;
+		const providers = users.filter((user) => user.type === 'provider').length;
 		const clients = users.filter((user) => user.type === 'client').length;
 		const active = users.filter((user) => user.status === 'active').length;
 		const inactive = users.filter((user) => user.status === 'inactive').length;
 		const pending = users.filter((user) => user.status === 'pending').length;
 
-		// Employee role breakdown
+		// Provider role breakdown
 		const psws = users.filter(
-			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'psw')
+			(user) => UsersService.isProvider(user) && UsersService.hasRole(user, 'psw')
 		).length;
 		const managers = users.filter(
-			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'manager')
+			(user) => UsersService.isProvider(user) && UsersService.hasRole(user, 'manager')
 		).length;
 		const admins = users.filter(
-			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'admin')
+			(user) => UsersService.isProvider(user) && UsersService.hasRole(user, 'admin')
 		).length;
 		const lws = users.filter(
-			(user) => UsersService.isEmployee(user) && UsersService.hasRole(user, 'lw')
+			(user) => UsersService.isProvider(user) && UsersService.hasRole(user, 'lw')
 		).length;
 
-		return { total, employees, clients, active, inactive, pending, psws, managers, admins, lws };
+		return { total, providers, clients, active, inactive, pending, psws, managers, admins, lws };
 	});
 
-	$effect(() => {
-		deleteUserId = selectedUsers.map((user) => user.id.name).join(', ');
-		updateStatusId = selectedUsers.map((user) => user.id.name).join(', ');
-	});
+	// Get selected user IDs and types for prefilling forms
+	const selectedUserIds = $derived(selectedUsers.map((user) => user.id.name).join(', '));
+	const selectedUserType = $derived(selectedUsers.length === 1 ? selectedUsers[0].type : undefined);
 </script>
 
-{#if loading}
-	<div class="flex items-center justify-center p-6">
-		<div class="text-lg">Loading users...</div>
-	</div>
-{:else}
-	<div class="space-y-6 p-6">
-		<div class="flex items-center justify-between">
+<svelte:head>
+	<title>Users - Stride Admin</title>
+	<meta name="description" content="Manage facility providers and elderly care residents" />
+</svelte:head>
+
+<div class="space-y-6 p-6">
+	<div class="flex items-center justify-between">
+		<div>
 			<h1 class="text-2xl font-semibold text-gray-900">Users</h1>
-			<p class="text-sm text-gray-600">Manage employees and clients across all organizations</p>
+			<p class="text-sm text-gray-600">Manage facility providers and elderly care residents across all organizations</p>
 		</div>
+		<Button onclick={loadUsers} disabled={loading} size="sm">
+			{loading ? 'Refreshing...' : 'Refresh'}
+		</Button>
+	</div>
 
-		<!-- Messages -->
-		<Message type="error" message={error || undefined} />
-		<Message type="success" message={successMessage || undefined} />
+	<!-- Messages -->
+	<Message type="error" message={error} />
+	<Message type="success" message={successMessage} />
 
+	{#if loading && users.length === 0}
+		<Card class="p-8">
+			<div class="flex items-center justify-center">
+				<p class="text-gray-600">Loading users...</p>
+			</div>
+		</Card>
+	{:else}
 		<!-- Summary Cards -->
 		<div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
 			<Card class="flex items-center justify-between p-4">
 				<div>
-					<h4>Total Users</h4>
+					<h4 class="text-sm text-gray-600">Total Users</h4>
 					<p class="text-2xl font-bold text-gray-900">{summaryStats().total}</p>
 				</div>
 			</Card>
 
 			<Card class="flex items-center justify-between p-4">
 				<div>
-					<h4>Employees</h4>
-					<p class="text-2xl font-bold">{summaryStats().employees}</p>
+					<h4 class="text-sm text-gray-600">Providers</h4>
+					<p class="text-2xl font-bold text-blue-600">{summaryStats().providers}</p>
 				</div>
 			</Card>
 
 			<Card class="flex items-center justify-between p-4">
 				<div>
-					<h4>Clients</h4>
-					<p class="text-2xl font-bold">{summaryStats().clients}</p>
+					<h4 class="text-sm text-gray-600">Residents</h4>
+					<p class="text-2xl font-bold text-green-600">{summaryStats().clients}</p>
 				</div>
 			</Card>
 
 			<Card class="flex items-center justify-between p-4">
 				<div>
-					<h4>Active Users</h4>
-					<p class="text-2xl font-bold">{summaryStats().active}</p>
+					<h4 class="text-sm text-gray-600">Active</h4>
+					<p class="text-2xl font-bold text-emerald-600">{summaryStats().active}</p>
 				</div>
 			</Card>
 
 			<Card class="flex items-center justify-between p-4">
 				<div>
-					<h4>PSWs</h4>
-					<p class="text-2xl font-bold">{summaryStats().psws}</p>
+					<h4 class="text-sm text-gray-600">PSWs</h4>
+					<p class="text-2xl font-bold text-purple-600">{summaryStats().psws}</p>
 				</div>
 			</Card>
 
 			<Card class="flex items-center justify-between p-4">
 				<div>
-					<h4>Managers</h4>
-					<p class="text-2xl font-bold">{summaryStats().managers}</p>
+					<h4 class="text-sm text-gray-600">Managers</h4>
+					<p class="text-2xl font-bold text-orange-600">{summaryStats().managers}</p>
 				</div>
 			</Card>
 		</div>
 
-		<!-- Create User Forms -->
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<CreateEmployeeForm bind:error bind:successMessage callback={(newUser) => users.push(newUser)} />
+		<!-- Create User Forms in Tabs -->
+		<Tabs>
+			<TabPanel label="Create Provider">
+				<CreateProviderUserForm
+					bind:error
+					bind:successMessage
+					callback={loadUsers}
+				/>
+			</TabPanel>
+			<TabPanel label="Create Resident">
+				<CreateClientUserForm
+					bind:error
+					bind:successMessage
+					callback={loadUsers}
+				/>
+			</TabPanel>
+			<TabPanel label="Update User">
+				<UpdateUserForm
+					bind:error
+					bind:successMessage
+					constantUserId={selectedUserIds}
+					callback={loadUsers}
+				/>
+			</TabPanel>
+			<TabPanel label="Delete User">
+				<DeleteUserForm
+					bind:error
+					bind:successMessage
+					prefilledUserId={selectedUserIds}
+					callback={loadUsers}
+				/>
+			</TabPanel>
+		</Tabs>
 
-			<!-- Create Client Form -->
-			<CreateClientForm bind:error bind:successMessage callback={(newUser) => users.push(newUser)} />
-		</div>
-
-		<!-- Management Actions -->
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<!-- Update Status -->
-			<Card class="p-6">
-				<h2 class="mb-4 text-lg font-medium text-gray-900">Update User Status</h2>
-				<form onsubmit={handleUpdateStatus} class="space-y-4">
-					<Input
-						type="text"
-						placeholder="User ID"
-						size="md"
-						variant="outline"
-						bind:value={updateStatusId}
-						required
-					/>
-					<Input as="select" variant="outline" bind:value={updateStatus} required>
+		<!-- Filters -->
+		<Card class="p-6">
+			<h2 class="mb-4 text-lg font-medium text-gray-900">Filter Users</h2>
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+				<div>
+					<label class="mb-2 block text-sm font-medium text-gray-700">Type</label>
+					<select
+						bind:value={filterType}
+						class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					>
+						<option value="all">All Types</option>
+						<option value="provider">Providers</option>
+						<option value="client">Residents</option>
+					</select>
+				</div>
+				<div>
+					<label class="mb-2 block text-sm font-medium text-gray-700">Status</label>
+					<select
+						bind:value={filterStatus}
+						class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					>
+						<option value="all">All Statuses</option>
 						<option value="active">Active</option>
 						<option value="inactive">Inactive</option>
 						<option value="pending">Pending</option>
-					</Input>
-					<Button type="submit" size="md" variant="secondary" class="w-full">Update Status</Button>
-				</form>
-			</Card>
-
-			<!-- Delete User -->
-			<Card class="flex flex-col justify-between border-red-200 bg-red-50 p-6">
-				<div>
-					<h2 class="mb-4 text-lg font-medium text-red-900">Delete User</h2>
-					<p class="my-2 text-xs text-red-700">
-						Soft delete hides the user but preserves data. Hard delete permanently removes all data.
-					</p>
+						<option value="deleted">Deleted</option>
+					</select>
 				</div>
-				<div class="space-y-4">
+				<div>
+					<label class="mb-2 block text-sm font-medium text-gray-700">Search</label>
 					<Input
 						type="text"
-						placeholder="User ID"
+						placeholder="Search by name, email, or ID..."
 						size="md"
 						variant="outline"
-						name="deleteId"
-						bind:value={deleteUserId}
-						required
+						bind:value={searchTerm}
 					/>
-					<!-- Soft Delete Button -->
-					<Button
-						type="button"
-						size="md"
-						class="w-full border-yellow-600 bg-yellow-600 text-white hover:border-yellow-700 hover:bg-yellow-700"
-						onclick={handleSoftDeleteUser}
-					>
-						Soft Delete User (Recoverable)
-					</Button>
-					<!-- Hard Delete Button -->
-					<Button
-						type="button"
-						size="md"
-						class="w-full border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
-						onclick={handleDeleteUser}
-					>
-						Hard Delete User (Permanent)
-					</Button>
 				</div>
-			</Card>
-		</div>
+			</div>
+		</Card>
 
 		<!-- Users Table -->
 		<Card class="p-6">
@@ -520,6 +275,9 @@
 				</span>
 			</div>
 			<Table data={tableData} bind:selected={selectedUsers} class="max-h-96" />
+			<p class="mt-2 text-xs text-gray-500">
+				Select users to auto-fill the update/delete forms above.
+			</p>
 		</Card>
-	</div>
-{/if}
+	{/if}
+</div>

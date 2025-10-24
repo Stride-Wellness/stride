@@ -143,7 +143,7 @@ class _ProfileCard extends StatelessWidget {
                 icon: Icons.work_outline,
                 label: 'Role',
                 value:
-                    user!.asEmployee?.employeeRole
+                    user!.asProvider?.providerRole
                         .map((e) => e.name)
                         .join(', ') ??
                     'N/A',

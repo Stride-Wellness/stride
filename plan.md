@@ -32,19 +32,19 @@ The product has 2 main part and 1 supporting parts:
 
 3. **Mobile app (main)** - Where clients fill out forms, discuss their health, and see exercises. This will be as simple and basic as possible
 
-4. **Provider Dashboard (supporting)**: A simple, basic dashboard to provide the bare minimum functionality for organizations to manage their employees. This will not be the focus of development but is required for a full functioning user flow so it will be complementary.
+4. **Provider Dashboard (supporting)**: A simple, basic dashboard to provide the bare minimum functionality for organizations to manage their providers. This will not be the focus of development but is required for a full functioning user flow so it will be complementary.
 
 ## Definitions:
 
 **Organization**: A group of homecare provider businesses or retirement homes.
 
-**Employee**: A person employed to a business under an organization.
+**Provider**: A person employed to a business under an organization.
 
-**Manager**: A type of employee who can manage one or multiple businesses in an organization. This person is responsible for managing employees in their business.
+**Manager**: A type of provider who can manage one or multiple businesses in an organization. This person is responsible for managing providers in their business.
 
 **Organization Admin**: A type of manager who can manage managers, and perform all other tasks. This person is responsible for billing.
 
-**Client:** An elderly adult who is, or has the potential to be (registered in stride db) receiving stride from an employee.
+**Client:** An elderly adult who is, or has the potential to be (registered in stride db) receiving stride from an provider.
 
 ## Timeline
 
@@ -70,7 +70,7 @@ By the end of this phase, there should be a rough definition of all UI pages, wi
 
 ### Phase 1 - Authentication and User Management (2 weeks)
 
-This section will target connecting the backend and front ends with basic authentaction. This means sign in/out, and account pages for the web app for retirement homes / homecare provider managers and org admins. And for employees (PSW/LW/EA) mobile apps.
+This section will target connecting the backend and front ends with basic authentaction. This means sign in/out, and account pages for the web app for retirement homes / homecare provider managers and org admins. And for providers (PSW/LW/EA) mobile apps.
 
 **Developer tasks:**
 
@@ -95,7 +95,7 @@ Add the core functionality. Implement working logic that takes user input/quiz f
 
 - Build backend logic to generate exercises using AI/automation
 - Create provider approval workflow - allow providers to intervene and modify exercises
-- Create client interface to view exercises as a formatted list and mark them as complete, or allow their assigned employee to do this on their behalf.
+- Create client interface to view exercises as a formatted list and mark them as complete, or allow their assigned provider to do this on their behalf.
 
 **Business tasks:**
 

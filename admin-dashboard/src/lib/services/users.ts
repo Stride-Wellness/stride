@@ -1,35 +1,16 @@
-import {
-	collection,
-	doc,
-	getDoc,
-	getDocs,
-	addDoc,
-	updateDoc,
-	deleteDoc,
-	query,
-	where,
-	orderBy,
-	limit,
-	Timestamp
-} from 'firebase/firestore';
-import { db } from '$lib/firebase/config';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '$lib/firebase/config';
+import { toSafeDate } from './utils';
 
-// Helper function to safely convert Firestore data to Date
-function toSafeDate(value: Timestamp | Date | { toDate(): Date } | null | undefined): Date {
-	if (value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
-		return value.toDate();
-	}
-	if (value instanceof Date) {
-		return value;
-	}
-	return new Date();
-}
+// ============================================================================
+// Types & Enums
+// ============================================================================
 
-export type EmployeeRole = 'psw' | 'lw' | 'admin' | 'manager';
-export type UserType = 'employee' | 'client';
+export type ProviderRole = 'psw' | 'lw' | 'admin' | 'manager';
+export type UserType = 'provider' | 'client';
 export type UserStatus = 'active' | 'inactive' | 'pending' | 'deleted';
 
-export interface EmployeeProfile {
+export interface ProviderProfile {
 	[key: string]: string | number | boolean | null;
 }
 
@@ -62,16 +43,16 @@ export interface BaseUser {
 	organizationId: string;
 	divisionId: string;
 	status: UserStatus;
-	lastLoginAt?: Date;
+	lastSignIn?: Date;
 	deletedAt?: Date;
 	createdAt: Date;
 	updatedAt: Date;
 }
 
-export interface EmployeeUser extends BaseUser {
-	type: 'employee';
-	employeeRole: EmployeeRole[];
-	profile: EmployeeProfile;
+export interface ProviderUser extends BaseUser {
+	type: 'provider';
+	providerRole: ProviderRole[];
+	profile: ProviderProfile;
 }
 
 export interface ClientUser extends BaseUser {
@@ -79,152 +60,167 @@ export interface ClientUser extends BaseUser {
 	profile: ClientProfile;
 }
 
-export type User = EmployeeUser | ClientUser;
+export type User = ProviderUser | ClientUser;
 
-export interface CreateEmployeeUserData {
+// ============================================================================
+// Request Types (for Cloud Functions)
+// ============================================================================
+
+export interface CreateProviderUserData {
 	email: string;
+	password: string;
 	name: string;
 	organizationId: string;
 	divisionId: string;
-	employeeRole: EmployeeRole[];
-	profile?: EmployeeProfile;
+	providerRole: ProviderRole[];
 }
 
 export interface CreateClientUserData {
 	email: string;
+	password: string;
 	name: string;
 	organizationId: string;
 	divisionId: string;
-	profile?: ClientProfile;
+	phone?: string;
+	dateOfBirth?: string;
 }
 
-export type CreateUserData = CreateEmployeeUserData | CreateClientUserData;
-
-export interface UpdateEmployeeUserData {
-	email?: string;
+export interface UpdateProviderUserData {
+	userId: string;
 	name?: string;
-	divisionId?: string;
-	employeeRole?: EmployeeRole[];
-	profile?: EmployeeProfile;
 	status?: UserStatus;
-	lastLoginAt?: Date;
-	deletedAt?: Date | null;
+	providerRole?: ProviderRole[];
+	profile?: ProviderProfile;
 }
 
 export interface UpdateClientUserData {
-	email?: string;
+	userId: string;
 	name?: string;
-	divisionId?: string;
-	profile?: ClientProfile;
 	status?: UserStatus;
-	lastLoginAt?: Date;
-	deletedAt?: Date | null;
+	profile?: ClientProfile;
 }
 
-export type UpdateUserData = UpdateEmployeeUserData | UpdateClientUserData;
+export interface DeleteUserData {
+	userId: string;
+	hardDelete?: boolean;
+}
+
+export interface ResetPasswordData {
+	userId: string;
+}
+
+export interface UpdateEmailData {
+	userId: string;
+	newEmail: string;
+}
+
+export interface GetUsersData {
+	limit?: number;
+	userIds?: string[];
+	organizationId?: string;
+	divisionId?: string;
+	userType?: UserType;
+	status?: UserStatus;
+	includeDeleted?: boolean;
+}
+
+// Cloud Function response types
+interface CloudFunctionResponse {
+	success: boolean;
+	message: string;
+	userId?: string;
+	resetLink?: string;
+}
+
+interface GetUsersResponse {
+	success: boolean;
+	users: User[];
+	count: number;
+}
+
+interface GetUserResponse {
+	success: boolean;
+	user: User;
+}
+
+interface GetUserStatsResponse {
+	success: boolean;
+	stats: {
+		total: number;
+		providers: number;
+		clients: number;
+		active: number;
+		inactive: number;
+		pending: number;
+		deleted: number;
+	};
+}
+
+// ============================================================================
+// Users Service
+// ============================================================================
 
 export class UsersService {
-	private static COLLECTION = 'users';
+	// ============================================================================
+	// Private Helper Methods
+	// ============================================================================
 
 	/**
-	 * Get user by ID
+	 * Parse user data from Cloud Function response
 	 */
-	static async getById(userId: string): Promise<User | null> {
-		try {
-			const userRef = doc(db, this.COLLECTION, userId);
-			const userSnap = await getDoc(userRef);
+	private static _parseUser(userData: User): User {
+		const baseUser = {
+			id: userData.id,
+			email: userData.email,
+			name: userData.name,
+			organizationId: userData.organizationId,
+			divisionId: userData.divisionId,
+			status: userData.status as UserStatus,
+			lastSignIn: userData.lastSignIn ? toSafeDate(userData.lastSignIn) : undefined,
+			deletedAt: userData.deletedAt ? toSafeDate(userData.deletedAt) : undefined,
+			createdAt: toSafeDate(userData.createdAt),
+			updatedAt: toSafeDate(userData.updatedAt)
+		};
 
-			if (!userSnap.exists()) {
-				return null;
-			}
-
-			const data = userSnap.data();
-			const baseUser = {
-				id: userSnap.id,
-				email: data.email,
-				name: data.name,
-				organizationId: data.organizationId,
-				divisionId: data.divisionId,
-				status: data.status,
-				lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
-				deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
-				createdAt: toSafeDate(data.createdAt),
-				updatedAt: toSafeDate(data.updatedAt)
-			};
-
-			if (data.type === 'employee') {
-				return {
-					...baseUser,
-					type: 'employee',
-					employeeRole: data.employeeRole || [],
-					profile: data.profile || {}
-				} as EmployeeUser;
-			} else {
-				return {
-					...baseUser,
-					type: 'client',
-					profile: data.profile || {}
-				} as ClientUser;
-			}
-		} catch (error) {
-			console.error('Error getting user:', error);
-			throw new Error('Failed to get user');
+		if (userData.type === 'provider') {
+			return {
+				...baseUser,
+				type: 'provider',
+				providerRole: userData.providerRole || [],
+				profile: userData.profile || {}
+			} as ProviderUser;
+		} else {
+			return {
+				...baseUser,
+				type: 'client',
+				profile: userData.profile || {}
+			} as ClientUser;
 		}
 	}
 
+	// ============================================================================
+	// Public Read Methods (Use Cloud Functions with Auth metadata)
+	// ============================================================================
+
 	/**
-	 * Get all users (admin only) - excludes deleted users by default
+	 * Get all users with Auth metadata (lastSignIn)
+	 * Excludes deleted users by default
 	 */
 	static async getAll(limitCount: number = 100, includeDeleted: boolean = false): Promise<User[]> {
 		try {
-			const usersRef = collection(db, this.COLLECTION);
-			let q = query(usersRef, orderBy('createdAt', 'desc'), limit(limitCount));
+			const getUsersFn = httpsCallable<GetUsersData, GetUsersResponse>(functions, 'get_users');
 
-			// Filter out deleted users unless explicitly requested
-			if (!includeDeleted) {
-				q = query(
-					usersRef,
-					where('status', '!=', 'deleted'),
-					orderBy('createdAt', 'desc'),
-					limit(limitCount)
-				);
+			const result = await getUsersFn({
+				limit: limitCount,
+				includeDeleted
+			});
+			console.log(result);
+
+			if (!result.data.success) {
+				throw new Error('Failed to get users');
 			}
 
-			const querySnap = await getDocs(q);
-			const users: User[] = [];
-
-			querySnap.forEach((doc) => {
-				const data = doc.data();
-				const baseUser = {
-					id: doc.id,
-					email: data.email,
-					name: data.name,
-					organizationId: data.organizationId,
-					divisionId: data.divisionId,
-					status: data.status,
-					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
-					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
-					createdAt: toSafeDate(data.createdAt),
-					updatedAt: toSafeDate(data.updatedAt)
-				};
-
-				if (data.type === 'employee') {
-					users.push({
-						...baseUser,
-						type: 'employee',
-						employeeRole: data.employeeRole || [],
-						profile: data.profile || {}
-					} as EmployeeUser);
-				} else {
-					users.push({
-						...baseUser,
-						type: 'client',
-						profile: data.profile || {}
-					} as ClientUser);
-				}
-			});
-
-			return users;
+			return result.data.users.map((user) => this._parseUser(user));
 		} catch (error) {
 			console.error('Error getting users:', error);
 			throw new Error('Failed to get users');
@@ -232,65 +228,74 @@ export class UsersService {
 	}
 
 	/**
-	 * Get users by organization ID - excludes deleted users by default
+	 * Get user by ID with Auth metadata
+	 */
+	static async getById(userId: string): Promise<User | null> {
+		try {
+			const getUserFn = httpsCallable<{ userId: string }, GetUserResponse>(
+				functions,
+				'get_user_by_id'
+			);
+
+			const result = await getUserFn({ userId });
+
+			if (!result.data.success) {
+				return null;
+			}
+
+			return this._parseUser(result.data.user);
+		} catch (error) {
+			console.error('Error getting user by ID:', error);
+			return null;
+		}
+	}
+
+	/**
+	 * Get users by specific IDs (max 10 due to Firestore 'in' query limit)
+	 */
+	static async getByIds(userIds: string[]): Promise<User[]> {
+		try {
+			if (userIds.length > 10) {
+				throw new Error('Cannot get more than 10 users by ID at once');
+			}
+
+			const getUsersFn = httpsCallable<GetUsersData, GetUsersResponse>(functions, 'get_users');
+
+			const result = await getUsersFn({ userIds });
+
+			if (!result.data.success) {
+				throw new Error('Failed to get users by IDs');
+			}
+
+			return result.data.users.map((user) => this._parseUser(user));
+		} catch (error) {
+			console.error('Error getting users by IDs:', error);
+			throw new Error('Failed to get users by IDs');
+		}
+	}
+
+	/**
+	 * Get users by organization ID
+	 * Excludes deleted users by default
 	 */
 	static async getByOrganizationId(
 		organizationId: string,
 		includeDeleted: boolean = false
 	): Promise<User[]> {
 		try {
-			const usersRef = collection(db, this.COLLECTION);
-			let q = query(
-				usersRef,
-				where('organizationId', '==', organizationId),
-				orderBy('createdAt', 'desc')
-			);
+			const getUsersFn = httpsCallable<GetUsersData, GetUsersResponse>(functions, 'get_users');
 
-			// Filter out deleted users unless explicitly requested
-			if (!includeDeleted) {
-				q = query(
-					usersRef,
-					where('organizationId', '==', organizationId),
-					where('status', '!=', 'deleted'),
-					orderBy('createdAt', 'desc')
-				);
-			}
-
-			const querySnap = await getDocs(q);
-			const users: User[] = [];
-
-			querySnap.forEach((doc) => {
-				const data = doc.data();
-				const baseUser = {
-					id: doc.id,
-					email: data.email,
-					name: data.name,
-					organizationId: data.organizationId,
-					divisionId: data.divisionId,
-					status: data.status,
-					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
-					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
-					createdAt: toSafeDate(data.createdAt),
-					updatedAt: toSafeDate(data.updatedAt)
-				};
-
-				if (data.type === 'employee') {
-					users.push({
-						...baseUser,
-						type: 'employee',
-						employeeRole: data.employeeRole || [],
-						profile: data.profile || {}
-					} as EmployeeUser);
-				} else {
-					users.push({
-						...baseUser,
-						type: 'client',
-						profile: data.profile || {}
-					} as ClientUser);
-				}
+			const result = await getUsersFn({
+				organizationId,
+				includeDeleted,
+				limit: 1000
 			});
 
-			return users;
+			if (!result.data.success) {
+				throw new Error('Failed to get users by organization');
+			}
+
+			return result.data.users.map((user) => this._parseUser(user));
 		} catch (error) {
 			console.error('Error getting users by organization:', error);
 			throw new Error('Failed to get users by organization');
@@ -298,61 +303,27 @@ export class UsersService {
 	}
 
 	/**
-	 * Get users by division ID - excludes deleted users by default
+	 * Get users by division ID
+	 * Excludes deleted users by default
 	 */
 	static async getByDivisionId(
 		divisionId: string,
 		includeDeleted: boolean = false
 	): Promise<User[]> {
 		try {
-			const usersRef = collection(db, this.COLLECTION);
-			let q = query(usersRef, where('divisionId', '==', divisionId), orderBy('createdAt', 'desc'));
+			const getUsersFn = httpsCallable<GetUsersData, GetUsersResponse>(functions, 'get_users');
 
-			// Filter out deleted users unless explicitly requested
-			if (!includeDeleted) {
-				q = query(
-					usersRef,
-					where('divisionId', '==', divisionId),
-					where('status', '!=', 'deleted'),
-					orderBy('createdAt', 'desc')
-				);
-			}
-
-			const querySnap = await getDocs(q);
-			const users: User[] = [];
-
-			querySnap.forEach((doc) => {
-				const data = doc.data();
-				const baseUser = {
-					id: doc.id,
-					email: data.email,
-					name: data.name,
-					organizationId: data.organizationId,
-					divisionId: data.divisionId,
-					status: data.status,
-					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
-					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
-					createdAt: toSafeDate(data.createdAt),
-					updatedAt: toSafeDate(data.updatedAt)
-				};
-
-				if (data.type === 'employee') {
-					users.push({
-						...baseUser,
-						type: 'employee',
-						employeeRole: data.employeeRole || [],
-						profile: data.profile || {}
-					} as EmployeeUser);
-				} else {
-					users.push({
-						...baseUser,
-						type: 'client',
-						profile: data.profile || {}
-					} as ClientUser);
-				}
+			const result = await getUsersFn({
+				divisionId,
+				includeDeleted,
+				limit: 1000
 			});
 
-			return users;
+			if (!result.data.success) {
+				throw new Error('Failed to get users by division');
+			}
+
+			return result.data.users.map((user) => this._parseUser(user));
 		} catch (error) {
 			console.error('Error getting users by division:', error);
 			throw new Error('Failed to get users by division');
@@ -360,7 +331,8 @@ export class UsersService {
 	}
 
 	/**
-	 * Get users by type and organization - excludes deleted users by default
+	 * Get users by type and organization
+	 * Excludes deleted users by default
 	 */
 	static async getByTypeAndOrganization(
 		type: UserType,
@@ -368,60 +340,20 @@ export class UsersService {
 		includeDeleted: boolean = false
 	): Promise<User[]> {
 		try {
-			const usersRef = collection(db, this.COLLECTION);
-			let q = query(
-				usersRef,
-				where('type', '==', type),
-				where('organizationId', '==', organizationId),
-				orderBy('createdAt', 'desc')
-			);
+			const getUsersFn = httpsCallable<GetUsersData, GetUsersResponse>(functions, 'get_users');
 
-			// Filter out deleted users unless explicitly requested
-			if (!includeDeleted) {
-				q = query(
-					usersRef,
-					where('type', '==', type),
-					where('organizationId', '==', organizationId),
-					where('status', '!=', 'deleted'),
-					orderBy('createdAt', 'desc')
-				);
-			}
-
-			const querySnap = await getDocs(q);
-			const users: User[] = [];
-
-			querySnap.forEach((doc) => {
-				const data = doc.data();
-				const baseUser = {
-					id: doc.id,
-					email: data.email,
-					name: data.name,
-					organizationId: data.organizationId,
-					divisionId: data.divisionId,
-					status: data.status,
-					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
-					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
-					createdAt: toSafeDate(data.createdAt),
-					updatedAt: toSafeDate(data.updatedAt)
-				};
-
-				if (data.type === 'employee') {
-					users.push({
-						...baseUser,
-						type: 'employee',
-						employeeRole: data.employeeRole || [],
-						profile: data.profile || {}
-					} as EmployeeUser);
-				} else {
-					users.push({
-						...baseUser,
-						type: 'client',
-						profile: data.profile || {}
-					} as ClientUser);
-				}
+			const result = await getUsersFn({
+				userType: type,
+				organizationId,
+				includeDeleted,
+				limit: 1000
 			});
 
-			return users;
+			if (!result.data.success) {
+				throw new Error('Failed to get users by type and organization');
+			}
+
+			return result.data.users.map((user) => this._parseUser(user));
 		} catch (error) {
 			console.error('Error getting users by type and organization:', error);
 			throw new Error('Failed to get users by type and organization');
@@ -436,49 +368,19 @@ export class UsersService {
 		organizationId: string
 	): Promise<User[]> {
 		try {
-			const usersRef = collection(db, this.COLLECTION);
-			const q = query(
-				usersRef,
-				where('status', '==', status),
-				where('organizationId', '==', organizationId),
-				orderBy('createdAt', 'desc')
-			);
+			const getUsersFn = httpsCallable<GetUsersData, GetUsersResponse>(functions, 'get_users');
 
-			const querySnap = await getDocs(q);
-			const users: User[] = [];
-
-			querySnap.forEach((doc) => {
-				const data = doc.data();
-				const baseUser = {
-					id: doc.id,
-					email: data.email,
-					name: data.name,
-					organizationId: data.organizationId,
-					divisionId: data.divisionId,
-					status: data.status,
-					lastLoginAt: data.lastLoginAt ? toSafeDate(data.lastLoginAt) : undefined,
-					deletedAt: data.deletedAt ? toSafeDate(data.deletedAt) : undefined,
-					createdAt: toSafeDate(data.createdAt),
-					updatedAt: toSafeDate(data.updatedAt)
-				};
-
-				if (data.type === 'employee') {
-					users.push({
-						...baseUser,
-						type: 'employee',
-						employeeRole: data.employeeRole || [],
-						profile: data.profile || {}
-					} as EmployeeUser);
-				} else {
-					users.push({
-						...baseUser,
-						type: 'client',
-						profile: data.profile || {}
-					} as ClientUser);
-				}
+			const result = await getUsersFn({
+				status,
+				organizationId,
+				limit: 1000
 			});
 
-			return users;
+			if (!result.data.success) {
+				throw new Error('Failed to get users by status and organization');
+			}
+
+			return result.data.users.map((user) => this._parseUser(user));
 		} catch (error) {
 			console.error('Error getting users by status and organization:', error);
 			throw new Error('Failed to get users by status and organization');
@@ -486,178 +388,298 @@ export class UsersService {
 	}
 
 	/**
-	 * Create new employee user
+	 * Search users by name (client-side filtering)
 	 */
-	static async createEmployee(data: CreateEmployeeUserData): Promise<EmployeeUser> {
+	static async search(searchTerm: string, organizationId?: string): Promise<User[]> {
 		try {
-			const now = Timestamp.now();
-			const userData = {
-				email: data.email,
-				name: data.name,
-				type: 'employee' as const,
-				employeeRole: data.employeeRole,
-				organizationId: data.organizationId,
-				divisionId: data.divisionId,
-				profile: data.profile || {},
-				status: 'active' as const,
-				createdAt: now,
-				updatedAt: now
-			};
+			const users = organizationId
+				? await this.getByOrganizationId(organizationId, false)
+				: await this.getAll(1000, false);
 
-			const docRef = await addDoc(collection(db, this.COLLECTION), userData);
+			const lowercaseSearch = searchTerm.toLowerCase();
 
-			return {
-				id: docRef.id,
-				...userData,
-				createdAt: now.toDate(),
-				updatedAt: now.toDate()
-			};
+			return users.filter((user) => user.name.toLowerCase().includes(lowercaseSearch));
 		} catch (error) {
-			console.error('Error creating employee user:', error);
-			throw new Error('Failed to create employee user');
+			console.error('Error searching users:', error);
+			throw new Error('Failed to search users');
 		}
 	}
 
 	/**
-	 * Create new client user
+	 * Get user statistics
 	 */
-	static async createClient(data: CreateClientUserData): Promise<ClientUser> {
+	static async getStats(organizationId?: string): Promise<{
+		total: number;
+		providers: number;
+		clients: number;
+		active: number;
+		inactive: number;
+		pending: number;
+		deleted: number;
+	}> {
 		try {
-			const now = Timestamp.now();
-			const userData = {
-				email: data.email,
-				name: data.name,
-				type: 'client' as const,
-				organizationId: data.organizationId,
-				divisionId: data.divisionId,
-				profile: data.profile || {},
-				status: 'active' as const,
-				createdAt: now,
-				updatedAt: now
-			};
+			const getStatsFn = httpsCallable<{ organizationId?: string }, GetUserStatsResponse>(
+				functions,
+				'get_user_stats'
+			);
 
-			const docRef = await addDoc(collection(db, this.COLLECTION), userData);
+			const result = await getStatsFn({ organizationId });
 
-			return {
-				id: docRef.id,
-				...userData,
-				createdAt: now.toDate(),
-				updatedAt: now.toDate()
-			};
-		} catch (error) {
-			console.error('Error creating client user:', error);
-			throw new Error('Failed to create client user');
-		}
-	}
-
-	/**
-	 * Update user
-	 */
-	static async update(userId: string, data: UpdateUserData): Promise<void> {
-		try {
-			const userRef = doc(db, this.COLLECTION, userId);
-			const updateData = {
-				...data,
-				updatedAt: Timestamp.now()
-			};
-
-			await updateDoc(userRef, updateData);
-		} catch (error) {
-			console.error('Error updating user:', error);
-			throw new Error('Failed to update user');
-		}
-	}
-
-	/**
-	 * Update last login timestamp
-	 */
-	static async updateLastLogin(userId: string): Promise<void> {
-		try {
-			const userRef = doc(db, this.COLLECTION, userId);
-			await updateDoc(userRef, {
-				lastLoginAt: Timestamp.now(),
-				updatedAt: Timestamp.now()
-			});
-		} catch (error) {
-			console.error('Error updating last login:', error);
-			throw new Error('Failed to update last login');
-		}
-	}
-
-	/**
-	 * Soft delete user (set status to deleted and add deletedAt timestamp)
-	 */
-	static async softDelete(userId: string): Promise<void> {
-		try {
-			await this.update(userId, {
-				status: 'deleted',
-				deletedAt: new Date()
-			});
-		} catch (error) {
-			console.error('Error soft deleting user:', error);
-			throw new Error('Failed to delete user');
-		}
-	}
-
-	/**
-	 * Restore soft deleted user
-	 */
-	static async restore(userId: string): Promise<void> {
-		try {
-			const userRef = doc(db, this.COLLECTION, userId);
-			await updateDoc(userRef, {
-				status: 'active',
-				deletedAt: null,
-				updatedAt: Timestamp.now()
-			});
-		} catch (error) {
-			console.error('Error restoring user:', error);
-			throw new Error('Failed to restore user');
-		}
-	}
-
-	/**
-	 * Check if user has any active assignments (to prevent hard delete)
-	 */
-	static async hasActiveAssignments(userId: string): Promise<boolean> {
-		try {
-			// This would need the AssignmentsService to be implemented
-			// For now, return false to allow hard delete
-			// TODO: Implement assignment checking once AssignmentsService is available
-			console.log('Checking assignments for user:', userId);
-			return false;
-		} catch (error) {
-			console.error('Error checking user assignments:', error);
-			return true; // Err on the side of caution
-		}
-	}
-
-	/**
-	 * Hard delete user (use with caution) - only if no active references
-	 */
-	static async hardDelete(userId: string): Promise<void> {
-		try {
-			// Check for active assignments before allowing hard delete
-			const hasAssignments = await this.hasActiveAssignments(userId);
-			if (hasAssignments) {
-				throw new Error(
-					'Cannot hard delete user with active assignments. Use soft delete instead.'
-				);
+			if (!result.data.success) {
+				throw new Error('Failed to get user statistics');
 			}
 
-			const userRef = doc(db, this.COLLECTION, userId);
-			await deleteDoc(userRef);
+			return result.data.stats;
 		} catch (error) {
-			console.error('Error hard deleting user:', error);
-			throw new Error('Failed to permanently delete user');
+			console.error('Error getting user stats:', error);
+			throw new Error('Failed to get user statistics');
+		}
+	}
+
+	// ============================================================================
+	// Public Write Methods (Use Cloud Functions)
+	// ============================================================================
+
+	/**
+	 * Create a new provider user (via Cloud Function)
+	 * Creates both Firebase Auth user and Firestore document
+	 */
+	static async createProvider(data: CreateProviderUserData): Promise<string> {
+		try {
+			const createProviderFn = httpsCallable<CreateProviderUserData, CloudFunctionResponse>(
+				functions,
+				'create_provider'
+			);
+
+			const result = await createProviderFn({
+				email: data.email,
+				password: data.password,
+				name: data.name,
+				organizationId: data.organizationId,
+				divisionId: data.divisionId,
+				providerRole: data.providerRole
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+
+			return result.data.userId!;
+		} catch (error: unknown) {
+			console.error('Error creating provider:', error);
+			const message = error instanceof Error ? error.message : 'Failed to create provider user';
+			throw new Error(message);
 		}
 	}
 
 	/**
-	 * Check if user is employee
+	 * Create a new client user (via Cloud Function)
+	 * Creates both Firebase Auth user and Firestore document
 	 */
-	static isEmployee(user: User): user is EmployeeUser {
-		return user.type === 'employee';
+	static async createClient(data: CreateClientUserData): Promise<string> {
+		try {
+			const createClientFn = httpsCallable<CreateClientUserData, CloudFunctionResponse>(
+				functions,
+				'create_client'
+			);
+
+			const result = await createClientFn({
+				email: data.email,
+				password: data.password,
+				name: data.name,
+				organizationId: data.organizationId,
+				divisionId: data.divisionId,
+				phone: data.phone,
+				dateOfBirth: data.dateOfBirth
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+
+			return result.data.userId!;
+		} catch (error: unknown) {
+			console.error('Error creating client:', error);
+			const message = error instanceof Error ? error.message : 'Failed to create client user';
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Update provider user (via Cloud Function)
+	 * Updates both Firebase Auth and Firestore
+	 */
+	static async updateProvider(data: UpdateProviderUserData): Promise<void> {
+		try {
+			if (!data.name && !data.status && !data.providerRole && !data.profile) {
+				throw new Error('No fields to update');
+			}
+
+			const updateProviderFn = httpsCallable<UpdateProviderUserData, CloudFunctionResponse>(
+				functions,
+				'update_provider'
+			);
+
+			const result = await updateProviderFn({
+				userId: data.userId,
+				name: data.name,
+				status: data.status,
+				providerRole: data.providerRole,
+				profile: data.profile
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error updating provider:', error);
+			const message = error instanceof Error ? error.message : 'Failed to update provider user';
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Update client user (via Cloud Function)
+	 * Updates both Firebase Auth and Firestore
+	 */
+	static async updateClient(data: UpdateClientUserData): Promise<void> {
+		try {
+			if (!data.name && !data.status && !data.profile) {
+				throw new Error('No fields to update');
+			}
+
+			const updateClientFn = httpsCallable<UpdateClientUserData, CloudFunctionResponse>(
+				functions,
+				'update_client'
+			);
+
+			const result = await updateClientFn({
+				userId: data.userId,
+				name: data.name,
+				status: data.status,
+				profile: data.profile
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error updating client:', error);
+			const message = error instanceof Error ? error.message : 'Failed to update client user';
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Delete provider user (via Cloud Function)
+	 * Soft delete by default, hard delete removes from Auth and Firestore
+	 */
+	static async deleteProvider(userId: string, hardDelete: boolean = false): Promise<void> {
+		try {
+			const deleteProviderFn = httpsCallable<DeleteUserData, CloudFunctionResponse>(
+				functions,
+				'delete_provider'
+			);
+
+			const result = await deleteProviderFn({
+				userId,
+				hardDelete
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error deleting provider:', error);
+			const message = error instanceof Error ? error.message : 'Failed to delete provider user';
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Delete client user (via Cloud Function)
+	 * Soft delete by default, hard delete removes from Auth and Firestore
+	 */
+	static async deleteClient(userId: string, hardDelete: boolean = false): Promise<void> {
+		try {
+			const deleteClientFn = httpsCallable<DeleteUserData, CloudFunctionResponse>(
+				functions,
+				'delete_client'
+			);
+
+			const result = await deleteClientFn({
+				userId,
+				hardDelete
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error deleting client:', error);
+			const message = error instanceof Error ? error.message : 'Failed to delete client user';
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Reset user password (via Cloud Function)
+	 * Generates and sends password reset email
+	 */
+	static async resetPassword(userId: string): Promise<void> {
+		try {
+			const resetPasswordFn = httpsCallable<ResetPasswordData, CloudFunctionResponse>(
+				functions,
+				'reset_user_password'
+			);
+
+			const result = await resetPasswordFn({ userId });
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error resetting password:', error);
+			const message = error instanceof Error ? error.message : 'Failed to reset user password';
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Update user email (via Cloud Function)
+	 * Updates both Firebase Auth and Firestore
+	 */
+	static async updateEmail(userId: string, newEmail: string): Promise<void> {
+		try {
+			const updateEmailFn = httpsCallable<UpdateEmailData, CloudFunctionResponse>(
+				functions,
+				'update_user_email'
+			);
+
+			const result = await updateEmailFn({
+				userId,
+				newEmail
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error updating email:', error);
+			const message = error instanceof Error ? error.message : 'Failed to update user email';
+			throw new Error(message);
+		}
+	}
+
+	// ============================================================================
+	// Helper Methods
+	// ============================================================================
+
+	/**
+	 * Check if user is provider
+	 */
+	static isProvider(user: User): user is ProviderUser {
+		return user.type === 'provider';
 	}
 
 	/**
@@ -668,10 +690,10 @@ export class UsersService {
 	}
 
 	/**
-	 * Check if employee has specific role
+	 * Check if provider has specific role
 	 */
-	static hasRole(user: EmployeeUser, role: EmployeeRole): boolean {
-		return user.employeeRole.includes(role);
+	static hasRole(user: ProviderUser, role: ProviderRole): boolean {
+		return user.providerRole.includes(role);
 	}
 
 	/**
@@ -683,6 +705,19 @@ export class UsersService {
 			return users.length;
 		} catch (error) {
 			console.error('Error counting active users:', error);
+			return 0;
+		}
+	}
+
+	/**
+	 * Count users by type and organization
+	 */
+	static async countByTypeAndOrganization(type: UserType, organizationId: string): Promise<number> {
+		try {
+			const users = await this.getByTypeAndOrganization(type, organizationId, false);
+			return users.length;
+		} catch (error) {
+			console.error('Error counting users by type:', error);
 			return 0;
 		}
 	}

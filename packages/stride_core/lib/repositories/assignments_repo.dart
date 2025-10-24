@@ -75,7 +75,7 @@ class AssignmentsRepository {
       final userData = providerDoc.data()!;
       final user = UserModel.fromMap(userData, providerDoc.id);
 
-      return user.isProvider ? user.asEmployee : null;
+      return user.isProvider ? user.asProvider : null;
     } catch (e) {
       print('Error getting provider by client: $e');
       throw Exception('Failed to get provider');

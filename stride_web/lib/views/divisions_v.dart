@@ -262,7 +262,7 @@ class _DivisionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<DivisionsViewModel>();
-    final employeeCount = viewModel.getEmployeeCount(division.id);
+    final providerCount = viewModel.getProviderCount(division.id);
     final clientCount = viewModel.getClientCount(division.id);
 
     return Card(
@@ -309,8 +309,8 @@ class _DivisionCard extends StatelessWidget {
                 children: [
                   _StatItem(
                     icon: Icons.people_outline,
-                    label: 'Employees',
-                    value: employeeCount.toString(),
+                    label: 'Providers',
+                    value: providerCount.toString(),
                   ),
                   _StatItem(
                     icon: Icons.person_outline,

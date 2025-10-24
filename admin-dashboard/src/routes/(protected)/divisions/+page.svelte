@@ -2,15 +2,14 @@
 	import type { Division } from '$lib/services';
 	import { DivisionsService } from '$lib/services';
 	import Table from '$lib/components/Table.svelte';
-	import Button from '$lib/components/Button.svelte';
-	import Input from '$lib/components/Input.svelte';
 	import Message from '$lib/components/Message.svelte';
 	import Card from '$lib/components/Card.svelte';
-	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
 	import CreateDivisionForm from '$lib/components/compound/CreateDivisionForm.svelte';
-
-	const { form }: { form: any } = $props();
+	import AssignManagerForm from '$lib/components/compound/AssignManagerForm.svelte';
+	import DeleteDivisionForm from '$lib/components/compound/DeleteDivisionForm.svelte';
+	import Tabs from '$lib/components/Tabs.svelte';
+	import TabPanel from '$lib/components/TabPanel.svelte';
 
 	// State for divisions data
 	let divisions = $state<Division[]>([]);
@@ -18,17 +17,16 @@
 	let error = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
 
-	// Form state for deleting division
-	let deleteDivisionId = $state('');
-
-	// Form state for assigning manager
-	let assignDivisionId = $state('');
-	let assignManagerId = $state('');
-
 	let selectedDivisions: Record<string, any>[] = $state([]);
 
 	// Load divisions on mount
 	onMount(async () => {
+		await loadDivisions();
+	});
+
+	async function loadDivisions() {
+		loading = true;
+		error = null;
 		try {
 			divisions = await DivisionsService.getAll(1000);
 		} catch (err: any) {
@@ -57,185 +55,6 @@
 		} finally {
 			loading = false;
 		}
-	});
-
-	// Handle soft delete division
-	async function handleSoftDeleteDivision(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (!deleteDivisionId) {
-			error = 'Division ID is required';
-			return;
-		}
-
-		// Confirm soft deletion
-		if (
-			!confirm(
-				'Are you sure you want to soft delete this division? This will hide it from the main view but preserve all data. You can restore it later if needed.'
-			)
-		) {
-			return;
-		}
-
-		try {
-			await DivisionsService.softDelete(deleteDivisionId, false); // Don't cascade to users by default
-
-			// Reload divisions to refresh the list (soft deleted won't show)
-			divisions = await DivisionsService.getAll(1000);
-
-			deleteDivisionId = '';
-
-			successMessage = 'Division soft deleted successfully! Data has been preserved and can be restored.';
-		} catch (err: any) {
-			console.error('Error soft deleting division:', err);
-			
-			// Parse specific Firebase/Firestore errors
-			if (err.code) {
-				switch (err.code) {
-					case 'permission-denied':
-						error = 'Permission denied. You may not have the required permissions to delete this division.';
-						break;
-					case 'not-found':
-						error = 'Division not found. It may have already been deleted or the ID is incorrect.';
-						break;
-					case 'failed-precondition':
-						error = 'Cannot delete division. Please check the division ID and try again.';
-						break;
-					case 'unauthenticated':
-						error = 'You are not authenticated. Please log in and try again.';
-						break;
-					default:
-						error = `Error: ${err.message || 'Failed to soft delete division. Please try again.'}`;
-				}
-			} else if (err.message) {
-				if (err.message.includes('Failed to delete division')) {
-					error = 'Failed to soft delete division. Please check the division ID and try again.';
-				} else {
-					error = err.message;
-				}
-			} else {
-				error = 'An unexpected error occurred while soft deleting the division.';
-			}
-		}
-	}
-
-	// Handle delete division
-	async function handleDeleteDivision(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (!deleteDivisionId) {
-			error = 'Division ID is required';
-			return;
-		}
-
-		// Confirm deletion
-		if (
-			!confirm(
-				'Are you sure you want to delete this division? This action cannot be undone and will permanently remove all associated data.'
-			)
-		) {
-			return;
-		}
-
-		try {
-			const divisionsToDelete = deleteDivisionId.split(',').map((id) => id.trim());
-			for (const id of divisionsToDelete) {
-				await DivisionsService.hardDelete(id);
-			}
-
-			// Update local state immediately
-			divisions = divisions.filter((division) => !divisionsToDelete.includes(division.id));
-
-			deleteDivisionId = '';
-
-			successMessage = 'Division deleted successfully!';
-		} catch (err: any) {
-			console.error('Error deleting division:', err);
-			
-			// Parse specific Firebase/Firestore errors
-			if (err.code) {
-				switch (err.code) {
-					case 'permission-denied':
-						error = 'Permission denied. You may not have the required permissions to delete this division.';
-						break;
-					case 'not-found':
-						error = 'Division not found. It may have already been deleted or the ID is incorrect.';
-						break;
-					case 'failed-precondition':
-						error = 'Cannot delete division. There may be users or assignments still associated with this division.';
-						break;
-					case 'unauthenticated':
-						error = 'You are not authenticated. Please log in and try again.';
-						break;
-					default:
-						error = `Error: ${err.message || 'Failed to delete division. Please try again.'}`;
-				}
-			} else if (err.message) {
-				if (err.message.includes('Failed to permanently delete division')) {
-					error = 'Failed to delete division. Please ensure there are no users or assignments linked to this division.';
-				} else {
-					error = err.message;
-				}
-			} else {
-				error = 'An unexpected error occurred while deleting the division.';
-			}
-		}
-	}
-
-	// Handle assign manager to division
-	async function handleAssignManager(event: Event) {
-		event.preventDefault();
-
-		error = null;
-		successMessage = null;
-
-		if (!assignDivisionId || !assignManagerId) {
-			error = 'Both Division ID and Manager ID are required';
-			return;
-		}
-
-		try {
-			await DivisionsService.assignManager(assignDivisionId, assignManagerId);
-
-			// Reload divisions to refresh the list
-			divisions = await DivisionsService.getAll(1000);
-
-			assignDivisionId = '';
-			assignManagerId = '';
-
-			successMessage = 'Manager assigned to division successfully!';
-		} catch (err: any) {
-			console.error('Error assigning manager:', err);
-			
-			if (err.code) {
-				switch (err.code) {
-					case 'permission-denied':
-						error = 'Permission denied. You may not have the required permissions to assign managers.';
-						break;
-					case 'not-found':
-						error = 'Division or manager not found. Please verify the IDs are correct.';
-						break;
-					case 'failed-precondition':
-						error = 'Manager assignment failed validation. The manager must exist, belong to the same organization, and have manager role.';
-						break;
-					case 'unauthenticated':
-						error = 'You are not authenticated. Please log in and try again.';
-						break;
-					default:
-						error = `Error: ${err.message || 'Failed to assign manager. Please try again.'}`;
-				}
-			} else if (err.message) {
-				error = err.message;
-			} else {
-				error = 'An unexpected error occurred while assigning the manager.';
-			}
-		}
 	}
 
 	// Transform data for table display
@@ -261,10 +80,8 @@
 		return { total, retirementHomes, homecareProviders, withoutManager };
 	});
 
-	$effect(() => {
-		deleteDivisionId = selectedDivisions.map((div) => div.id.name).join(', ');
-		assignDivisionId = selectedDivisions.map((div) => div.id.name).join(', ');
-	});
+	// Get selected division IDs
+	const selectedDivisionIds = $derived(selectedDivisions.map((div) => div.id.name).join(', '));
 </script>
 
 {#if loading}
@@ -313,86 +130,37 @@
 			</Card>
 		</div>
 
-		<!-- Create Division Form -->
-		<CreateDivisionForm bind:error bind:successMessage callback={(newDivision) => { divisions.push(newDivision); }} />
-
-		<!-- Management Actions -->
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+		
+		<Tabs>
+			<TabPanel label="Create Division">
+				<!-- Create Division Form -->
+				<CreateDivisionForm 
+					bind:error 
+					bind:successMessage 
+					callback={(newDivision) => { 
+						divisions.push(newDivision); 
+					}} 
+				/>
+			</TabPanel>
+			<TabPanel label="Assign Manager">
 			<!-- Assign Manager -->
-			<Card class="p-6">
-				<h2 class="mb-4 text-lg font-medium text-gray-900">Assign Manager</h2>
-				<p class="my-2 text-xs text-gray-700">
-					Assign a manager to a division that doesn't have one assigned yet.
-				</p>
-				<form onsubmit={handleAssignManager} class="space-y-4">
-					<Input
-						type="text"
-						placeholder="Division ID"
-						size="md"
-						variant="outline"
-						name="assignDivisionId"
-						bind:value={assignDivisionId}
-						required
-					/>
-					<Input
-						type="text"
-						placeholder="Manager ID"
-						size="md"
-						variant="outline"
-						name="assignManagerId"
-						bind:value={assignManagerId}
-						required
-					/>
-					<Button
-						type="submit"
-						size="md"
-						class="w-full"
-					>
-						Assign Manager
-					</Button>
-				</form>
-			</Card>
-
+			<AssignManagerForm
+				bind:error
+				bind:successMessage
+				constantDivisionId={selectedDivisionIds}
+				callback={loadDivisions}
+			/>
+			</TabPanel>
+			<TabPanel label="Delete Division">
 			<!-- Delete Division -->
-			<Card class="border-red-200 bg-red-50 p-6 flex flex-col justify-between">
-				<div>
-					<h2 class="mb-4 text-lg font-medium text-red-900">Delete Division</h2>
-					<p class="my-2 text-xs text-red-700">
-						Soft delete hides the division but preserves data. Hard delete permanently removes all data.
-					</p>
-				</div>
-				<div class="space-y-4">
-					<Input
-						type="text"
-						placeholder="Division ID"
-						size="md"
-						variant="outline"
-						name="deleteId"
-						bind:value={deleteDivisionId}
-						required
-					/>
-					<!-- Soft Delete Button -->
-					<Button
-						type="button"
-						size="md"
-						class="w-full border-yellow-600 bg-yellow-600 text-white hover:border-yellow-700 hover:bg-yellow-700"
-						onclick={handleSoftDeleteDivision}
-					>
-						Soft Delete Division (Recoverable)
-					</Button>
-					<!-- Hard Delete Button -->
-					<Button
-						type="button"
-						size="md"
-						class="w-full border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
-						onclick={handleDeleteDivision}
-					>
-						Hard Delete Division (Permanent)
-					</Button>
-				</div>
-			</Card>
-		</div>
-
+			<DeleteDivisionForm
+				bind:error
+				bind:successMessage
+				constantDivisionId={selectedDivisionIds}
+				callback={loadDivisions}
+			/>
+			</TabPanel>
+		</Tabs>
 
 		<!-- Divisions Table -->
 		<Card class="p-6">

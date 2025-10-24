@@ -3,24 +3,24 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { redirect } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
 import { adminAuth } from '$lib/firebase/admin';
-import { AdminUsersService } from '$lib/services/privileged';
+import { AdminsService } from '$lib/services/admins';
 
 const handleAuth: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get('session');
-
+	console.log('here');
 	if (token) {
 		try {
 			const decodedToken = await adminAuth.verifySessionCookie(token);
 			// Get full admin user data and verify admin status
-			const adminUser = await AdminUsersService.getAdminById(decodedToken.uid);
-
+			const adminUser = await AdminsService.getById_(decodedToken.uid);
 			if (adminUser) {
 				event.locals.user = adminUser;
 			} else {
 				// User exists but is not an admin, clear session
 				event.cookies.delete('session', { path: '/' });
 			}
-		} catch {
+		} catch (error) {
+			console.error('Error verifying session:', error);
 			event.cookies.delete('session', { path: '/' });
 		}
 	}
@@ -43,7 +43,6 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 	console.log('✅ Proceeding to resolve');
 	return resolve(event);
 };
-
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {

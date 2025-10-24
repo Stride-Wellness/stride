@@ -1,67 +1,101 @@
-import {
-	collection,
-	doc,
-	getDoc,
-	getDocs,
-	addDoc,
-	updateDoc,
-	deleteDoc,
-	query,
-	orderBy,
-	limit,
-	Timestamp
-} from 'firebase/firestore';
-import { db } from '$lib/firebase/config';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '$lib/firebase/config';
 import { toSafeDate } from './utils';
 
-// Update interface to match database design
+// Match Python AdminPrivilegeLevel enum
+export enum AdminPrivilegeLevel {
+	SUPER_ADMIN = 0,
+	ADMIN = 1,
+	MODERATOR = 2,
+	READ_ONLY = 3,
+	DISABLED = 4
+}
+
 export interface Admin {
 	id: string;
 	name: string;
-	privilege: number; // 0 = super admin, 1 = admin, 2 = moderator, 3 = read-only
+	privilege: AdminPrivilegeLevel;
 	createdAt: Date;
 	createdBy: string;
 	updatedAt: Date;
+	lastSignIn?: Date; // Optional - from Auth metadata
 }
 
 export interface CreateAdminData {
+	email: string;
+	password: string;
 	name: string;
-	privilege: number;
-	createdBy: string;
+	privilege?: AdminPrivilegeLevel;
 }
 
 export interface UpdateAdminData {
+	userId: string;
 	name?: string;
-	privilege?: number;
+	privilege?: AdminPrivilegeLevel;
+}
+
+export interface DeleteAdminData {
+	userId: string;
+}
+
+export interface GetAdminsData {
+	limit?: number;
+	userIds?: string[];
+	privilegeLevel?: AdminPrivilegeLevel;
+}
+
+// Cloud Function response types
+interface CloudFunctionResponse {
+	success: boolean;
+	message: string;
+	userId?: string;
+}
+
+interface GetAdminsResponse {
+	success: boolean;
+	admins: Admin[];
+	count: number;
+}
+
+interface GetAdminResponse {
+	success: boolean;
+	admin: Admin;
 }
 
 export class AdminsService {
-	private static COLLECTION = 'admins';
+	// ============================================================================
+	// Public Read Methods (Use Cloud Functions with Auth metadata)
+	// ============================================================================
 
 	/**
-	 * Get all admin users
+	 * Get all admin users with Auth metadata (lastSignIn)
 	 */
-	static async getAll(limitCount: number = 100): Promise<Admin[]> {
+	static async getAll(
+		limitCount: number = 100,
+		privilegeLevel?: AdminPrivilegeLevel
+	): Promise<Admin[]> {
 		try {
-			const adminsRef = collection(db, this.COLLECTION);
-			const q = query(adminsRef, orderBy('createdAt', 'desc'), limit(limitCount));
+			const getAdminsFn = httpsCallable<GetAdminsData, GetAdminsResponse>(functions, 'get_admins');
 
-			const querySnap = await getDocs(q);
-			const admins: Admin[] = [];
-
-			querySnap.forEach((doc) => {
-				const data = doc.data();
-				admins.push({
-					id: doc.id,
-					name: data.name,
-					privilege: data.privilege,
-					createdAt: toSafeDate(data.createdAt),
-					createdBy: data.createdBy,
-					updatedAt: toSafeDate(data.updatedAt)
-				});
+			const result = await getAdminsFn({
+				limit: limitCount,
+				privilegeLevel
 			});
 
-			return admins;
+			if (!result.data.success) {
+				throw new Error('Failed to get admins');
+			}
+
+			// Parse admins with Auth metadata
+			return result.data.admins.map((admin) => ({
+				id: admin.id,
+				name: admin.name,
+				privilege: admin.privilege as AdminPrivilegeLevel,
+				createdAt: toSafeDate(admin.createdAt),
+				createdBy: admin.createdBy,
+				updatedAt: toSafeDate(admin.updatedAt),
+				lastSignIn: admin.lastSignIn ? toSafeDate(admin.lastSignIn) : undefined
+			}));
 		} catch (error) {
 			console.error('Error getting admins:', error);
 			throw new Error('Failed to get admin users');
@@ -69,88 +103,133 @@ export class AdminsService {
 	}
 
 	/**
-	 * Get admin user by ID
+	 * Get admin user by ID with Auth metadata
 	 */
 	static async getById(adminId: string): Promise<Admin | null> {
 		try {
-			const adminRef = doc(db, this.COLLECTION, adminId);
-			const adminSnap = await getDoc(adminRef);
+			const getAdminFn = httpsCallable<{ userId: string }, GetAdminResponse>(
+				functions,
+				'get_admin_by_id'
+			);
 
-			if (!adminSnap.exists()) {
+			const result = await getAdminFn({ userId: adminId });
+
+			if (!result.data.success) {
 				return null;
 			}
 
-			const data = adminSnap.data();
+			const admin = result.data.admin;
 			return {
-				id: adminSnap.id,
-				name: data.name,
-				privilege: data.privilege,
-				createdAt: toSafeDate(data.createdAt),
-				createdBy: data.createdBy,
-				updatedAt: toSafeDate(data.updatedAt)
+				id: admin.id,
+				name: admin.name,
+				privilege: admin.privilege as AdminPrivilegeLevel,
+				createdAt: toSafeDate(admin.createdAt),
+				createdBy: admin.createdBy,
+				updatedAt: toSafeDate(admin.updatedAt),
+				lastSignIn: admin.lastSignIn ? toSafeDate(admin.lastSignIn) : undefined
 			};
 		} catch (error) {
 			console.error('Error getting admin by ID:', error);
-			throw new Error('Failed to get admin user');
+			return null;
 		}
 	}
 
 	/**
-	 * Create new admin user
+	 * Get admin user by ID with Auth metadata
 	 */
-	static async create(data: CreateAdminData): Promise<Admin> {
-		try {
-			const now = Timestamp.now();
-			const adminData = {
-				name: data.name,
-				privilege: data.privilege,
-				createdBy: data.createdBy,
-				createdAt: now,
-				updatedAt: now
-			};
+	static async getById_(adminId: string): Promise<Admin | null> {
+		if (typeof window !== 'undefined') {
+			throw new Error('getByIdFromFirestore can only be called server-side');
+		}
 
-			const docRef = await addDoc(collection(db, this.COLLECTION), adminData);
+		try {
+			// Import Admin SDK (only available server-side)
+			const { adminDb } = await import('$lib/firebase/admin');
+
+			const adminDoc = await adminDb.collection('admins').doc(adminId).get();
+
+			if (!adminDoc.exists) {
+				return null;
+			}
+
+			const data = adminDoc.data();
+			if (!data) {
+				return null;
+			}
 
 			return {
-				id: docRef.id,
-				...adminData,
-				createdAt: now.toDate(),
-				updatedAt: now.toDate()
+				id: adminDoc.id,
+				name: data.name,
+				privilege: data.privilege as AdminPrivilegeLevel,
+				createdAt: data.createdAt?.toDate() || new Date(),
+				createdBy: data.createdBy,
+				updatedAt: data.updatedAt?.toDate() || new Date(),
+				lastSignIn: undefined // No Auth metadata in direct Firestore reads
 			};
 		} catch (error) {
-			console.error('Error creating admin:', error);
-			throw new Error('Failed to create admin user');
+			console.error('Error getting admin from Firestore:', error);
+			return null;
 		}
 	}
 
 	/**
-	 * Update admin user
+	 * Get admins by specific IDs (max 10 due to Firestore 'in' query limit)
 	 */
-	static async update(adminId: string, data: UpdateAdminData): Promise<void> {
+	static async getByIds(adminIds: string[]): Promise<Admin[]> {
 		try {
-			const adminRef = doc(db, this.COLLECTION, adminId);
-			const updateData = {
-				...data,
-				updatedAt: Timestamp.now()
-			};
+			if (adminIds.length > 10) {
+				throw new Error('Cannot get more than 10 admins by ID at once');
+			}
 
-			await updateDoc(adminRef, updateData);
+			const getAdminsFn = httpsCallable<GetAdminsData, GetAdminsResponse>(functions, 'get_admins');
+
+			const result = await getAdminsFn({
+				userIds: adminIds
+			});
+
+			if (!result.data.success) {
+				throw new Error('Failed to get admins by IDs');
+			}
+
+			return result.data.admins.map((admin) => ({
+				id: admin.id,
+				name: admin.name,
+				privilege: admin.privilege as AdminPrivilegeLevel,
+				createdAt: toSafeDate(admin.createdAt),
+				createdBy: admin.createdBy,
+				updatedAt: toSafeDate(admin.updatedAt),
+				lastSignIn: admin.lastSignIn ? toSafeDate(admin.lastSignIn) : undefined
+			}));
 		} catch (error) {
-			console.error('Error updating admin:', error);
-			throw new Error('Failed to update admin user');
+			console.error('Error getting admins by IDs:', error);
+			throw new Error('Failed to get admins by IDs');
 		}
 	}
 
 	/**
-	 * Delete admin user
+	 * Search admins by name (client-side filtering)
 	 */
-	static async delete(adminId: string): Promise<void> {
+	static async search(searchTerm: string): Promise<Admin[]> {
 		try {
-			const adminRef = doc(db, this.COLLECTION, adminId);
-			await deleteDoc(adminRef);
+			const admins = await this.getAll(1000);
+			const lowercaseSearch = searchTerm.toLowerCase();
+
+			return admins.filter((admin) => admin.name.toLowerCase().includes(lowercaseSearch));
 		} catch (error) {
-			console.error('Error deleting admin:', error);
-			throw new Error('Failed to delete admin user');
+			console.error('Error searching admins:', error);
+			throw new Error('Failed to search admin users');
+		}
+	}
+
+	/**
+	 * Get admins by privilege level
+	 */
+	static async getByPrivilegeLevel(privilegeLevel: AdminPrivilegeLevel): Promise<Admin[]> {
+		try {
+			return await this.getAll(1000, privilegeLevel);
+		} catch (error) {
+			console.error('Error getting admins by privilege level:', error);
+			throw new Error('Failed to get admins by privilege level');
 		}
 	}
 
@@ -159,14 +238,14 @@ export class AdminsService {
 	 */
 	static async getStats(): Promise<{
 		total: number;
-		byPrivilegeLevel: Record<number, number>;
+		byPrivilegeLevel: Record<AdminPrivilegeLevel, number>;
 	}> {
 		try {
 			const admins = await this.getAll(1000);
 
 			const stats = {
 				total: admins.length,
-				byPrivilegeLevel: {} as Record<number, number>
+				byPrivilegeLevel: {} as Record<AdminPrivilegeLevel, number>
 			};
 
 			// Count by privilege level
@@ -185,11 +264,15 @@ export class AdminsService {
 	/**
 	 * Check if user has specific permission level or higher
 	 */
-	static async hasPermission(adminId: string, requiredLevel: number): Promise<boolean> {
+	static async hasPermission(
+		adminId: string,
+		requiredLevel: AdminPrivilegeLevel
+	): Promise<boolean> {
 		try {
 			const admin = await this.getById(adminId);
 			if (!admin) return false;
 
+			// Lower number = higher privilege (0 is SUPER_ADMIN)
 			return admin.privilege <= requiredLevel;
 		} catch (error) {
 			console.error('Error checking permissions:', error);
@@ -197,31 +280,127 @@ export class AdminsService {
 		}
 	}
 
+	// ============================================================================
+	// Public Write Methods (Use Cloud Functions)
+	// ============================================================================
+
 	/**
-	 * Get admins by privilege level
+	 * Create a new admin user (via Cloud Function)
+	 * Creates both Firebase Auth user and Firestore document
 	 */
-	static async getByPrivilegeLevel(privilegeLevel: number): Promise<Admin[]> {
+	static async create(data: CreateAdminData): Promise<string> {
 		try {
-			const admins = await this.getAll(1000);
-			return admins.filter((admin) => admin.privilege === privilegeLevel);
-		} catch (error) {
-			console.error('Error getting admins by privilege level:', error);
-			throw new Error('Failed to get admins by privilege level');
+			const createAdminFn = httpsCallable<CreateAdminData, CloudFunctionResponse>(
+				functions,
+				'create_admin'
+			);
+
+			const result = await createAdminFn({
+				email: data.email,
+				password: data.password,
+				name: data.name,
+				privilege: data.privilege ?? AdminPrivilegeLevel.READ_ONLY
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+
+			return result.data.userId!;
+		} catch (error: unknown) {
+			console.error('Error creating admin:', error);
+			const message = error instanceof Error ? error.message : 'Failed to create admin user';
+			throw new Error(message);
 		}
 	}
 
 	/**
-	 * Search admins by name
+	 * Update admin user (via Cloud Function)
+	 * Updates both Firebase Auth and Firestore
 	 */
-	static async search(searchTerm: string): Promise<Admin[]> {
+	static async update(data: UpdateAdminData): Promise<void> {
 		try {
-			const admins = await this.getAll(1000);
-			const lowercaseSearch = searchTerm.toLowerCase();
+			if (!data.name && data.privilege === undefined) {
+				throw new Error('No fields to update');
+			}
 
-			return admins.filter((admin) => admin.name.toLowerCase().includes(lowercaseSearch));
-		} catch (error) {
-			console.error('Error searching admins:', error);
-			throw new Error('Failed to search admin users');
+			const updateAdminFn = httpsCallable<UpdateAdminData, CloudFunctionResponse>(
+				functions,
+				'update_admin'
+			);
+
+			const result = await updateAdminFn({
+				userId: data.userId,
+				name: data.name,
+				privilege: data.privilege
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error updating admin:', error);
+			const message = error instanceof Error ? error.message : 'Failed to update admin user';
+			throw new Error(message);
 		}
+	}
+
+	/**
+	 * Delete admin user (via Cloud Function)
+	 * Hard delete - removes from both Auth and Firestore
+	 */
+	static async delete(data: DeleteAdminData): Promise<void> {
+		try {
+			const deleteAdminFn = httpsCallable<DeleteAdminData, CloudFunctionResponse>(
+				functions,
+				'delete_admin'
+			);
+
+			const result = await deleteAdminFn({
+				userId: data.userId
+			});
+
+			if (!result.data.success) {
+				throw new Error(result.data.message);
+			}
+		} catch (error: unknown) {
+			console.error('Error deleting admin:', error);
+			const message = error instanceof Error ? error.message : 'Failed to delete admin user';
+			throw new Error(message);
+		}
+	}
+
+	// ============================================================================
+	// Helper Methods
+	// ============================================================================
+
+	/**
+	 * Get privilege level name
+	 */
+	static getPrivilegeName(level: AdminPrivilegeLevel): string {
+		return AdminPrivilegeLevel[level];
+	}
+
+	/**
+	 * Check if privilege level can modify another level
+	 */
+	static canModify(adminLevel: AdminPrivilegeLevel, targetLevel: AdminPrivilegeLevel): boolean {
+		// Lower number = higher privilege
+		// Can only modify admins with higher number (lower privilege)
+		return adminLevel < targetLevel;
+	}
+
+	/**
+	 * Get available privilege levels for an admin
+	 * (Can only create/assign levels lower than their own)
+	 */
+	static getAvailablePrivilegeLevels(adminLevel: AdminPrivilegeLevel): AdminPrivilegeLevel[] {
+		const levels: AdminPrivilegeLevel[] = [];
+
+		for (let level = adminLevel + 1; level <= AdminPrivilegeLevel.READ_ONLY; level++) {
+			levels.push(level as AdminPrivilegeLevel);
+		}
+
+		return levels;
 	}
 }

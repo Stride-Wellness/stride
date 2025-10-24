@@ -14,14 +14,16 @@ def to_camel(string: str) -> str:
 # Enums
 # ============================================================================
 
-class EmployeeRole(str, Enum):
+
+class ProviderRole(str, Enum):
     PSW = 'psw'
     LW = 'lw'
     ADMIN = 'admin'
     MANAGER = 'manager'
 
+
 class UserType(str, Enum):
-    EMPLOYEE = 'employee'
+    EMPLOYEE = "provider"
     CLIENT = 'client'
 
 class UserStatus(str, Enum):
@@ -68,8 +70,9 @@ class MedicalInfo(BaseModel):
     notes: str = ""
 
 
-class EmployeeProfile(BaseModel):
-    """Employee profile (flexible dict)"""
+class ProviderProfile(BaseModel):
+    """Provider profile (flexible dict)"""
+
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -114,30 +117,30 @@ class BaseUser(BaseModel):
     status: UserStatus
     created_at: datetime
     updated_at: datetime
-    last_login_at: Optional[datetime] = None
-    deleted_at: Optional[datetime] = None
+    last_sign_in: datetime | None
 
 
-class EmployeeUser(BaseUser):
-    """Employee user model"""
-    type: Literal['employee'] = 'employee'
-    employee_role: list[EmployeeRole] = Field(default_factory=list)
-    profile: EmployeeProfile = Field(default_factory=EmployeeProfile)
+class ProviderUser(BaseUser):
+    """Provider user model"""
 
-    def has_role(self, role: EmployeeRole) -> bool:
-        """Check if employee has specific role"""
-        return role in self.employee_role
+    type: Literal["provider"] = "provider"
+    provider_role: list[ProviderRole] = Field(default_factory=list)
+    profile: ProviderProfile = Field(default_factory=ProviderProfile)
+
+    def has_role(self, role: ProviderRole) -> bool:
+        """Check if provider has specific role"""
+        return role in self.provider_role
 
     def is_manager(self) -> bool:
-        """Check if employee is manager"""
-        return EmployeeRole.MANAGER in self.employee_role
+        """Check if provider is manager"""
+        return ProviderRole.MANAGER in self.provider_role
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to Firestore-compatible dict with camelCase keys"""
         return self.model_dump(by_alias=True, exclude_none=True)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'EmployeeUser':
+    def from_dict(cls, data: dict[str, Any]) -> "ProviderUser":
         """Create from Firestore dict"""
         return cls.model_validate(data)
 
@@ -161,12 +164,12 @@ class ClientUser(BaseUser):
 # Type Aliases & Helper Functions
 # ============================================================================
 
-User = Union[EmployeeUser, ClientUser]
+User = Union[ProviderUser, ClientUser]
 
 
-def is_employee(user: User) -> bool:
-    """Check if user is employee"""
-    return isinstance(user, EmployeeUser)
+def is_provider(user: User) -> bool:
+    """Check if user is provider"""
+    return isinstance(user, ProviderUser)
 
 
 def is_client(user: User) -> bool:
@@ -177,8 +180,8 @@ def is_client(user: User) -> bool:
 def user_from_dict(data: dict[str, Any]) -> User:
     """Create user from Firestore dict (auto-detect type)"""
     user_type = data.get('type')
-    if user_type == 'employee':
-        return EmployeeUser.model_validate(data)
+    if user_type == "provider":
+        return ProviderUser.model_validate(data)
     elif user_type == 'client':
         return ClientUser.model_validate(data)
     else:
@@ -189,14 +192,32 @@ def user_from_dict(data: dict[str, Any]) -> User:
 # ============================================================================
 
 
-class CreateEmployeeRequest(BaseModel):
-    """Request to create a new employee"""
+class GetUsersRequest(BaseModel):
+    """Request model for getting users"""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    limit: int = Field(default=100, ge=1, le=1000)
+    user_ids: Optional[list[str]] = None
+    organization_id: Optional[str] = None
+    division_id: Optional[str] = None
+    user_type: Optional[UserType] = None
+    status: Optional[UserStatus] = None
+    include_deleted: bool = False
+
+
+class CreateProviderRequest(BaseModel):
+    """Request to create a new provider"""
+
     email: str
     password: str
     name: str
     organization_id: str
     division_id: str
-    employee_role: list[str]  # Required for employees
+    provider_role: list[str]  # Required for providers
 
 
 class CreateClientRequest(BaseModel):
@@ -210,12 +231,13 @@ class CreateClientRequest(BaseModel):
     date_of_birth: Optional[str] = None
 
 
-class UpdateEmployeeRequest(BaseModel):
-    """Request to update employee data"""
+class UpdateProviderRequest(BaseModel):
+    """Request to update provider data"""
+
     user_id: str
     name: Optional[str] = None
     status: Optional[str] = None
-    employee_role: Optional[list[str]] = None
+    provider_role: Optional[list[str]] = None
     profile: Optional[dict] = None
 
 
@@ -231,4 +253,3 @@ class DeleteUserRequest(BaseModel):
     """Request to delete a user"""
     user_id: str
     hard_delete: bool = False  # True = delete from Auth, False = soft delete
-

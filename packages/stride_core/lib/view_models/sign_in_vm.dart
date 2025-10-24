@@ -58,8 +58,9 @@ class SignInViewModel extends ChangeNotifier {
       );
       if (dashboardSignIn) {
         final user = await userRepo.get();
-        // print(user!.asEmployee?.employeeRole.contains('admin'));
-        if (user == null || null == user.asEmployee?.employeeRole.contains('admin')) {
+        // print(user!.asProvider?.providerRole.contains('admin'));
+        if (user == null ||
+            null == user.asProvider?.providerRole.contains('admin')) {
           await authService.signOut();
           _errorMessage = "Access denied. Admins only.";
           notifyListeners();

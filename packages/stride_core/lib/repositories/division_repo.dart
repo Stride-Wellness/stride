@@ -166,19 +166,19 @@ class DivisionRepository {
     }
   }
 
-  /// Get employee count for a division
-  Future<int> getEmployeeCount(String divisionId) async {
+  /// Get provider count for a division
+  Future<int> getProviderCount(String divisionId) async {
     try {
       final snapshot = await _db
           .collection('users')
           .where('divisionId', isEqualTo: divisionId)
-          .where('role', isEqualTo: 'employee')
+          .where('role', isEqualTo: 'provider')
           .where('status', isEqualTo: 'active')
           .get();
 
       return snapshot.docs.length;
     } catch (e) {
-      print('Error getting employee count: $e');
+      print('Error getting provider count: $e');
       return 0;
     }
   }
@@ -209,7 +209,7 @@ class DivisionRepository {
 
       // Initialize counts
       for (final id in divisionIds) {
-        counts[id] = {'employees': 0, 'clients': 0};
+        counts[id] = {'providers': 0, 'clients': 0};
       }
 
       // Get all users for these divisions
@@ -226,9 +226,9 @@ class DivisionRepository {
         final role = data['type'] as String?;
 
         if (divisionId != null && counts.containsKey(divisionId)) {
-          if (role == 'employee') {
-            counts[divisionId]!['employees'] = 
-                (counts[divisionId]!['employees'] ?? 0) + 1;
+          if (role == 'provider') {
+            counts[divisionId]!['providers'] =
+                (counts[divisionId]!['providers'] ?? 0) + 1;
           } else if (role == 'client') {
             counts[divisionId]!['clients'] = 
                 (counts[divisionId]!['clients'] ?? 0) + 1;

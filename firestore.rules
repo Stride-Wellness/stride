@@ -21,26 +21,26 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
     
-    // Check if user has specific employee role
-    function hasEmployeeRole(role) {
+    // Check if user has specific provider role
+    function hasProviderRole(role) {
       return userExists() && 
-             getUserData().type == 'employee' && 
-             role in getUserData().employeeRole;
+             getUserData().type == 'provider' && 
+             role in getUserData().providerRole;
     }
     
     // Check if user is admin of their organization
     function isOrgAdmin() {
-      return hasEmployeeRole('admin');
+      return hasProviderRole('admin');
     }
 
     // Check if user is manager
     function isManager() {
-      return hasEmployeeRole('manager');
+      return hasProviderRole('manager');
     }
 
     // Check if user is PSW or LW
     function isWorker() {
-      return hasEmployeeRole('psw') || hasEmployeeRole('lw');
+      return hasProviderRole('psw') || hasProviderRole('lw');
     }
 
     // Check if user is client
@@ -110,7 +110,7 @@ service cloud.firestore {
       return status in ['active', 'inactive', 'completed'];
     }
 
-    function isValidEmployeeRole(role) {
+    function isValidProviderRole(role) {
       return role in ['psw', 'lw', 'admin', 'manager'];
     }
 
@@ -132,9 +132,10 @@ service cloud.firestore {
                                            isAdminWithPrivilege(3));
       
       // Only site admins can create organizations
-      allow create: if isAuthenticated() && 
-                       isAdminWithPrivilege(2) &&
-                       validateOrganizationCreation();
+      allow create: if validateOrganizationCreation();
+      // don't need this stuff to create an org, should put email verify to prevent spam
+      // isAuthenticated() && 
+      //                  isAdminWithPrivilege(2) &&
       
       allow delete: if isAuthenticated() && 
                        ((belongsToOrganization(orgId) && 
@@ -171,7 +172,7 @@ service cloud.firestore {
       // Users can read their own data
       // Workers can read clients they are assigned to
       // Managers and admins can read users in their organization
-      allow read: if isAuthenticated() && (
+      allow read: if true || isAuthenticated() && (
       // User reading their own data
       request.auth.uid == userId ||
       // Manager/admin reading users in their organization
@@ -184,26 +185,30 @@ service cloud.firestore {
 
       // Users can update their own profile
       // Managers and admins can update users in their organization
-      allow update: if isAuthenticated() && (
+      allow update: if true;
+      // isAuthenticated()
       // User updating their own profile (limited fields)
-      (request.auth.uid == userId && 
-      request.resource.data.diff(resource.data).affectedKeys()
-      .hasOnly(['profile', 'lastLoginAt', 'updatedAt']) &&
-      // Validate status if changed
-      (!('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
-       isValidUserStatus(request.resource.data.status))) ||
-      // Manager/admin updating users in their organization
-      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin()) &&
-      validateUserUpdate()) ||
-      // Site admin access
-      isAdminWithPrivilege(2)
-      );
+      // request.auth.uid == userId;
+      // && 
+      // request.resource.data.diff(resource.data).affectedKeys()
+      // .hasOnly(['profile', 'lastLoginAt', 'updatedAt']) &&
+      // // Validate status if changed
+      // (!('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
+      //  isValidUserStatus(request.resource.data.status))) ||
+      // // Manager/admin updating users in their organization
+      // (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin()) &&
+      // validateUserUpdate()) ||
+      // // Site admin access
+      // isAdminWithPrivilege(2)
+      // );
 
       // Only managers and admins can create new users
-      allow create: if isAuthenticated() && (
-      (isManager() || isOrgAdmin()) ||
-      isAdminWithPrivilege(2)
-      ) && validateUserCreation();
+      allow create: if validateUserCreation() || true;
+      // same as organization create condition
+      // isAuthenticated() && (
+      // (isManager() || isOrgAdmin()) ||
+      // isAdminWithPrivilege(2)
+      // ) &&
 
       // Only managers and admins can delete users
       // Hard delete is blocked if user has active assignments
@@ -216,7 +221,7 @@ service cloud.firestore {
       function validateUserCreation() {
         return hasRequiredFields(['email', 'name', 'type', 'organizationId', 'divisionId', 'status']) &&
                request.resource.data.email.matches('.*@.*\\..*') &&
-               request.resource.data.type in ['employee', 'client'] &&
+               request.resource.data.type in ['provider', 'client'] &&
                isValidUserStatus(request.resource.data.status) &&
                // Organization must exist
                exists(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)) &&
@@ -224,9 +229,9 @@ service cloud.firestore {
                exists(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)) &&
                // Division must belong to the specified organization
                get(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)).data.organizationId == request.resource.data.organizationId &&
-               // If employee, must have valid roles and role assignment permissions
-               (request.resource.data.type != 'employee' || (
-                 validateEmployeeRoles(request.resource.data.employeeRole)
+               // If provider, must have valid roles and role assignment permissions
+               (request.resource.data.type != 'provider' || (
+                 validateProviderRoles(request.resource.data.providerRole)
                )) &&
                // User must belong to creator's organization (unless site admin)
                (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId)) &&
@@ -234,8 +239,8 @@ service cloud.firestore {
                (request.resource.data.type != 'client' || validateClientProfile());
       }
 
-      // Validate employee roles and permissions
-      function validateEmployeeRoles(roles) {
+      // Validate provider roles and permissions
+      function validateProviderRoles(roles) {
         return roles.size() > 0 &&
                roles.toSet().hasOnly(['psw', 'lw', 'admin', 'manager'].toSet()) &&
                // Only admins can assign admin/manager roles (unless site admin)
@@ -248,14 +253,14 @@ service cloud.firestore {
         return // Validate status if changed
                (!('status' in request.resource.data.diff(resource.data).affectedKeys()) ||
                 isValidUserStatus(request.resource.data.status)) &&
-               // Validate employee roles if changed
-               (!('employeeRole' in request.resource.data.diff(resource.data).affectedKeys()) ||
-                resource.data.type != 'employee' ||
-                validateEmployeeRoles(request.resource.data.employeeRole)) &&
+               // Validate provider roles if changed
+               (!('providerRole' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                resource.data.type != 'provider' ||
+                validateProviderRoles(request.resource.data.providerRole)) &&
                // Validate profile changes
                (!('profile' in request.resource.data.diff(resource.data).affectedKeys()) ||
                 (resource.data.type == 'client' && validateClientProfile()) ||
-                resource.data.type == 'employee');
+                resource.data.type == 'provider');
       }
 
       // Validate client profile medical info
@@ -265,6 +270,10 @@ service cloud.firestore {
                !('mobility' in request.resource.data.profile.medicalInfo) ||
                isValidMobility(request.resource.data.profile.medicalInfo.mobility);
       }
+      
+      match /quiz_results/{resultId} {
+      	allow read, write: if true;
+      }
     }
 
     // ====================================================================
@@ -272,16 +281,20 @@ service cloud.firestore {
     // ====================================================================
     match /divisions/{divisionId} {
       // Any authenticated user can read divisions in their organization
-      allow read: if isAuthenticated() && (
-        belongsToOrganization(resource.data.organizationId) ||
-        isAdminWithPrivilege(3)
-      );
+      allow read: if isAuthenticated() 
+      
+      // && (
+      //   belongsToOrganization(resource.data.organizationId) ||
+      //   isAdminWithPrivilege(3)
+      // );
 
       // Only managers and admins can create divisions
-      allow create: if isAuthenticated() && (
-        (isManager() || isOrgAdmin()) ||
-        isAdminWithPrivilege(2)
-      ) && validateDivisionCreation();
+      allow create: if validateDivisionCreation();
+      // same as organization condition
+      // isAuthenticated() && (
+      //   (isManager() || isOrgAdmin()) ||
+      //   isAdminWithPrivilege(2)
+      // ) &&
 
       // Only managers and admins can update divisions
       allow update: if isAuthenticated() && (
@@ -303,9 +316,9 @@ service cloud.firestore {
                // Organization must exist
                exists(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)) &&
                // Manager validation (if provided)
-               validateDivisionManager() &&
+               validateDivisionManager()
                // Creator must belong to the organization (unless site admin)
-               (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId));
+               // (isAdminWithPrivilege(2) || belongsToOrganization(request.resource.data.organizationId));
       }
 
       function validateDivisionManager() {
@@ -316,8 +329,8 @@ service cloud.firestore {
                 // Manager must belong to the same organization
                 get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.organizationId == request.resource.data.organizationId &&
                 // Manager must have manager role
-                get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.type == 'employee' &&
-                'manager' in get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.employeeRole);
+                get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.type == 'provider' &&
+                'manager' in get(/databases/$(database)/documents/users/$(request.resource.data.managerId)).data.providerRole);
       }
 
       function validateDivisionUpdate() {
@@ -335,8 +348,8 @@ service cloud.firestore {
       function validateManagerAssignment(managerId, orgId) {
         return exists(/databases/$(database)/documents/users/$(managerId)) &&
                get(/databases/$(database)/documents/users/$(managerId)).data.organizationId == orgId &&
-               get(/databases/$(database)/documents/users/$(managerId)).data.type == 'employee' &&
-               'manager' in get(/databases/$(database)/documents/users/$(managerId)).data.employeeRole;
+               get(/databases/$(database)/documents/users/$(managerId)).data.type == 'provider' &&
+               'manager' in get(/databases/$(database)/documents/users/$(managerId)).data.providerRole;
       }
     }
 
@@ -380,24 +393,25 @@ service cloud.firestore {
       ) && validateAssignmentUpdate();
 
       function validateAssignmentCreation() {
-        return hasRequiredFields(['clientId', 'workerId', 'divisionId', 'assignedBy', 'status']) &&
-               isValidAssignmentStatus(request.resource.data.status) &&
-               // Division must exist
-               exists(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)) &&
-               // Client and worker must exist
-               exists(/databases/$(database)/documents/users/$(request.resource.data.clientId)) &&
-               exists(/databases/$(database)/documents/users/$(request.resource.data.workerId)) &&
-               // Get division data to determine organization
-               validateAssignmentUsersInSameDivision() &&
-               // Client must be client type and worker must be employee type
-               get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.type == 'client' &&
-               get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.type == 'employee' &&
-               // Worker must have PSW or LW role
-               (get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.employeeRole.hasAny(['psw', 'lw'])) &&
-               // Creator must belong to organization (unless site admin)
-               (isAdminWithPrivilege(2) || validateAssignmentCreatorPermissions()) &&
-               // Validate permissions if provided
-               (!('permissions' in request.resource.data) || validateAssignmentPermissions());
+      	return true
+        // return hasRequiredFields(['clientId', 'workerId', 'divisionId', 'assignedBy', 'status']) &&
+        //        isValidAssignmentStatus(request.resource.data.status) &&
+        //        // Division must exist
+        //        exists(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)) &&
+        //        // Client and worker must exist
+        //        exists(/databases/$(database)/documents/users/$(request.resource.data.clientId)) &&
+        //        exists(/databases/$(database)/documents/users/$(request.resource.data.workerId)) &&
+        //        // Get division data to determine organization
+        //        validateAssignmentUsersInSameDivision() &&
+        //        // Client must be client type and worker must be provider type
+        //        get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.type == 'client' &&
+        //        get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.type == 'provider' &&
+        //        // Worker must have PSW or LW role
+        //        (get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.providerRole.hasAny(['psw', 'lw'])) &&
+        //        // Creator must belong to organization (unless site admin)
+        //        (isAdminWithPrivilege(2) || validateAssignmentCreatorPermissions()) &&
+        //        // Validate permissions if provided
+        //        (!('permissions' in request.resource.data) || validateAssignmentPermissions());
       }
 
       function validateAssignmentUsersInSameDivision() {
@@ -440,8 +454,9 @@ service cloud.firestore {
     // ====================================================================
     match /admins/{adminId} {
       // Any admin can read other admins
-      allow read: if isAuthenticated() && 
-      exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow read: if isAuthenticated() 
+      // && 
+      // (true || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
 
       // Only super admins (level 0) can create new admins
       allow create: if isAuthenticated() && 

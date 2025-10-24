@@ -8,12 +8,13 @@ class UsersViewModel extends ChangeNotifier {
   final AssignmentsRepository _assignmentsRepo;
 
   List<UserModel> _allUsers = [];
-  List<ProviderUserModel> _employees = [];
+  List<ProviderUserModel> _providers = [];
   List<ClientUserModel> _clients = [];
   
   // Assignment tracking
   Map<String, String> _clientAssignments = {}; // clientId -> therapistId
-  Map<String, ProviderUserModel> _employeesMap = {}; // therapistId -> ProviderUserModel
+  Map<String, ProviderUserModel> _providersMap =
+      {}; // therapistId -> ProviderUserModel
   
   bool _isLoading = false;
   String? _errorMessage;
@@ -28,19 +29,20 @@ class UsersViewModel extends ChangeNotifier {
   }
 
   // Getters
-  List<ProviderUserModel> get employees => _filteredEmployees;
+  List<ProviderUserModel> get providers => _filteredProviders;
   List<ClientUserModel> get clients => _filteredClients;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  int get employeeCount => _employees.length;
+  int get providerCount => _providers.length;
   int get clientCount => _clients.length;
-  bool get hasEmployees => _employees.isNotEmpty;
+  bool get hasProviders => _providers.isNotEmpty;
   bool get hasClients => _clients.isNotEmpty;
 
-  List<ProviderUserModel> get _filteredEmployees {
-    if (_searchQuery.isEmpty) return _employees;
+  List<ProviderUserModel> get _filteredProviders {
+    if (_searchQuery.isEmpty) return _providers;
     final query = _searchQuery.toLowerCase();
-    return _employees.where((e) =>
+    return _providers
+        .where((e) =>
       e.name.toLowerCase().contains(query) ||
       e.email.toLowerCase().contains(query)
     ).toList();
@@ -59,7 +61,7 @@ class UsersViewModel extends ChangeNotifier {
   String getAssignedProviderName(String clientId) {
     final therapistId = _clientAssignments[clientId];
     if (therapistId == null) return 'Unassigned';
-    return _employeesMap[therapistId]?.name ?? 'Unknown';
+    return _providersMap[therapistId]?.name ?? 'Unknown';
   }
 
   /// Get client count for a therapist
@@ -76,27 +78,27 @@ class UsersViewModel extends ChangeNotifier {
     try {
       _allUsers = await _userRepo.getByOrganization();
       _filterUsers();
-      _buildEmployeesMap();
+      _buildProvidersMap();
       await _loadAssignments();
     } catch (e) {
       _errorMessage = e.toString();
       _allUsers = [];
-      _employees = [];
+      _providers = [];
       _clients = [];
       _clientAssignments = {};
-      _employeesMap = {};
+      _providersMap = {};
     }
     _isLoading = false;
     notifyListeners();
   }
 
   void _filterUsers() {
-    _employees = [];
+    _providers = [];
     _clients = [];
     for (final user in _allUsers) {
-      if (user.type == UserType.employee) {
-        final employee = user.asEmployee;
-        if (employee != null) _employees.add(employee);
+      if (user.type == UserType.provider) {
+        final provider = user.asProvider;
+        if (provider != null) _providers.add(provider);
       } else if (user.type == UserType.client) {
         final client = user.asClient;
         if (client != null) _clients.add(client);
@@ -104,19 +106,19 @@ class UsersViewModel extends ChangeNotifier {
     }
   }
 
-  void _buildEmployeesMap() {
-    _employeesMap = {for (var e in _employees) e.id: e};
+  void _buildProvidersMap() {
+    _providersMap = {for (var e in _providers) e.id: e};
   }
 
   Future<void> _loadAssignments() async {
     try {
       _clientAssignments = {};
       
-      // Get assignments for all employees
-      for (final employee in _employees) {
-        final clients = await _assignmentsRepo.getClients_(employee.id);
+      // Get assignments for all providers
+      for (final provider in _providers) {
+        final clients = await _assignmentsRepo.getClients_(provider.id);
         for (final client in clients) {
-          _clientAssignments[client.id] = employee.id;
+          _clientAssignments[client.id] = provider.id;
         }
       }
     } catch (e) {
@@ -138,9 +140,9 @@ class UsersViewModel extends ChangeNotifier {
       final success = await _userRepo.hardDeleteFirestore_(userId);
       if (success) {
         _allUsers.removeWhere((u) => u.id == userId);
-        _employees.removeWhere((u) => u.id == userId);
+        _providers.removeWhere((u) => u.id == userId);
         _clients.removeWhere((u) => u.id == userId);
-        _employeesMap.remove(userId);
+        _providersMap.remove(userId);
         _clientAssignments.remove(userId);
         notifyListeners();
       }

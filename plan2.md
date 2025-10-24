@@ -7,7 +7,7 @@ Bob: An older adult who wants to use stride for himself.
   - Action: Bob can now use that account.
 
 John: A caregiver who works for Retirement Inc. (owned by Jessica) need to download stride so he can help his clients.
-  - Action: Jessica clicks add employeed (she fills in his email, name, and role) and recieves a code which she sends to John.
+  - Action: Jessica clicks add providerd (she fills in his email, name, and role) and recieves a code which she sends to John.
   - Action: John downloads stride and puts his code in.
   - Step: John now has an account and is in the database assigned to to business.
   - Action: John can click add person (older adult, etc) which will register the person to the business and allow john to manage them.

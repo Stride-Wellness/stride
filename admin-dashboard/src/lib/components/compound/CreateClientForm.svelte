@@ -31,12 +31,13 @@
 		constantDivisionId?: string;
 		constantPhone?: string;
 		constantDateOfBirth?: string;
-		callback?: (newUser: User) => void;
+		callback?: (newUser: string) => void;
 	} = $props();
 
 	// Form state for creating client users
 	let clientName = $state(constantName);
 	let clientEmail = $state(constantEmail);
+	let clientPassword = $state('');
 	let clientOrganizationId = $state(constantOrganizationId);
 	let clientDivisionId = $state(constantDivisionId);
 	let clientPhone = $state(constantPhone);
@@ -49,8 +50,8 @@
 		error = null;
 		successMessage = null;
 
-		if (!clientName || !clientEmail || !clientOrganizationId || !clientDivisionId) {
-			error = 'Name, email, organization ID, and division ID are required';
+		if (!clientName || !clientEmail || !clientPassword || !clientOrganizationId || !clientDivisionId) {
+			error = 'Name, email, password, organization ID, and division ID are required';
 			return;
 		}
 
@@ -59,26 +60,26 @@
 			return;
 		}
 
-		try {
-			const profile =
-				clientPhone || clientDateOfBirth
-					? {
-							...(clientPhone && { phone: clientPhone }),
-							...(clientDateOfBirth && { dateOfBirth: clientDateOfBirth })
-						}
-					: undefined;
+		if (clientPassword.length < 6) {
+			error = 'Password must be at least 6 characters';
+			return;
+		}
 
+		try {
 			const newUser = await UsersService.createClient({
 				name: clientName,
 				email: clientEmail,
+				password: clientPassword,
 				organizationId: clientOrganizationId,
 				divisionId: clientDivisionId,
-				profile
+				phone: clientPhone || undefined,
+				dateOfBirth: clientDateOfBirth || undefined
 			});
 
 			// Reset form
 			clientName = '';
 			clientEmail = '';
+			clientPassword = '';
 			clientOrganizationId = '';
 			clientDivisionId = '';
 			clientPhone = '';
@@ -116,6 +117,15 @@
 			variant="outline"
 			bind:value={clientEmail}
 			disabled={constantEmail}
+			required
+		/>
+
+		<Input
+			type="password"
+			placeholder="Password (min 6 characters)"
+			size="md"
+			variant="outline"
+			bind:value={clientPassword}
 			required
 		/>
 

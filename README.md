@@ -1,6 +1,6 @@
 # Stride
 
-Stride is a elderly care support app. It's intended use if for homecare providers and lifestyle workers in retirements homes. The basic functionality is that a busness buys the app and seats. Then the busness can add employees and clients (elderly adults) with the seats. The works fill out a quiz with the elderly person identifing their goals, problems, etc. Then ChatGPT will come up with an individualized work out for the client. The worker will have a session with client where they show the excersises. Or maybe there will be a very basic mobile app for the client to view the excerises too with the works permision.
+Stride is a elderly care support app. It's intended use if for homecare providers and lifestyle workers in retirements homes. The basic functionality is that a busness buys the app and seats. Then the busness can add providers and clients (elderly adults) with the seats. The works fill out a quiz with the elderly person identifing their goals, problems, etc. Then ChatGPT will come up with an individualized work out for the client. The worker will have a session with client where they show the excersises. Or maybe there will be a very basic mobile app for the client to view the excerises too with the works permision.
 
 Admins and Managers have a web dashboard to manager workers and clients. Workets and clients have a phone dashboard, with a very simple interface to complete quizes and see excersis descriptions and gifs.
 

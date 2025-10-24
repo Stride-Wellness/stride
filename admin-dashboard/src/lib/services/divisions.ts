@@ -13,7 +13,7 @@ import {
 	Timestamp
 } from 'firebase/firestore';
 import { db } from '$lib/firebase/config';
-import type { EmployeeRole, EmployeeProfile } from './users';
+import type { ProviderRole, ProviderProfile } from './users';
 
 import { toSafeDate } from './utils'; // Import the utility function
 
@@ -253,8 +253,8 @@ export class DivisionsService {
 		managerData: {
 			email: string;
 			name: string;
-			employeeRole: EmployeeRole[];
-			profile?: EmployeeProfile;
+			providerRole: ProviderRole[];
+			profile?: ProviderProfile;
 		}
 	): Promise<{ division: Division; managerId: string }> {
 		try {
@@ -266,13 +266,13 @@ export class DivisionsService {
 
 			// Step 2: Create manager user for this division
 			const { UsersService } = await import('./users');
-			const manager = await UsersService.createEmployee({
+			const manager = await UsersService.createProvider({
 				...managerData,
 				organizationId: divisionData.organizationId,
 				divisionId: division.id,
-				employeeRole: managerData.employeeRole.includes('manager')
-					? managerData.employeeRole
-					: [...managerData.employeeRole, 'manager' as EmployeeRole] // Ensure manager role is included
+				providerRole: managerData.providerRole.includes('manager')
+					? managerData.providerRole
+					: [...managerData.providerRole, 'manager' as ProviderRole] // Ensure manager role is included
 			});
 
 			// Step 3: Assign the manager to the division

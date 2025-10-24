@@ -9,9 +9,9 @@
 	import { DivisionsService } from '$lib/services/divisions';
 	import type { Division } from '$lib/services/divisions';
 	import { UsersService } from '$lib/services/users';
-	import type { ClientUser, EmployeeUser, User, UserType } from '$lib/services/users';
+	import type { ClientUser, ProviderUser, User, UserType } from '$lib/services/users';
 	import Link from '$lib/components/Link.svelte';
-	import CreateEmployeeForm from '$lib/components/compound/CreateEmployeeForm.svelte';
+	import CreateProviderForm from '$lib/components/compound/CreateProviderForm.svelte';
 	import CreateClientForm from '$lib/components/compound/CreateClientForm.svelte';
 
 	const divisionId = $derived($page.params.id);
@@ -25,16 +25,16 @@
 	let jsonText = $state('');
 
 	// User state
-	let employees = $state<User[]>([]);
+	let providers = $state<User[]>([]);
 	let clients = $state<User[]>([]);
-	let employeesLoading = $state(false);
+	let providersLoading = $state(false);
 	let clientsLoading = $state(false);
 	
-	// Employee form state
-	let newEmployeeName = $state('');
-	let newEmployeeEmail = $state('');
-	let newEmployeeRole = $state<string>('psw');
-	let creatingEmployee = $state(false);
+	// Provider form state
+	let newProviderName = $state('');
+	let newProviderEmail = $state('');
+	let newProviderRole = $state<string>('psw');
+	let creatingProvider = $state(false);
 	
 	// Client form state
 	let newClientName = $state('');
@@ -44,7 +44,7 @@
 	let creatingClient = $state(false);
 	
 	// Delete states
-	let deletingEmployees = $state(new Set<string>());
+	let deletingProviders = $state(new Set<string>());
 	let deletingClients = $state(new Set<string>());
 
 	// Load division data
@@ -68,7 +68,7 @@
 			jsonText = JSON.stringify(divisionWithoutId, null, 2);
 			
 			// Load users for this division
-			await loadEmployees();
+			await loadProviders();
 			await loadClients();
 		} catch (err: any) {
 			console.error('Error loading division:', err);
@@ -173,22 +173,22 @@
 		}
 	}
 
-	// Load employees
-	async function loadEmployees() {
+	// Load providers
+	async function loadProviders() {
 		if (!divisionId) return;
 		
-		employeesLoading = true;
+		providersLoading = true;
 		try {
 			const allUsers = await UsersService.getByDivisionId(divisionId);
-			employees = allUsers.filter(user => user.type === 'employee');
+			providers = allUsers.filter(user => user.type === 'provider');
 		} catch (err: any) {
-			console.error('Error loading employees:', err);
+			console.error('Error loading providers:', err);
 			// Don't set the main error state for sub-operations, just log it
 			if (err.code === 'permission-denied') {
-				console.warn('Permission denied loading employees for division:', divisionId);
+				console.warn('Permission denied loading providers for division:', divisionId);
 			}
 		} finally {
-			employeesLoading = false;
+			providersLoading = false;
 		}
 	}
 
@@ -211,67 +211,67 @@
 		}
 	}
 
-	// Create new employee
-	async function createEmployee() {
-		if (!divisionId || !division || !newEmployeeName.trim() || !newEmployeeEmail.trim()) {
-			error = 'Employee name and email are required.';
+	// Create new provider
+	async function createProvider() {
+		if (!divisionId || !division || !newProviderName.trim() || !newProviderEmail.trim()) {
+			error = 'Provider name and email are required.';
 			return;
 		}
 		
-		creatingEmployee = true;
+		creatingProvider = true;
 		error = null;
 		
 		try {
-			const employeeData = {
-				email: newEmployeeEmail.trim(),
-				name: newEmployeeName.trim(),
+			const providerData = {
+				email: newProviderEmail.trim(),
+				name: newProviderName.trim(),
 				organizationId: division.organizationId,
 				divisionId: divisionId,
-				employeeRole: [newEmployeeRole as any]
+				providerRole: [newProviderRole as any]
 			};
 			
-			await UsersService.createEmployee(employeeData);
+			await UsersService.createProvider(providerData);
 			
 			// Reset form
-			newEmployeeName = '';
-			newEmployeeEmail = '';
-			newEmployeeRole = 'psw';
+			newProviderName = '';
+			newProviderEmail = '';
+			newProviderRole = 'psw';
 			
-			// Reload employees
-			await loadEmployees();
+			// Reload providers
+			await loadProviders();
 			
-			successMessage = 'Employee created successfully!';
+			successMessage = 'Provider created successfully!';
 		} catch (err: any) {
-			console.error('Error creating employee:', err);
+			console.error('Error creating provider:', err);
 			
 			if (err.code) {
 				switch (err.code) {
 					case 'permission-denied':
-						error = 'Permission denied. You may not have the required permissions to create employees.';
+						error = 'Permission denied. You may not have the required permissions to create providers.';
 						break;
 					case 'already-exists':
-						error = 'An employee with this email already exists.';
+						error = 'An provider with this email already exists.';
 						break;
 					case 'invalid-argument':
-						error = 'Invalid employee data. Please check the email format and other fields.';
+						error = 'Invalid provider data. Please check the email format and other fields.';
 						break;
 					case 'failed-precondition':
-						error = 'Employee creation failed. Please ensure the division and organization are valid.';
+						error = 'Provider creation failed. Please ensure the division and organization are valid.';
 						break;
 					default:
-						error = `Error: ${err.message || 'Failed to create employee. Please try again.'}`;
+						error = `Error: ${err.message || 'Failed to create provider. Please try again.'}`;
 				}
 			} else if (err.message) {
-				if (err.message.includes('Failed to create employee')) {
-					error = 'Failed to create employee. Please check the data and try again.';
+				if (err.message.includes('Failed to create provider')) {
+					error = 'Failed to create provider. Please check the data and try again.';
 				} else {
 					error = err.message;
 				}
 			} else {
-				error = 'Failed to create employee. Please try again.';
+				error = 'Failed to create provider. Please try again.';
 			}
 		} finally {
-			creatingEmployee = false;
+			creatingProvider = false;
 		}
 	}
 
@@ -340,43 +340,43 @@
 		}
 	}	
 
-	// Delete employee
-	async function deleteEmployee(employeeId: string) {
-		if (!confirm('Are you sure you want to delete this employee?')) return;
+	// Delete provider
+	async function deleteProvider(providerId: string) {
+		if (!confirm('Are you sure you want to delete this provider?')) return;
 		
 		error = null;
-		deletingEmployees.add(employeeId);
-		deletingEmployees = deletingEmployees;
+		deletingProviders.add(providerId);
+		deletingProviders = deletingProviders;
 		
 		try {
-			await UsersService.hardDelete(employeeId);
-			await loadEmployees();
-			successMessage = 'Employee deleted successfully!';
+			await UsersService.hardDelete(providerId);
+			await loadProviders();
+			successMessage = 'Provider deleted successfully!';
 		} catch (err: any) {
-			console.error('Error deleting employee:', err);
+			console.error('Error deleting provider:', err);
 			
 			if (err.code) {
 				switch (err.code) {
 					case 'permission-denied':
-						error = 'Permission denied. You may not have the required permissions to delete employees.';
+						error = 'Permission denied. You may not have the required permissions to delete providers.';
 						break;
 					case 'not-found':
-						error = 'Employee not found. They may have already been deleted.';
+						error = 'Provider not found. They may have already been deleted.';
 						break;
 					case 'failed-precondition':
-						error = 'Cannot delete employee. They may have active assignments or other dependencies.';
+						error = 'Cannot delete provider. They may have active assignments or other dependencies.';
 						break;
 					default:
-						error = `Error: ${err.message || 'Failed to delete employee. Please try again.'}`;
+						error = `Error: ${err.message || 'Failed to delete provider. Please try again.'}`;
 				}
 			} else if (err.message) {
 				error = err.message;
 			} else {
-				error = 'Failed to delete employee. Please try again.';
+				error = 'Failed to delete provider. Please try again.';
 			}
 		} finally {
-			deletingEmployees.delete(employeeId);
-			deletingEmployees = deletingEmployees;
+			deletingProviders.delete(providerId);
+			deletingProviders = deletingProviders;
 		}
 	}
 
@@ -419,13 +419,13 @@
 			deletingClients = deletingClients;
 		}
 	}
-	// Get formatted employee data for table
-	const employeeTableData = $derived(employees.map(employee => ({
-		name: { name: employee.name, href: `/users/${employee.id}` },
-		email: employee.email,
-		role: UsersService.isEmployee(employee) ? employee.employeeRole.join(', ') : '',
-		status: employee.status,
-		created: new Date(employee.createdAt).toLocaleDateString()
+	// Get formatted provider data for table
+	const providerTableData = $derived(providers.map(provider => ({
+		name: { name: provider.name, href: `/users/${provider.id}` },
+		email: provider.email,
+		role: UsersService.isProvider(provider) ? provider.providerRole.join(', ') : '',
+		status: provider.status,
+		created: new Date(provider.createdAt).toLocaleDateString()
 	})));
 
 	// Get formatted client data for table
@@ -489,31 +489,31 @@
 		<Message type="error" message={error || undefined} />
 		<Message type="success" message={successMessage || undefined} />
 
-		<!-- Employees Section -->
+		<!-- Providers Section -->
 		<Card class="p-6">
 			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-lg font-medium text-gray-900">Employees</h2>
+				<h2 class="text-lg font-medium text-gray-900">Providers</h2>
 				<div class="text-sm text-gray-600">
-					{employees.length} employee{employees.length !== 1 ? 's' : ''}
+					{providers.length} provider{providers.length !== 1 ? 's' : ''}
 				</div>
 			</div>
 			
-			<!-- Create Employee Form -->
+			<!-- Create Provider Form -->
 			<div class="mb-4">
-				<CreateEmployeeForm variant="complementary" bind:error bind:successMessage callback={(_) => loadEmployees()} constantDivisionId={divisionId} constantOrganizationId={division?.organizationId} />
+				<CreateProviderForm variant="complementary" bind:error bind:successMessage callback={(_) => loadProviders()} constantDivisionId={divisionId} constantOrganizationId={division?.organizationId} />
 			</div>
 
-			<!-- Employees Table -->
-			{#if employeesLoading}
+			<!-- Providers Table -->
+			{#if providersLoading}
 				<div class="text-center py-8">
-					<div class="text-gray-500">Loading employees...</div>
+					<div class="text-gray-500">Loading providers...</div>
 				</div>
-			{:else if employees.length === 0}
+			{:else if providers.length === 0}
 				<div class="text-center py-8">
-					<div class="text-gray-500">No employees found. Create one above to get started.</div>
+					<div class="text-gray-500">No providers found. Create one above to get started.</div>
 				</div>
 			{:else}
-				<Table data={employeeTableData} /> 
+				<Table data={providerTableData} /> 
 			{/if}
 		</Card>
 

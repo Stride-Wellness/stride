@@ -98,17 +98,18 @@ class UserRepository {
     }
   }
 
-  /// Create new employee user with specific document ID, meant for internal use since it must be created with correct auth id.
-  Future<ProviderUserModel> _createFirestoreEmployee(
-    CreateEmployeeUserDataModel data,
+  /// Create new provider user with specific document ID, meant for internal use since it must be created with correct auth id.
+  Future<ProviderUserModel> _createFirestoreProvider(
+    CreateProviderUserDataModel data,
   ) async {
     try {
       final now = DateTime.now();
       final userData = {
         'email': data.email,
         'name': data.name,
-        'type': 'employee',
-        'employeeRole': data.employeeRole
+        'type': 'provider',
+        'providerRole':
+            data.providerRole
             .map((e) => e.toString().split('.').last)
             .toList(),
         'organizationId': data.organizationId,
@@ -128,15 +129,15 @@ class UserRepository {
         name: data.name,
         organizationId: data.organizationId,
         divisionId: data.divisionId,
-        employeeRole: data.employeeRole,
+        providerRole: data.providerRole,
         profile: data.profile ?? {},
         status: UserStatus.active,
         createdAt: now,
         updatedAt: now,
       );
     } catch (e) {
-      print('Error creating employee user: $e');
-      throw Exception('Failed to create employee user');
+      print('Error creating provider user: $e');
+      throw Exception('Failed to create provider user');
     }
   }
 
@@ -198,14 +199,14 @@ class UserRepository {
     return hardDeleteFirestore_(userId);
   }
 
-  /// Create a new employee account with authentication and Firestore user document
-  Future<ProviderUserModel> createEmployee({
+  /// Create a new provider account with authentication and Firestore user document
+  Future<ProviderUserModel> createProvider({
     required String email,
     required String password,
     required String name,
     required String organizationId,
     required String divisionId,
-    required List<EmployeeRole> employeeRole,
+    required List<ProviderRole> providerRole,
     Map<String, dynamic>? profile,
     bool sendEmailVerification = true,
   }) async {
@@ -228,14 +229,14 @@ class UserRepository {
       }
 
       // 3. Create user document in Firestore with Firebase Auth UID
-      user = await _createFirestoreEmployee(
-        CreateEmployeeUserDataModel(
+      user = await _createFirestoreProvider(
+        CreateProviderUserDataModel(
           id: credential.user!.uid,
           email: email,
           name: name,
           organizationId: organizationId,
           divisionId: divisionId,
-          employeeRole: employeeRole,
+          providerRole: providerRole,
           profile: profile,
         ),
       );

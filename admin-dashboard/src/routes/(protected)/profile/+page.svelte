@@ -4,7 +4,6 @@
 	import { onMount } from 'svelte';
 	import { doc, getDoc } from 'firebase/firestore';
 	import { db } from '$lib/firebase/config';
-	import type { AdminUser } from '$lib/types'; // Your Firestore user type
 	import Dictionary from '$lib/components/Dictionary.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -22,7 +21,7 @@
 	};
 	onMount(async () => {
 		const userDoc = await getDoc(doc(db, 'admins', $authStore.firebaseUser?.uid as string));
-		const userData = userDoc.exists() ? ({ id: userDoc.id, ...userDoc.data() } as AdminUser) : null;
+		const userData = userDoc.exists() ? ({ id: userDoc.id, ...userDoc.data() } as Admin) : null;
 
 		console.log('User data:', userData);
 	});

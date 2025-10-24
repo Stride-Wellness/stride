@@ -4,12 +4,12 @@
   import { onMount } from 'svelte';
   import { OrganizationsService, AdminsService } from '$lib/services/organizations';
   import type { Organization } from '$lib/services/organizations';
-  import type { AdminUser } from '$lib/types';
 	import { goto } from '$app/navigation';
+	import type { Admin } from '$lib/services';
 
   // State for dashboard data
   let organizations = $state<Organization[]>([]);
-  let admins = $state<AdminUser[]>([]);
+  let admins = $state<Admin[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
 
@@ -40,7 +40,7 @@
     const seatUtilization = totalSeats > 0 ? Math.round((usedSeats / totalSeats) * 100) : 0;
     
     const totalAdmins = admins.length;
-    const activeAdmins = admins.filter(admin => !admin.disabled).length;
+    const activeAdmins = admins.filter(admin => admin.privilege < 4);
     const recentSignIns = admins.filter(admin => 
       admin.lastSignIn && new Date(admin.lastSignIn) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     ).length;

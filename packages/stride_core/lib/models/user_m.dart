@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Enums
-enum EmployeeRole { psw, lw, admin, manager }
+enum ProviderRole { psw, lw, admin, manager }
 
-enum UserType { employee, client }
+enum UserType { provider, client }
 
 enum UserStatus { active, inactive, pending, deleted }
 
@@ -217,10 +217,10 @@ class BaseUserDataModel {
   });
 }
 
-// Employee User
+// Provider User
 class ProviderUserModel extends BaseUserModel {
-  final UserType type = UserType.employee;
-  final List<EmployeeRole> employeeRole;
+  final UserType type = UserType.provider;
+  final List<ProviderRole> providerRole;
   final Map<String, dynamic> profile;
 
   ProviderUserModel({
@@ -234,7 +234,7 @@ class ProviderUserModel extends BaseUserModel {
     super.deletedAt,
     required super.createdAt,
     required super.updatedAt,
-    required this.employeeRole,
+    required this.providerRole,
     Map<String, dynamic>? profile,
   }) : profile = profile ?? {};
 
@@ -251,12 +251,11 @@ class ProviderUserModel extends BaseUserModel {
       deletedAt: base.deletedAt,
       createdAt: base.createdAt,
       updatedAt: base.updatedAt,
-      employeeRole:
-          (data['employeeRole'] as List<dynamic>?)
+      providerRole: (data['providerRole'] as List<dynamic>?)
               ?.map(
-                (role) => EmployeeRole.values.firstWhere(
+                (role) => ProviderRole.values.firstWhere(
                   (e) => e.name == role,
-                  orElse: () => EmployeeRole.psw,
+                  orElse: () => ProviderRole.psw,
                 ),
               )
               .toList() ??
@@ -269,7 +268,7 @@ class ProviderUserModel extends BaseUserModel {
     return {
       ...toBaseMap(),
       'type': type.name,
-      'employeeRole': employeeRole.map((role) => role.name).toList(),
+      'providerRole': providerRole.map((role) => role.name).toList(),
       'profile': profile,
     };
   }
@@ -324,7 +323,7 @@ class UserModel {
 
   UserModel._(this._user);
 
-  factory UserModel.employee(ProviderUserModel user) => UserModel._(user);
+  factory UserModel.provider(ProviderUserModel user) => UserModel._(user);
   factory UserModel.client(ClientUserModel user) => UserModel._(user);
 
   factory UserModel.fromMap(Map<String, dynamic> data, String id) {
@@ -333,8 +332,8 @@ class UserModel {
       orElse: () => UserType.client,
     );
 
-    if (type == UserType.employee) {
-      return UserModel.employee(ProviderUserModel.fromMap(data, id));
+    if (type == UserType.provider) {
+      return UserModel.provider(ProviderUserModel.fromMap(data, id));
     } else {
       return UserModel.client(ClientUserModel.fromMap(data, id));
     }
@@ -353,7 +352,7 @@ class UserModel {
   DateTime get updatedAt => _user.updatedAt;
 
   UserType get type {
-    if (_user is ProviderUserModel) return UserType.employee;
+    if (_user is ProviderUserModel) return UserType.provider;
     return UserType.client;
   }
 
@@ -362,7 +361,7 @@ class UserModel {
   bool get isClient => _user is ClientUserModel;
 
   // Safe casting
-  ProviderUserModel? get asEmployee =>
+  ProviderUserModel? get asProvider =>
       _user is ProviderUserModel ? _user as ProviderUserModel : null;
 
   ClientUserModel? get asClient => _user is ClientUserModel ? _user as ClientUserModel : null;
@@ -373,22 +372,22 @@ class UserModel {
 }
 
 // Create Data classes
-class CreateEmployeeUserDataModel {
+class CreateProviderUserDataModel {
   final String id;
   final String email;
   final String name;
   final String organizationId;
   final String divisionId;
-  final List<EmployeeRole> employeeRole;
+  final List<ProviderRole> providerRole;
   final Map<String, dynamic>? profile;
 
-  CreateEmployeeUserDataModel({
+  CreateProviderUserDataModel({
     required this.id,
     required this.email,
     required this.name,
     required this.organizationId,
     required this.divisionId,
-    required this.employeeRole,
+    required this.providerRole,
     this.profile,
   });
 }
@@ -412,21 +411,21 @@ class CreateClientUserDataModel {
 }
 
 // Update Data classes
-class UpdateEmployeeUserDataModel {
+class UpdateProviderUserDataModel {
   final String? email;
   final String? name;
   final String? divisionId;
-  final List<EmployeeRole>? employeeRole;
+  final List<ProviderRole>? providerRole;
   final Map<String, dynamic>? profile;
   final UserStatus? status;
   final DateTime? lastLoginAt;
   final DateTime? deletedAt;
 
-  UpdateEmployeeUserDataModel({
+  UpdateProviderUserDataModel({
     this.email,
     this.name,
     this.divisionId,
-    this.employeeRole,
+    this.providerRole,
     this.profile,
     this.status,
     this.lastLoginAt,
@@ -438,8 +437,8 @@ class UpdateEmployeeUserDataModel {
     if (email != null) map['email'] = email;
     if (name != null) map['name'] = name;
     if (divisionId != null) map['divisionId'] = divisionId;
-    if (employeeRole != null)
-      map['employeeRole'] = employeeRole!.map((e) => e.name).toList();
+    if (providerRole != null)
+      map['providerRole'] = providerRole!.map((e) => e.name).toList();
     if (profile != null) map['profile'] = profile;
     if (status != null) map['status'] = status!.name;
     if (lastLoginAt != null)

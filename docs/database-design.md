@@ -1,12 +1,12 @@
 # Stride Database Design
 
 ## Overview
-This document outlines the Firestore database structure for the Stride elderly care support app. The design supports a multi-tenant architecture where businesses purchase seats, manage employees, and serve elderly clients with personalized exercise programs.
+This document outlines the Firestore database structure for the Stride elderly care support app. The design supports a multi-tenant architecture where businesses purchase seats, manage providers, and serve elderly clients with personalized exercise programs.
 
 ## Design Principles
 
-1. **Multi-tenancy**: Each organization can organize their clients and employees into a division
-2. **Role-based access**: Clear separation between Organization Admins, Division Managers, PSWs and/or LWs (employee types), and Clients
+1. **Multi-tenancy**: Each organization can organize their clients and providers into a division
+2. **Role-based access**: Clear separation between Organization Admins, Division Managers, PSWs and/or LWs (provider types), and Clients
 3. **Scalability**: Structure supports businesses of all sizes (single user to large retirement homes)
 4. **Security**: Firestore security rules can enforce proper access control
 5. **Flexibility**: Supports various business models (family care, retirement homes, etc.)
@@ -33,9 +33,9 @@ This document outlines the Firestore database structure for the Stride elderly c
 }
 ```
 
-**Design Decision:** Organizations are the top-level tenant boundary. All other data is scoped to an organization, enabling complete data isolation and independent billing. An organization has 1 admin employee that is responisble for setting up the billing, and at least 1 manager that adds employeeds on a division level. The admin and manager can be the same person.
+**Design Decision:** Organizations are the top-level tenant boundary. All other data is scoped to an organization, enabling complete data isolation and independent billing. An organization has 1 admin provider that is responisble for setting up the billing, and at least 1 manager that adds providerds on a division level. The admin and manager can be the same person.
 
-**Constraints:** An organization must have an admin for it to be able to do anything. When an organization is being created the admin will be created after since the admin is an employee, and an employee must belong to an organization.
+**Constraints:** An organization must have an admin for it to be able to do anything. When an organization is being created the admin will be created after since the admin is an provider, and an provider must belong to an organization.
 
 **Scope:** Only the organization admin should be able to edit and read data. And authenticated user should be able to read the data to get the name of the organization they are in. (does this make sense?).
 
@@ -44,15 +44,15 @@ This document outlines the Firestore database structure for the Stride elderly c
 **Collection:** `users`
 **Purpose:** All users in the system (Admins, Managers, PSWs, Clients)
 
-There two user types based on if they are a client or employeed to the organization.
+There two user types based on if they are a client or providerd to the organization.
 
-**Employee**
+**Provider**
 ```javascript
 {
   email: "john.doe@example.com",
   name: "John Doe",
-  type: "employee",
-  employeeRole: ["psw"], // Can be array: ["psw", "manager"], ["lw", "admin"], etc.
+  type: "provider",
+  providerRole: ["psw"], // Can be array: ["psw", "manager"], ["lw", "admin"], etc.
   organizationId: "org_12345",
   divisionId: "div_12345",
   profile: {
@@ -97,15 +97,15 @@ There two user types based on if they are a client or employeed to the organizat
 }
 ```
 
-**Design Decision:** Users can be either client or admin. If they are a client the can be a basic employee which belongs to a division and organization (Lifestyle Worker and Personal Support Worker). If they are a client it stores the client info. There is a field to indicate what type they are.
+**Design Decision:** Users can be either client or admin. If they are a client the can be a basic provider which belongs to a division and organization (Lifestyle Worker and Personal Support Worker). If they are a client it stores the client info. There is a field to indicate what type they are.
 
 **Constraints:** A user most belong to both a divsion and organization, the divsion must belong to the same organization.
 
-**Scope:** Only users should be able to access their own data if they are a client. If they are an employee (PSW/LW) they should be able to access any one in their assignments. This means a manager or admin must assign a user to themselves if they want to be able to see the clients data.
+**Scope:** Only users should be able to access their own data if they are a client. If they are an provider (PSW/LW) they should be able to access any one in their assignments. This means a manager or admin must assign a user to themselves if they want to be able to see the clients data.
 
 ### Divisions
 **Collection:** `divisions`
-**Purpose:** A sub catagory of a organization, employees are grouped into divisions. A manager can manage 1 or more divisions.
+**Purpose:** A sub catagory of a organization, providers are grouped into divisions. A manager can manage 1 or more divisions.
 
 ```javascript
 {
@@ -123,7 +123,7 @@ There two user types based on if they are a client or employeed to the organizat
 
 **Design Decision:** Separate locations collection supports multi-location businesses and enables location-specific management and reporting.
 
-**Constraints:** A division must belong to an existing organization. The managerId must reference a user with "manager" in their employeeRole array and belong to the same organization.
+**Constraints:** A division must belong to an existing organization. The managerId must reference a user with "manager" in their providerRole array and belong to the same organization.
 
 **Scope:** Only managers and the admin should be able to edit. Any authenticated user should be able to read. (again does this make sense?).
 
@@ -153,7 +153,7 @@ There two user types based on if they are a client or employeed to the organizat
 
 **Constraints:** Both the client and worker must be in the database and belong to the same organization and division.
 
-**Scope:** Both worker should be able to read and delete the assignement. The client should be able to read. The manager or admin should be able to create, read, delete. A regular worker/employee should not be able to assign themselves to a client.
+**Scope:** Both worker should be able to read and delete the assignement. The client should be able to read. The manager or admin should be able to create, read, delete. A regular worker/provider should not be able to assign themselves to a client.
 
 ### Admins
 

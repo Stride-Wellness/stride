@@ -1,184 +1,349 @@
 <script lang="ts">
-	import type { AdminUser } from '$lib/types';
-	import type { PageProps } from './$types';
+	import { AdminPrivilegeLevel, AdminsService, type Admin } from '$lib/services/admins';
+	import { page } from '$app/stores';
 	import Table from '$lib/components/Table.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Message from '$lib/components/Message.svelte';
 	import Card from '$lib/components/Card.svelte';
-	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
+	import Tabs from '$lib/components/Tabs.svelte';
+	import TabPanel from '$lib/components/TabPanel.svelte';
+	import CreateAdminForm from '$lib/components/compound/CreateAdminForm.svelte';
+	import UpdateAdminForm from '$lib/components/compound/UpdateAdminForm.svelte';
+	import DeleteAdminForm from '$lib/components/compound/DeleteAdminForm.svelte';
 
-	const { data, form }: PageProps = $props();
+	// State
+	let admins = $state<Admin[]>([]);
+	let loading = $state(true);
+	let error = $state('');
+	let successMessage = $state('');
 
-	// Make admins reactive to data changes
-	const admins = $derived(JSON.parse(data.admins) as AdminUser[]);
+	// Current user from page data
+	const currentUser = $derived($page.data.user as Admin | undefined);
+	const currentUserPrivilege = $derived(currentUser?.privilege ?? AdminPrivilegeLevel.DISABLED);
 
-	let email = $state('');
-	let name = $state('');
-	let privilege = $state(0);
-	let id = $state('');
+	// Create form fields
+	let createEmail = $state('');
+	let createPassword = $state('');
+	let createName = $state('');
+	let createPrivilege = $state(AdminPrivilegeLevel.READ_ONLY);
+	let createLoading = $state(false);
+
+	// Update form fields
+	let updateUserId = $state('');
+	let updateName = $state('');
+	let updatePrivilege = $state<AdminPrivilegeLevel | ''>('');
+	let updateLoading = $state(false);
+
+	// Delete form fields
+	let deleteUserId = $state('');
+	let deleteLoading = $state(false);
 
 	let selectedAdmins: Record<string, any>[] = $state([]);
 
-	// Reset form after successful submission
+	// Load admins on mount
+	onMount(async () => {
+		await loadAdmins();
+	});
+
+	async function loadAdmins() {
+		try {
+			loading = true;
+			error = '';
+			admins = await AdminsService.getAll(1000);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load admin users';
+			console.error('Error loading admins:', err);
+		} finally {
+			loading = false;
+		}
+	}
+
+	// Auto-fill delete/update forms when admin is selected
 	$effect(() => {
-		if (form?.success) {
-			email = '';
-			name = '';
-			privilege = 0;
-			id = '';
+		if (selectedAdmins.length === 1) {
+			const selectedId = selectedAdmins[0].id.name;
+			deleteUserId = selectedId;
+			updateUserId = selectedId;
 		}
 	});
 
-	$effect(() => {
-		id = selectedAdmins.map((admin) => admin.id.name).join(', ');
-	});
-
-	// Transform data for table display - make this reactive too
+	// Transform data for table display
 	const tableData = $derived(
 		admins.map((admin) => ({
 			id: { name: admin.id, href: `/admins/${admin.id}` },
 			name: admin.name,
-			email: admin.email,
-			privilege: admin.privilege,
-			disabled: admin.disabled ? 'Yes' : 'No',
-			emailVerified: admin.emailVerified ? 'Yes' : 'No',
-			createdAt: admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : 'N/A',
-			lastSignIn: admin.lastSignIn ? new Date(admin.lastSignIn).toLocaleDateString() : 'Never',
-			updatedAt: admin.updatedAt ? new Date(admin.updatedAt).toLocaleDateString() : 'N/A'
+			privilege: getPrivilegeName(admin.privilege),
+			createdAt: new Date(admin.createdAt).toLocaleDateString(),
+			updatedAt: new Date(admin.updatedAt).toLocaleDateString(),
+			lastSignIn: admin.lastSignIn ? new Date(admin.lastSignIn).toLocaleDateString() : 'Never'
 		}))
 	);
+
+	// Helper function to get privilege name
+	function getPrivilegeName(privilege: AdminPrivilegeLevel): string {
+		return AdminsService.getPrivilegeName(privilege).replace('_', ' ');
+	}
 
 	// Calculate summary stats
 	const summaryStats = $derived(() => {
 		const total = admins.length;
-		const active = admins.filter((admin) => !admin.disabled).length;
-		const verified = admins.filter((admin) => admin.emailVerified).length;
-		const highPrivilege = admins.filter((admin) => admin.privilege <= 1).length;
+		const superAdmins = admins.filter(
+			(admin) => admin.privilege === AdminPrivilegeLevel.SUPER_ADMIN
+		).length;
+		const adminsCount = admins.filter(
+			(admin) => admin.privilege === AdminPrivilegeLevel.ADMIN
+		).length;
+		const moderators = admins.filter(
+			(admin) => admin.privilege === AdminPrivilegeLevel.MODERATOR
+		).length;
+		const readOnly = admins.filter(
+			(admin) => admin.privilege === AdminPrivilegeLevel.READ_ONLY
+		).length;
 
-		return { total, active, verified, highPrivilege };
+		return { total, superAdmins, adminsCount, moderators, readOnly };
 	});
+
+	// Get available privilege levels for current user
+	const availablePrivilegeLevels = $derived(
+		AdminsService.getAvailablePrivilegeLevels(currentUserPrivilege)
+	);
+
+	async function handleUpdate(event: Event) {
+		event.preventDefault();
+		updateLoading = true;
+		error = '';
+		successMessage = '';
+
+		if (!updateUserId) {
+			error = 'Admin ID is required';
+			updateLoading = false;
+			return;
+		}
+
+		if (!updateName && !updatePrivilege) {
+			error = 'No fields to update';
+			updateLoading = false;
+			return;
+		}
+
+		try {
+			// Get target admin to check permissions
+			const targetAdmin = await AdminsService.getById(updateUserId);
+			if (!targetAdmin) {
+				error = 'Admin user not found';
+				updateLoading = false;
+				return;
+			}
+
+			if (!AdminsService.canModify(currentUserPrivilege, targetAdmin.privilege)) {
+				error = 'You do not have permission to modify this admin user';
+				updateLoading = false;
+				return;
+			}
+
+			const privilege = updatePrivilege !== '' ? updatePrivilege : undefined;
+			if (privilege !== undefined && !AdminsService.canModify(currentUserPrivilege, privilege)) {
+				error = `You cannot assign privilege level ${getPrivilegeName(privilege)}`;
+				updateLoading = false;
+				return;
+			}
+
+			await AdminsService.update({
+				userId: updateUserId,
+				name: updateName || undefined,
+				privilege
+			});
+
+			successMessage = 'Administrator updated successfully!';
+
+			// Reset form
+			updateUserId = '';
+			updateName = '';
+			updatePrivilege = '';
+
+			// Reload admins
+			await loadAdmins();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to update admin user';
+			console.error('Error updating admin:', err);
+		} finally {
+			updateLoading = false;
+		}
+	}
+
+	async function handleDelete(event: Event) {
+		event.preventDefault();
+		deleteLoading = true;
+		error = '';
+		successMessage = '';
+
+		if (!deleteUserId) {
+			error = 'Admin ID is required';
+			deleteLoading = false;
+			return;
+		}
+
+		if (deleteUserId === currentUser?.id) {
+			error = 'You cannot delete your own account';
+			deleteLoading = false;
+			return;
+		}
+
+		try {
+			// Get target admin to check permissions
+			const targetAdmin = await AdminsService.getById(deleteUserId);
+			if (!targetAdmin) {
+				error = 'Admin user not found';
+				deleteLoading = false;
+				return;
+			}
+
+			if (!AdminsService.canModify(currentUserPrivilege, targetAdmin.privilege)) {
+				error = 'You do not have permission to delete this admin user';
+				deleteLoading = false;
+				return;
+			}
+
+			if (
+				!confirm(
+					`Are you sure you want to delete admin user "${targetAdmin.name}"? This action cannot be undone.`
+				)
+			) {
+				deleteLoading = false;
+				return;
+			}
+
+			await AdminsService.delete({ userId: deleteUserId });
+
+			successMessage = 'Administrator deleted successfully!';
+
+			// Reset form
+			deleteUserId = '';
+
+			// Reload admins
+			await loadAdmins();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to delete admin user';
+			console.error('Error deleting admin:', err);
+		} finally {
+			deleteLoading = false;
+		}
+	}
 </script>
+
+<svelte:head>
+	<title>Admin Users - Stride Admin</title>
+	<meta name="description" content="Manage administrator accounts and permissions" />
+</svelte:head>
 
 <div class="space-y-6 p-6">
 	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-semibold text-gray-900">Admin Users</h1>
-		<p class="text-sm text-gray-600">Manage administrator accounts and permissions</p>
-	</div>
-		<!-- Messages -->
-	<Message type="error" message={form?.error} />
-	<Message
-		type="success"
-		message={form?.success ? 'Operation completed successfully!' : undefined}
-	/>
-
-	<!-- Summary Cards -->
-	<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-		<Card class="flex items-center justify-between p-4">
-			<div>
-				<h4>Total Admins</h4>
-				<p class="text-2xl font-bold">{summaryStats().total}</p>
-			</div>
-		</Card>
-
-		<Card class="flex items-center justify-between p-4">
-			<div>
-				<h4>Active Admins</h4>
-				<p class="text-2xl font-bold">{summaryStats().active}</p>
-			</div>
-		</Card>
-
-		<Card class="flex items-center justify-between p-4">
-			<div>
-				<h4>Email Verified</h4>
-				<p class="text-2xl font-bold ">{summaryStats().verified}</p>
-			</div>
-		</Card>
-
-		<Card class="flex items-center justify-between p-4">
-			<div>
-				<h4>High Privilege</h4>
-				<p class="text-2xl font-bold">{summaryStats().highPrivilege}</p>
-			</div>
-		</Card>
+		<div>
+			<h1 class="text-2xl font-semibold text-gray-900">Admin Users</h1>
+			<p class="text-sm text-gray-600">Manage administrator accounts and permissions</p>
+		</div>
+		<Button onclick={loadAdmins} disabled={loading} size="sm" variant="secondary">
+			{loading ? 'Refreshing...' : 'Refresh'}
+		</Button>
 	</div>
 
-	<!-- Admin Management Actions -->
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-		<!-- Add New Admin -->
-		<Card class="p-6">
-			<h2>Add New Administrator</h2>
-			<form method="post" action="?/create" class="space-y-4" use:enhance>
-				<Input
-					type="email"
-					placeholder="Administrator Email"
-					size="md"
-					variant="outline"
-					name="email"
-					bind:value={email}
-					required
-				/>
-				<Input
-					type="text"
-					placeholder="Full Name"
-					size="md"
-					variant="outline"
-					name="name"
-					bind:value={name}
-					required
-				/>
-				<div class="space-y-2">
-					<h5 class="block text-sm font-medium text-gray-700">Privilege Level</h5>
-					<Input
-						type="number"
-						placeholder="0-3 (0=Super Admin, 3=Limited)"
-						size="md"
-						variant="outline"
-						name="privilege"
-						bind:value={privilege}
-						min="0"
-						max="3"
-						required
-					/>
-					<p class="text-xs text-gray-500">
-						0: Super Admin • 1: Advanced Admin • 2: Basic Admin • 3: Read-only
-					</p>
+	<!-- Messages -->
+	<Message type="error" message={error} />
+	<Message type="success" message={successMessage} />
+
+	{#if loading && admins.length === 0}
+		<Card class="p-8">
+			<div class="flex items-center justify-center">
+				<p class="text-gray-600">Loading administrators...</p>
+			</div>
+		</Card>
+	{:else}
+		<!-- Summary Cards -->
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+			<Card class="flex items-center justify-between p-4">
+				<div>
+					<h4 class="text-sm text-gray-600">Total Admins</h4>
+					<p class="text-2xl font-bold text-gray-900">{summaryStats().total}</p>
 				</div>
-				<Button type="submit" size="md" class="w-full">Create Administrator</Button>
-			</form>
-		</Card>
+			</Card>
 
-		<!-- Delete Admin -->
-		<Card class="border-red-200 bg-red-50 p-6">
-			<h2 class="text-red-900">Remove Administrator</h2>
-			<form method="post" action="?/delete" class="space-y-4" use:enhance>
-				<Input
-					type="text"
-					placeholder="Administrator ID"
-					size="md"
-					variant="outline"
-					name="id"
-					bind:value={id}
-					required
+			<Card class="flex items-center justify-between p-4">
+				<div>
+					<h4 class="text-sm text-gray-600">Super Admins</h4>
+					<p class="text-2xl font-bold text-purple-600">{summaryStats().superAdmins}</p>
+				</div>
+			</Card>
+
+			<Card class="flex items-center justify-between p-4">
+				<div>
+					<h4 class="text-sm text-gray-600">Admins</h4>
+					<p class="text-2xl font-bold text-blue-600">{summaryStats().adminsCount}</p>
+				</div>
+			</Card>
+
+			<Card class="flex items-center justify-between p-4">
+				<div>
+					<h4 class="text-sm text-gray-600">Moderators</h4>
+					<p class="text-2xl font-bold text-green-600">{summaryStats().moderators}</p>
+				</div>
+			</Card>
+
+			<Card class="flex items-center justify-between p-4">
+				<div>
+					<h4 class="text-sm text-gray-600">Read-only</h4>
+					<p class="text-2xl font-bold text-gray-600">{summaryStats().readOnly}</p>
+				</div>
+			</Card>
+		</div>
+
+		<Tabs>
+			<TabPanel label="Create Admin">
+				<CreateAdminForm
+					bind:error
+					bind:successMessage
+					callback={(newAdminId) => {
+						loadAdmins();
+						// Handle the new admin ID (e.g., reload the admin list)
+						console.log('New admin created with ID:', newAdminId);
+					}}
 				/>
-				<Button
-					type="submit"
-					size="md"
-					class="w-full border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
-				>
-					Remove Administrator
-				</Button>
-			</form>
-			<p class="mt-2 text-xs text-red-700">
-				This will permanently remove admin access. The user will no longer be able to sign in.
+			</TabPanel>
+			<TabPanel label="Update Admin">
+				<UpdateAdminForm
+					bind:error
+					bind:successMessage
+					prefilledUserId={updateUserId}
+					callback={(updatedAdminId) => {
+						loadAdmins();
+						console.log('Admin updated with ID:', updatedAdminId);
+					}}
+				/>
+			</TabPanel>
+			<TabPanel label="Delete Admin">
+				<DeleteAdminForm
+					bind:error
+					bind:successMessage
+					prefilledUserId={deleteUserId}
+					callback={(deletedAdminId) => {
+						loadAdmins();
+						console.log('Admin deleted with ID:', deletedAdminId);
+					}}
+				/>
+			</TabPanel>
+		</Tabs>
+
+		<!-- Admins Table -->
+		<Card class="p-6">
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-lg font-medium text-gray-900">Administrator Accounts Overview</h2>
+				<span class="text-sm text-gray-600">{admins.length} total</span>
+			</div>
+			<Table data={tableData} bind:selected={selectedAdmins} class="max-h-96" />
+			<p class="mt-2 text-xs text-gray-500">
+				Select an admin to auto-fill the update/delete forms above.
 			</p>
 		</Card>
-	</div>
-
-
-	<!-- Admins Table -->
-	<Card class="p-6">
-		<h2>Administrator Accounts Overview</h2>
-		<Table data={tableData} bind:selected={selectedAdmins} class="max-h-96" />
-	</Card>
+	{/if}
 </div>

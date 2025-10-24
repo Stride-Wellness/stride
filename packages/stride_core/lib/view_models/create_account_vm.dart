@@ -77,17 +77,17 @@ class CreateAccountViewModel extends ChangeNotifier {
         divisionType: 'homecare_provider',
       ));
 
-      // Step 3: Create employee account with auth (using high-level method)
-      final user = await userRepo.createEmployee(
+      // Step 3: Create provider account with auth (using high-level method)
+      final user = await userRepo.createProvider(
         email: accountInfo["email"]!,
         password: accountInfo["password"]!,
         name: accountInfo["full_name"]!,
         organizationId: org.id,
         divisionId: div.id,
-        employeeRole: [
-          EmployeeRole.admin,
-          EmployeeRole.manager,
-          EmployeeRole.psw,
+        providerRole: [
+          ProviderRole.admin,
+          ProviderRole.manager,
+          ProviderRole.psw,
         ],
         sendEmailVerification: true,
       );

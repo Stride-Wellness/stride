@@ -12,5 +12,8 @@
       ],
       "runtime": "python313"
     }
-  ]
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
 }

@@ -5,7 +5,7 @@ import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/models/user_m.dart';
 import 'package:stride_web/views/clients_v.dart';
 import 'package:stride_web/views/divisions_v.dart';
-import 'package:stride_web/views/employees_v.dart';
+import 'package:stride_web/views/providers_v.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -36,7 +36,7 @@ class _DashboardViewState extends State<DashboardView> {
               NavigationRailDestination(
                 icon: Icon(Icons.people_outline),
                 selectedIcon: Icon(Icons.people),
-                label: Text('Employees'),
+                label: Text('Providers'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.person_outline),
@@ -78,7 +78,7 @@ class _DashboardViewState extends State<DashboardView> {
       case 0:
         return const DivisionsView();
       case 1:
-        return const EmployeesView();
+        return const ProvidersView();
       case 2:
         return const ClientsView();
       default:
@@ -91,8 +91,8 @@ class _DashboardViewState extends State<DashboardView> {
 // Tab Content Widgets
 // ============================================================================
 
-class _EmployeesContent extends StatelessWidget {
-  const _EmployeesContent();
+class _ProvidersContent extends StatelessWidget {
+  const _ProvidersContent();
 
   @override
   Widget build(BuildContext context) {
@@ -105,22 +105,22 @@ class _EmployeesContent extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Employees',
+                'Providers',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
               ElevatedButton.icon(
                 onPressed: () {
-                  // TODO: Add new employee
+                  // TODO: Add new provider
                 },
                 icon: const Icon(Icons.add),
-                label: const Text('Add Employee'),
+                label: const Text('Add Provider'),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          // Placeholder for employees list
+          // Placeholder for providers list
           const Placeholder(fallbackHeight: 400),
         ],
       ),

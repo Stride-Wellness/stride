@@ -4,14 +4,14 @@ This document describes the new Firebase-based user service that mirrors the Typ
 
 ## Overview
 
-The `UsersService` class provides comprehensive user management functionality with Firebase Firestore as the backend. It supports both employee and client users with different roles and profiles.
+The `UsersService` class provides comprehensive user management functionality with Firebase Firestore as the backend. It supports both provider and client users with different roles and profiles.
 
 ## User Types
 
-### Employee Users
-- **Type**: `employee`
+### Provider Users
+- **Type**: `provider`
 - **Roles**: PSW, LW, Admin, Manager
-- **Profile**: Flexible key-value pairs for additional employee data
+- **Profile**: Flexible key-value pairs for additional provider data
 
 ### Client Users
 - **Type**: `client`
@@ -20,37 +20,37 @@ The `UsersService` class provides comprehensive user management functionality wi
 ## Key Classes
 
 ### Core Models
-- `User`: Union type that can be either EmployeeUser or ClientUser
-- `EmployeeUser`: User with employee-specific fields
+- `User`: Union type that can be either ProviderUser or ClientUser
+- `ProviderUser`: User with provider-specific fields
 - `ClientUser`: User with client-specific fields
 - `EmergencyContact`: Contact information for emergencies
 - `MedicalInfo`: Medical conditions, medications, and mobility information
 
 ### Data Transfer Objects
-- `CreateEmployeeUserData`: Data required to create an employee
+- `CreateProviderUserData`: Data required to create an provider
 - `CreateClientUserData`: Data required to create a client
-- `UpdateEmployeeUserData`: Data for updating employee information
+- `UpdateProviderUserData`: Data for updating provider information
 - `UpdateClientUserData`: Data for updating client information
 
 ## Usage Examples
 
 ### 1. Creating Users
 
-#### Create an Employee
+#### Create an Provider
 ```dart
-final employeeData = CreateEmployeeUserData(
+final providerData = CreateProviderUserData(
   email: 'john.doe@example.com',
   name: 'John Doe',
   organizationId: 'org123',
   divisionId: 'div456',
-  employeeRole: [EmployeeRole.psw, EmployeeRole.admin],
+  providerRole: [ProviderRole.psw, ProviderRole.admin],
   profile: {
     'phoneNumber': '+1234567890',
     'department': 'Care Services',
   },
 );
 
-final employee = await UsersService.createEmployee(employeeData);
+final provider = await UsersService.createProvider(providerData);
 ```
 
 #### Create a Client
@@ -102,8 +102,8 @@ for (final user in users) {
 
 #### Get Users by Type and Organization
 ```dart
-final employees = await UsersService.getByTypeAndOrganization(
-  UserType.employee,
+final providers = await UsersService.getByTypeAndOrganization(
+  UserType.provider,
   'org123',
 );
 ```
@@ -118,11 +118,11 @@ final activeUsers = await UsersService.getByStatusAndOrganization(
 
 ### 3. Updating Users
 
-#### Update Employee
+#### Update Provider
 ```dart
-await UsersService.updateEmployee('employee_id', UpdateEmployeeUserData(
+await UsersService.updateProvider('provider_id', UpdateProviderUserData(
   name: 'New Name',
-  employeeRole: [EmployeeRole.manager],
+  providerRole: [ProviderRole.manager],
   profile: {'department': 'Management'},
 ));
 ```
@@ -155,18 +155,18 @@ await UsersService.hardDelete('user_id'); // Only if no active assignments
 
 #### Check User Type
 ```dart
-if (user.isEmployee) {
-  final employee = user.asEmployee!;
-  print('Employee roles: ${employee.employeeRole}');
+if (user.isProvider) {
+  final provider = user.asProvider!;
+  print('Provider roles: ${provider.providerRole}');
 } else if (user.isClient) {
   final client = user.asClient!;
   print('Client phone: ${client.profile.phone}');
 }
 ```
 
-#### Check Employee Role
+#### Check Provider Role
 ```dart
-if (UsersService.hasRole(user, EmployeeRole.admin)) {
+if (UsersService.hasRole(user, ProviderRole.admin)) {
   print('User is an admin');
 }
 ```
@@ -216,7 +216,7 @@ void main() async {
 The old `UserDataModel` is still supported but deprecated. To migrate:
 
 1. Use `UsersService` instead of `UserRepository` for new code
-2. Replace `UserDataModel` with `User`, `EmployeeUser`, or `ClientUser`
+2. Replace `UserDataModel` with `User`, `ProviderUser`, or `ClientUser`
 3. Update creation logic to use proper user types
 4. Migrate profile data to structured formats
 
@@ -246,7 +246,7 @@ try {
 - All Firebase security rules should be properly configured
 - User organization and division access should be enforced at the database level
 - Sensitive medical information should comply with HIPAA requirements
-- Employee role changes should be audited
+- Provider role changes should be audited
 
 ## Testing
 
