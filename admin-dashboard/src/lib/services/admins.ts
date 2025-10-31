@@ -135,44 +135,6 @@ export class AdminsService {
 	}
 
 	/**
-	 * Get admin user by ID with Auth metadata
-	 */
-	static async getById_(adminId: string): Promise<Admin | null> {
-		if (typeof window !== 'undefined') {
-			throw new Error('getByIdFromFirestore can only be called server-side');
-		}
-
-		try {
-			// Import Admin SDK (only available server-side)
-			const { adminDb } = await import('$lib/firebase/admin');
-
-			const adminDoc = await adminDb.collection('admins').doc(adminId).get();
-
-			if (!adminDoc.exists) {
-				return null;
-			}
-
-			const data = adminDoc.data();
-			if (!data) {
-				return null;
-			}
-
-			return {
-				id: adminDoc.id,
-				name: data.name,
-				privilege: data.privilege as AdminPrivilegeLevel,
-				createdAt: data.createdAt?.toDate() || new Date(),
-				createdBy: data.createdBy,
-				updatedAt: data.updatedAt?.toDate() || new Date(),
-				lastSignIn: undefined // No Auth metadata in direct Firestore reads
-			};
-		} catch (error) {
-			console.error('Error getting admin from Firestore:', error);
-			return null;
-		}
-	}
-
-	/**
 	 * Get admins by specific IDs (max 10 due to Firestore 'in' query limit)
 	 */
 	static async getByIds(adminIds: string[]): Promise<Admin[]> {

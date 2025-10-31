@@ -12,7 +12,7 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 		try {
 			const decodedToken = await adminAuth.verifySessionCookie(token);
 			// Get full admin user data and verify admin status
-			const adminUser = await AdminsService.getById_(decodedToken.uid);
+			const adminUser = await AdminsService.getById(decodedToken.uid);
 			if (adminUser) {
 				event.locals.user = adminUser;
 			} else {
