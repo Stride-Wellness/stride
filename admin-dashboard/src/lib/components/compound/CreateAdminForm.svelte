@@ -12,29 +12,33 @@
 	import { getPrivilegeName } from '$lib/utils';
 
   let {
+    variant = 'independent',
     error = $bindable(),
     successMessage = $bindable(),
     constantEmail,
+    constantPassword,
     constantName,
     constantPrivilege,
     callback
   }: {
+    variant?: 'independent' | 'complementary';
     error: string | null;
     successMessage: string | null;
     constantEmail?: string;
+    constantPassword?: string;
     constantName?: string;
     constantPrivilege?: AdminPrivilegeLevel;
     callback?: (newAdminId: string) => void;
   } = $props();
 
-  const currentUser = $derived($page.data.user as Admin | undefined);
+	const currentUser = $derived($page.data.user as Admin | undefined);
 	const currentUserPrivilege = $derived(currentUser?.privilege ?? AdminPrivilegeLevel.DISABLED);
   
 	// Create form fields
-	let createEmail = $state('');
-	let createPassword = $state('');
-	let createName = $state('');
-	let createPrivilege = $state(AdminPrivilegeLevel.READ_ONLY);
+	let createEmail = $derived(constantEmail || '');
+	let createPassword = $derived(constantPassword || '');
+	let createName = $derived(constantName || '');
+	let createPrivilege = $derived(constantPrivilege || AdminPrivilegeLevel.READ_ONLY);
 	let createLoading = $state(false);
   	// Form handlers
 	async function handleCreate(event: Event) {
@@ -79,10 +83,10 @@
 			successMessage = 'Administrator created successfully!';
 
 			// Reset form
-			createEmail = '';
-			createPassword = '';
-			createName = '';
-			createPrivilege = AdminPrivilegeLevel.READ_ONLY;
+			createEmail = constantEmail || '';
+			createPassword = constantPassword || '';
+			createName = constantName || '';
+			createPrivilege = constantPrivilege || AdminPrivilegeLevel.READ_ONLY;
 
 			// Reload admins
 			callback?.(adminId);
@@ -101,53 +105,99 @@
 
 </script>
   
-  
-  <!-- Create Admin -->
-					<Card class="p-6">
-						<h2 class="mb-4 text-lg font-medium text-gray-900">Create Administrator</h2>
-						<form onsubmit={handleCreate} class="space-y-4">
-							<Input
-								type="email"
-								placeholder="Email"
-								size="md"
-								variant="outline"
-								bind:value={createEmail}
-								required
-								disabled={createLoading}
-							/>
-							<Input
-								type="password"
-								placeholder="Password (min 6 characters)"
-								size="md"
-								variant="outline"
-								bind:value={createPassword}
-								required
-								disabled={createLoading}
-							/>
-							<Input
-								type="text"
-								placeholder="Full Name"
-								size="md"
-								variant="outline"
-								bind:value={createName}
-								required
-								disabled={createLoading}
-							/>
-							<div class="space-y-2">
-								<label class="block text-sm font-medium text-gray-700">Privilege Level</label>
-								<select
-									bind:value={createPrivilege}
-									class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-									required
-									disabled={createLoading}
-								>
-									{#each availablePrivilegeLevels as level}
-										<option value={level}>{getPrivilegeName(level)}</option>
-									{/each}
-								</select>
-							</div>
-							<Button type="submit" size="md" class="w-full" disabled={createLoading}>
-								{createLoading ? 'Creating...' : 'Create Administrator'}
-							</Button>
-						</form>
-					</Card>
+{#if variant === 'independent'}
+<!-- Create Admin -->
+<Card class="p-6">
+	<h2 class="mb-4 text-lg font-medium text-gray-900">Create Administrator</h2>
+	<form onsubmit={handleCreate} class="space-y-4">
+		<Input
+			type="email"
+			placeholder="Email"
+			size="md"
+			variant="outline"
+			bind:value={createEmail}
+			required
+			disabled={createLoading || !!constantEmail}
+		/>
+		<Input
+			type="password"
+			placeholder="Password (min 6 characters)"
+			size="md"
+			variant="outline"
+			bind:value={createPassword}
+			required
+			disabled={createLoading || !!constantPassword}
+		/>
+		<Input
+			type="text"
+			placeholder="Full Name"
+			size="md"
+			variant="outline"
+			bind:value={createName}
+			required
+			disabled={createLoading || !!constantName}
+		/>
+		<div class="space-y-2">
+			<label class="block text-sm font-medium text-gray-700">Privilege Level</label>
+			<select
+				bind:value={createPrivilege}
+				class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				required
+				disabled={createLoading || !!constantPrivilege}
+			>
+				{#each availablePrivilegeLevels as level}
+					<option value={level}>{getPrivilegeName(level)}</option>
+				{/each}
+			</select>
+		</div>
+		<Button type="submit" size="md" class="w-full" disabled={createLoading}>
+			{createLoading ? 'Creating...' : 'Create Administrator'}
+		</Button>
+	</form>
+</Card>
+{:else if variant === 'complementary'}
+<div class="">
+	<form onsubmit={handleCreate} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+		<Input
+			type="email"
+			placeholder="Email"
+			size="md"
+			variant="outline"
+			bind:value={createEmail}
+			required
+			disabled={createLoading || !!constantEmail}
+		/>
+		<Input
+			type="password"
+			placeholder="Password"
+			size="md"
+			variant="outline"
+			bind:value={createPassword}
+			required
+			disabled={createLoading || !!constantPassword}
+		/>
+		<Input
+			type="text"
+			placeholder="Full Name"
+			size="md"
+			variant="outline"
+			bind:value={createName}
+			required
+			disabled={createLoading || !!constantName}
+		/>
+		<select
+			bind:value={createPrivilege}
+			class="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+			required
+			disabled={createLoading || !!constantPrivilege}
+		>
+			{#each availablePrivilegeLevels as level}
+				<option value={level}>{getPrivilegeName(level)}</option>
+			{/each}
+		</select>
+		<Button type="submit" size="md" disabled={createLoading}>
+			{createLoading ? 'Creating...' : 'Create'}
+		</Button>
+	</form>
+</div>
+{/if}

@@ -8,15 +8,17 @@
 		error = $bindable(),
 		successMessage = $bindable(),
 		constantDivisionId,
+		prefilledIds,
 		callback
 	}: {
 		error: string | null;
 		successMessage: string | null;
+		prefilledIds?: string[];
 		constantDivisionId?: string;
 		callback?: () => void;
 	} = $props();
 
-	let deleteDivisionId = $state(constantDivisionId || '');
+	let deleteDivisionId = $derived(constantDivisionId || prefilledIds?.join(', ') || '');
 	let softDeleteLoading = $state(false);
 	let hardDeleteLoading = $state(false);
 
@@ -46,7 +48,7 @@
 
 			successMessage = 'Division soft deleted successfully! Data has been preserved and can be restored.';
 
-			if (!constantDivisionId) deleteDivisionId = '';
+			deleteDivisionId = constantDivisionId || '';
 
 			callback?.();
 		} catch (err: any) {

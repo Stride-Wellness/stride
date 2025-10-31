@@ -5,18 +5,20 @@
 	import Card from '$lib/components/Card.svelte';
 
 	let {
+		variant = 'independent',
 		error = $bindable(),
 		successMessage = $bindable(),
 		constantOrganizationId,
 		callback
 	}: {
+		variant?: 'independent' | 'complementary';
 		error: string | null;
 		successMessage: string | null;
 		constantOrganizationId?: string;
 		callback?: () => void;
 	} = $props();
 
-	let updateSeatsId = $state(constantOrganizationId || '');
+	let updateSeatsId = $derived(constantOrganizationId || '');
 	let updateSeatsCount = $state(10);
 	let loading = $state(false);
 
@@ -52,6 +54,7 @@
 	}
 </script>
 
+{#if variant === 'independent'}
 <Card class="p-6">
 	<h2 class="mb-4 text-lg font-medium text-gray-900">Adjust Seat Allocation</h2>
 	<form onsubmit={handleUpdateSeats} class="space-y-4">
@@ -81,3 +84,31 @@
 		</Button>
 	</form>
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+	<form onsubmit={handleUpdateSeats} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+		<Input
+			type="text"
+			placeholder="Organization ID"
+			size="md"
+			variant="outline"
+			bind:value={updateSeatsId}
+			required
+			disabled={loading || !!constantOrganizationId}
+		/>
+		<Input
+			type="number"
+			placeholder="New Total Seats"
+			size="md"
+			variant="outline"
+			bind:value={updateSeatsCount}
+			min="1"
+			required
+			disabled={loading}
+		/>
+		<Button type="submit" size="md" variant="secondary" disabled={loading}>
+			{loading ? 'Updating...' : 'Update Seats'}
+		</Button>
+	</form>
+</div>
+{/if}

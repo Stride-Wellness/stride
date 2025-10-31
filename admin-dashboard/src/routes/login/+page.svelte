@@ -145,7 +145,7 @@
       <div class="text-center">
         <h3 class="text-sm font-medium text-blue-900 mb-2">Looking for the Stride app?</h3>
         <p class="text-xs text-blue-700 mb-3">
-          If you're a client or care worker, you'll want to use the main Stride application instead.
+          If you're a client or care provider, you'll want to use the main Stride application instead.
         </p>
         <a 
           href="https://stridewellness.ca" 

@@ -5,18 +5,20 @@
     import Card from '$lib/components/Card.svelte';
 
     let {
+        variant = 'independent',
         error = $bindable(),
         successMessage = $bindable(),
         constantClientId,
-        constantWorkerId,
+        constantProviderId,
         constantDivisionId,
         constantAssignedBy,
         callback
     }: {
+        variant?: 'independent' | 'complementary';
         error: string | null;
         successMessage: string | null;
         constantClientId?: string;
-        constantWorkerId?: string;
+        constantProviderId?: string;
         constantDivisionId?: string;
         constantAssignedBy?: string;
         callback?: (newAssignmentId: string) => void;
@@ -24,9 +26,21 @@
 
     // Form state for creating assignments
     let clientId = $state(constantClientId || '');
-    let workerId = $state(constantWorkerId || '');
+    $effect(() => {
+        clientId = constantClientId || '';
+    });
+    let providerId = $state(constantProviderId || '');
+    $effect(() => {
+        providerId = constantProviderId || '';
+    });
     let divisionId = $state(constantDivisionId || '');
+    $effect(() => {
+        divisionId = constantDivisionId || '';
+    });
     let assignedBy = $state(constantAssignedBy || '');
+    $effect(() => {
+        assignedBy = constantAssignedBy || '';
+    });
     let canModifyExercises = $state(false);
     let canViewMedicalInfo = $state(false);
     let canScheduleSessions = $state(false);
@@ -35,7 +49,7 @@
     // Watch for constant prop changes
     $effect(() => {
         if (constantClientId) clientId = constantClientId;
-        if (constantWorkerId) workerId = constantWorkerId;
+        if (constantProviderId) providerId = constantProviderId;
         if (constantDivisionId) divisionId = constantDivisionId;
         if (constantAssignedBy) assignedBy = constantAssignedBy;
     });
@@ -48,7 +62,7 @@
         successMessage = '';
 
         // Validation
-        if (!clientId || !workerId || !divisionId || !assignedBy) {
+        if (!clientId || !providerId || !divisionId || !assignedBy) {
             error = 'All fields are required';
             createLoading = false;
             return;
@@ -57,7 +71,7 @@
         try {
             const newAssignment = await AssignmentsService.create({
                 clientId,
-                workerId,
+                providerId,
                 divisionId,
                 assignedBy,
                 permissions: {
@@ -71,10 +85,10 @@
 
             // Reset form
             const assignmentId = newAssignment.id;
-            clientId = '';
-            workerId = '';
-            divisionId = '';
-            assignedBy = '';
+            clientId = constantClientId || '';
+            providerId = constantProviderId || '';
+            divisionId = constantDivisionId || '';
+            assignedBy = constantAssignedBy || '';
             canModifyExercises = false;
             canViewMedicalInfo = false;
             canScheduleSessions = false;
@@ -93,7 +107,7 @@
                         break;
                     case 'not-found':
                         error =
-                            'Organization, client, worker, or division not found. Please verify the IDs are correct.';
+                            'Organization, client, provider, or division not found. Please verify the IDs are correct.';
                         break;
                     case 'already-exists':
                         error = 'This assignment already exists.';
@@ -130,6 +144,7 @@
     }
 </script>
 
+{#if variant === 'independent'}
 <!-- Create Assignment Form -->
 <Card class="p-6">
     <h2 class="mb-4 text-lg font-medium text-gray-900">Create New Assignment</h2>
@@ -146,10 +161,10 @@
             />
             <Input
                 type="text"
-                placeholder="Worker ID"
+                placeholder="Provider ID"
                 size="md"
                 variant="outline"
-                bind:value={workerId}
+                bind:value={providerId}
                 required
                 disabled={createLoading}
             />
@@ -212,3 +227,51 @@
         </Button>
     </form>
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+    <form onsubmit={handleCreateAssignment} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <Input
+            type="text"
+            placeholder="Client ID"
+            size="md"
+            variant="outline"
+            bind:value={clientId}
+            required
+            disabled={createLoading}
+        />
+        <Input
+            type="text"
+            placeholder="Provider ID"
+            size="md"
+            variant="outline"
+            bind:value={providerId}
+            required
+            disabled={createLoading}
+        />
+        <Input
+            type="text"
+            placeholder="Division ID"
+            size="md"
+            variant="outline"
+            bind:value={divisionId}
+            required
+            disabled={createLoading}
+        />
+        <Input
+            type="text"
+            placeholder="Assigned By"
+            size="md"
+            variant="outline"
+            bind:value={assignedBy}
+            required
+            disabled={createLoading}
+        />
+        <Button type="submit" size="md" disabled={createLoading}>
+            {createLoading ? 'Creating...' : 'Create'}
+        </Button>
+    </form>
+    <p class="mt-2 text-xs text-gray-500">
+        Default permissions applied. Use independent form to customize permissions.
+    </p>
+</div>
+{/if}

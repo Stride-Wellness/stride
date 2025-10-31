@@ -8,15 +8,17 @@
 		error = $bindable(),
 		successMessage = $bindable(),
 		constantOrganizationId,
+		prefilledIds,
 		callback
 	}: {
 		error: string | null;
 		successMessage: string | null;
+		prefilledIds?: string[];
 		constantOrganizationId?: string;
 		callback?: () => void;
 	} = $props();
 
-	let deleteOrgId = $state(constantOrganizationId || '');
+	let deleteOrgId = $derived(constantOrganizationId || prefilledIds?.join(', ') || '');
 	let softDeleteLoading = $state(false);
 	let hardDeleteLoading = $state(false);
 
@@ -49,7 +51,7 @@
 
 			successMessage = 'Organization soft deleted successfully! Data has been preserved and can be restored.';
 
-			if (!constantOrganizationId) deleteOrgId = '';
+			deleteOrgId = constantOrganizationId || '';
 
 			callback?.();
 		} catch (err: any) {

@@ -2,7 +2,7 @@
   import Link from './Link.svelte';
 
   const { 
-    data, 
+    data = $bindable([]), 
     selected = $bindable([]), 
     class: className 
   }: { 

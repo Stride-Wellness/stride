@@ -13,11 +13,10 @@
     size?: 'sm' | 'md' | 'lg';
     variant?: 'default' | 'outline';
     class?: string;
-    options?: Array<{ value: string|number|boolean; label: string }>; // Add options type
+    options?: Array<{ value: string|number|boolean; label: string, selected?: boolean }>; // Add options type
     children?: any;
     [key: string]: any;
   } = $props();
-
   const baseClasses = 'w-full border transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-primary rounded-none';
   
   const variantClasses = {
@@ -38,11 +37,12 @@
 {#if as === 'select'}
   <select
     bind:value={value}
+    
     class={classes}
     {...restProps}
   >
     {#each options as option}
-      <option value={option.value}>{option.label}</option>
+      <option selected={option.selected} value={option.value}>{option.label}</option>
     {/each}
     {@render children?.()}
   </select>

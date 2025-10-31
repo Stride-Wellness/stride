@@ -39,8 +39,10 @@
 	}
 
 	// Transform data for table display
-	const tableData = $derived(
-		organizations.map((org) => ({
+	const tableData = $derived.by(() => {
+		if (organizations.length === 0) return [];
+
+		return organizations.map((org) => ({
 			id: { name: org.id, href: `/organizations/${org.id}` },
 			name: org.name,
 			status: org.status,
@@ -50,8 +52,8 @@
 			'Stripe ID': org.stripeUserId,
 			Created: org.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'N/A',
 			Updated: org.updatedAt ? new Date(org.updatedAt).toLocaleDateString() : 'N/A'
-		}))
-	);
+		}));
+	});
 
 	// Calculate summary stats
 	const summaryStats = $derived(() => {
@@ -66,95 +68,78 @@
 	});
 
 	// Get selected organization IDs
-	const selectedOrganizationIds = $derived(selectedOrganizations.map((org) => org.id.name).join(', '));
+	const selectedOrganizationIds = $derived(
+		selectedOrganizations.map((org) => org.id.name)
+	);
 </script>
 
-{#if loading}
-	<div class="flex items-center justify-center p-6">
-		<div class="text-lg">Loading organizations...</div>
+<div class="space-y-6 p-6">
+	<div class="flex items-center justify-between">
+		<h1 class="text-2xl font-semibold text-gray-900">Organizations</h1>
+		<p class="text-sm text-gray-600">Manage and monitor client organizations</p>
 	</div>
-{:else}
-	<div class="space-y-6 p-6">
-		<div class="flex items-center justify-between">
-			<h1 class="text-2xl font-semibold text-gray-900">Organizations</h1>
-			<p class="text-sm text-gray-600">Manage and monitor client organizations</p>
-		</div>
 
-		<!-- Messages -->
-		<Message type="error" message={error || undefined} />
-		<Message type="success" message={successMessage || undefined} />
+	<!-- Messages -->
+	<Message type="error" message={error || undefined} />
+	<Message type="success" message={successMessage || undefined} />
 
-		<!-- Summary Cards -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-			<Card class="flex items-center justify-between p-4">
-				<div>
-					<h4>Client Organizations</h4>
-					<p class="text-2xl font-bold text-gray-900">{summaryStats().total}</p>
-				</div>
-			</Card>
+	<!-- Summary Cards -->
+	<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+		<Card class="flex items-center justify-between p-4">
+			<div>
+				<h4>Client Organizations</h4>
+				<p class="text-2xl font-bold text-gray-900">{summaryStats().total}</p>
+			</div>
+		</Card>
 
-			<Card class="flex items-center justify-between p-4">
-				<div>
-					<h4>Active Organizations</h4>
-					<p class="text-2xl font-bold">{summaryStats().active}</p>
-				</div>
-			</Card>
+		<Card class="flex items-center justify-between p-4">
+			<div>
+				<h4>Active Organizations</h4>
+				<p class="text-2xl font-bold">{summaryStats().active}</p>
+			</div>
+		</Card>
 
-			<Card class="flex items-center justify-between p-4">
-				<div>
-					<h4>Platform Seats</h4>
-					<p class="text-2xl font-bold">{summaryStats().totalSeats}</p>
-				</div>
-			</Card>
+		<Card class="flex items-center justify-between p-4">
+			<div>
+				<h4>Platform Seats</h4>
+				<p class="text-2xl font-bold">{summaryStats().totalSeats}</p>
+			</div>
+		</Card>
 
-			<Card class="flex items-center justify-between p-4">
-				<div>
-					<h4>Seats in Use</h4>
-					<p class="text-2xl font-bold">{summaryStats().usedSeats}</p>
-				</div>
-			</Card>
-		</div>
-
-		<Tabs>
-			<TabPanel label="Create Organization">
-				<CreateOrganizationForm
-					bind:error
-					bind:successMessage
-					callback={(newOrg) => {
-						organizations = [...organizations, newOrg];
-					}}
-				/>
-			</TabPanel>
-			<TabPanel label="Update Status">
-				<UpdateOrganizationStatusForm
-					bind:error
-					bind:successMessage
-					constantOrganizationId={selectedOrganizationIds}
-					callback={loadOrganizations}
-				/>
-			</TabPanel>
-			<TabPanel label="Update Seats">
-				<UpdateOrganizationSeatsForm
-					bind:error
-					bind:successMessage
-					constantOrganizationId={selectedOrganizationIds}
-					callback={loadOrganizations}
-				/>
-			</TabPanel>
-			<TabPanel label="Delete Organization">
-				<DeleteOrganizationForm
-					bind:error
-					bind:successMessage
-					constantOrganizationId={selectedOrganizationIds}
-					callback={loadOrganizations}
-				/>
-			</TabPanel>
-		</Tabs>
-
-		<!-- Organizations Table -->
-		<Card class="p-6">
-			<h2 class="mb-4 text-lg font-medium text-gray-900">Client Organizations Overview</h2>
-			<Table data={tableData} bind:selected={selectedOrganizations} class="max-h-96" />
+		<Card class="flex items-center justify-between p-4">
+			<div>
+				<h4>Seats in Use</h4>
+				<p class="text-2xl font-bold">{summaryStats().usedSeats}</p>
+			</div>
 		</Card>
 	</div>
-{/if}
+
+	<Tabs>
+		<TabPanel label="Create Organization">
+			<CreateOrganizationForm
+				bind:error
+				bind:successMessage
+				callback={(newOrg) => {
+					organizations = [...organizations, newOrg];
+				}}
+			/>
+		</TabPanel>
+		<TabPanel label="Update Status">
+			<UpdateOrganizationStatusForm bind:error bind:successMessage callback={loadOrganizations} />
+		</TabPanel>
+		<TabPanel label="Update Seats">
+			<UpdateOrganizationSeatsForm bind:error bind:successMessage callback={loadOrganizations} />
+		</TabPanel>
+		<TabPanel label="Delete Organization">
+			<DeleteOrganizationForm bind:error bind:successMessage prefilledIds={selectedOrganizationIds} callback={loadOrganizations} />
+		</TabPanel>
+	</Tabs>
+
+	<!-- Organizations Table -->
+	<Card class="p-6">
+		<h2 class="mb-4 text-lg font-medium text-gray-900">Client Organizations Overview</h2>
+		{#key organizations.length}
+			<Table data={tableData} bind:selected={selectedOrganizations} class="max-h-96" />
+		{/key}
+	</Card>
+</div>

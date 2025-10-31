@@ -4,6 +4,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Card from '$lib/components/Card.svelte';
+	import { enhance } from '$app/forms';
 
 	let {
 		variant = 'independent',
@@ -26,9 +27,9 @@
 	} = $props();
 
 	// Form state for creating divisions
-	let name = $state(constantName || '');
-	let organizationId = $state(constantOrganizationId || '');
-	let managerId = $state(constantManagerId || '');
+	let name = $derived(constantName);
+	let organizationId = $derived(constantOrganizationId || '');
+	let managerId = $derived(constantManagerId || '');
 	let divisionType = $state<'retirement_home' | 'homecare_provider'>(constantDivisionType || 'retirement_home');
 
 	// Handle create division
@@ -59,10 +60,10 @@
 			});
 
 			// Reset form
-			name = '';
-			organizationId = '';
-			managerId = '';
-			divisionType = 'retirement_home';
+			name = constantName || '';
+			organizationId = constantOrganizationId || '';
+			managerId = constantManagerId || '';
+			divisionType = constantDivisionType || 'retirement_home';
 
 			// Update local state - use spread to trigger reactivity
 			callback?.(newDivision);

@@ -81,14 +81,9 @@
 	});
 
 	// Get selected division IDs
-	const selectedDivisionIds = $derived(selectedDivisions.map((div) => div.id.name).join(', '));
+	const selectedDivisionIds = $derived(selectedDivisions.map((div) => div.id.name));
 </script>
 
-{#if loading}
-	<div class="flex items-center justify-center p-6">
-		<div class="text-lg">Loading divisions...</div>
-	</div>
-{:else}
 	<div class="space-y-6 p-6">
 		<!-- Error and Success Messages at Top -->
 		<Message type="error" message={error || undefined} />
@@ -100,7 +95,7 @@
 		</div>
 
 		<!-- Summary Cards -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+		<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
 			<Card class="flex items-center justify-between p-4">
 				<div>
 					<h4>Total Divisions</h4>
@@ -147,7 +142,6 @@
 			<AssignManagerForm
 				bind:error
 				bind:successMessage
-				constantDivisionId={selectedDivisionIds}
 				callback={loadDivisions}
 			/>
 			</TabPanel>
@@ -156,7 +150,7 @@
 			<DeleteDivisionForm
 				bind:error
 				bind:successMessage
-				constantDivisionId={selectedDivisionIds}
+				prefilledIds={selectedDivisionIds}
 				callback={loadDivisions}
 			/>
 			</TabPanel>
@@ -165,7 +159,8 @@
 		<!-- Divisions Table -->
 		<Card class="p-6">
 			<h2 class="mb-4 text-lg font-medium text-gray-900">Divisions Overview</h2>
+			{#key divisions.length}
 			<Table data={tableData} bind:selected={selectedDivisions} class="max-h-96" />
+			{/key}
 		</Card>
 	</div>
-{/if}

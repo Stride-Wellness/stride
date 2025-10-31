@@ -25,7 +25,7 @@ export interface AssignmentPermissions {
 export interface Assignment {
 	id: string;
 	clientId: string;
-	workerId: string;
+	providerId: string;
 	divisionId: string; // Based on database design, should be divisionId not locationId
 	assignedBy: string;
 	status: 'active' | 'inactive' | 'completed';
@@ -38,7 +38,7 @@ export interface Assignment {
 
 export interface CreateAssignmentData {
 	clientId: string;
-	workerId: string;
+	providerId: string;
 	divisionId: string;
 	assignedBy: string;
 	permissions?: AssignmentPermissions;
@@ -69,7 +69,7 @@ export class AssignmentsService {
 				assignments.push({
 					id: doc.id,
 					clientId: data.clientId,
-					workerId: data.workerId,
+					providerId: data.providerId,
 					divisionId: data.divisionId,
 					assignedBy: data.assignedBy,
 					status: data.status,
@@ -108,7 +108,7 @@ export class AssignmentsService {
 			return {
 				id: assignmentSnap.id,
 				clientId: data.clientId,
-				workerId: data.workerId,
+				providerId: data.providerId,
 				divisionId: data.divisionId,
 				assignedBy: data.assignedBy,
 				status: data.status,
@@ -157,7 +157,7 @@ export class AssignmentsService {
 				assignments.push({
 					id: doc.id,
 					clientId: data.clientId,
-					workerId: data.workerId,
+					providerId: data.providerId,
 					divisionId: data.divisionId,
 					assignedBy: data.assignedBy,
 					status: data.status,
@@ -181,14 +181,14 @@ export class AssignmentsService {
 	}
 
 	/**
-	 * Get assignments by worker ID
+	 * Get assignments by provider ID
 	 */
-	static async getByWorkerId(workerId: string): Promise<Assignment[]> {
+	static async getByProviderId(providerId: string): Promise<Assignment[]> {
 		try {
 			const assignmentsRef = collection(db, this.COLLECTION);
 			const q = query(
 				assignmentsRef,
-				where('workerId', '==', workerId),
+				where('providerId', '==', providerId),
 				orderBy('createdAt', 'desc')
 			);
 
@@ -200,7 +200,7 @@ export class AssignmentsService {
 				assignments.push({
 					id: doc.id,
 					clientId: data.clientId,
-					workerId: data.workerId,
+					providerId: data.providerId,
 					divisionId: data.divisionId,
 					assignedBy: data.assignedBy,
 					status: data.status,
@@ -218,8 +218,8 @@ export class AssignmentsService {
 
 			return assignments;
 		} catch (error) {
-			console.error('Error getting assignments by worker:', error);
-			throw new Error('Failed to get assignments by worker');
+			console.error('Error getting assignments by provider:', error);
+			throw new Error('Failed to get assignments by provider');
 		}
 	}
 
@@ -243,7 +243,7 @@ export class AssignmentsService {
 				assignments.push({
 					id: doc.id,
 					clientId: data.clientId,
-					workerId: data.workerId,
+					providerId: data.providerId,
 					divisionId: data.divisionId,
 					assignedBy: data.assignedBy,
 					status: data.status,
@@ -274,7 +274,7 @@ export class AssignmentsService {
 			const now = Timestamp.now();
 			const assignmentData = {
 				clientId: data.clientId,
-				workerId: data.workerId,
+				providerId: data.providerId,
 				divisionId: data.divisionId,
 				assignedBy: data.assignedBy,
 				status: 'active' as const,
@@ -349,14 +349,14 @@ export class AssignmentsService {
 	}
 
 	/**
-	 * Check if worker is assigned to client
+	 * Check if provider is assigned to client
 	 */
-	static async isWorkerAssignedToClient(workerId: string, clientId: string): Promise<boolean> {
+	static async isProviderAssignedToClient(providerId: string, clientId: string): Promise<boolean> {
 		try {
 			const assignmentsRef = collection(db, this.COLLECTION);
 			const q = query(
 				assignmentsRef,
-				where('workerId', '==', workerId),
+				where('providerId', '==', providerId),
 				where('clientId', '==', clientId),
 				where('status', '==', 'active'),
 				limit(1)

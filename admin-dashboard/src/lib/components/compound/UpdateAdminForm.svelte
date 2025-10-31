@@ -7,14 +7,16 @@
     import { getPrivilegeName } from '$lib/utils';
 
     let {
+        variant = 'independent',
         error = $bindable(),
         successMessage = $bindable(),
-        prefilledUserId,
+        constantUserId: constantUserId,
         callback
     }: {
+        variant?: 'independent' | 'complementary';
         error: string | null;
         successMessage: string | null;
-        prefilledUserId?: string;
+        constantUserId?: string;
         callback?: (updatedAdminId: string) => void;
     } = $props();
 
@@ -22,15 +24,15 @@
     const currentUserPrivilege = $derived(currentUser?.privilege ?? AdminPrivilegeLevel.DISABLED);
 
     // Update form fields
-    let updateUserId = $state(prefilledUserId || '');
+    let updateUserId = $derived(constantUserId || '');
     let updateName = $state('');
     let updatePrivilege = $state<AdminPrivilegeLevel | ''>('');
     let updateLoading = $state(false);
 
     // Watch for prefilledUserId changes
     $effect(() => {
-        if (prefilledUserId) {
-            updateUserId = prefilledUserId;
+        if (constantUserId) {
+            updateUserId = constantUserId;
         }
     });
 
@@ -89,7 +91,7 @@
 
             // Reset form
             const updatedId = updateUserId;
-            updateUserId = '';
+            updateUserId = constantUserId ||'';
             updateName = '';
             updatePrivilege = '';
 
@@ -104,6 +106,7 @@
     }
 </script>
 
+{#if variant === 'independent'}
 <!-- Update Admin -->
 <Card class="p-6">
     <h2 class="mb-4 text-lg font-medium text-gray-900">Update Administrator</h2>
@@ -148,3 +151,39 @@
         Select an admin from the table below to auto-fill the ID.
     </p>
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+    <form onsubmit={handleUpdate} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <Input
+            type="text"
+            placeholder="Admin User ID"
+            size="md"
+            variant="outline"
+            bind:value={updateUserId}
+            required
+            disabled={updateLoading}
+        />
+        <Input
+            type="text"
+            placeholder="New Name"
+            size="md"
+            variant="outline"
+            bind:value={updateName}
+            disabled={updateLoading}
+        />
+        <select
+            bind:value={updatePrivilege}
+            class="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            disabled={updateLoading}
+        >
+            <option value="">-- Privilege --</option>
+            {#each availablePrivilegeLevels as level}
+                <option value={level}>{getPrivilegeName(level)}</option>
+            {/each}
+        </select>
+        <Button type="submit" size="md" disabled={updateLoading}>
+            {updateLoading ? 'Updating...' : 'Update'}
+        </Button>
+    </form>
+</div>
+{/if}

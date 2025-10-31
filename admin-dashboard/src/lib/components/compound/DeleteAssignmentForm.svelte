@@ -7,23 +7,24 @@
     let {
         error = $bindable(),
         successMessage = $bindable(),
-        prefilledAssignmentId,
+        prefilledIds,
+        constantAssignmentId,
         callback
     }: {
         error: string | null;
         successMessage: string | null;
-        prefilledAssignmentId?: string;
+        constantAssignmentId?: string;
+        prefilledIds?: string[];
         callback?: (deletedAssignmentId: string) => void;
-    } = $props();
-
+    } = $props();;
     // Delete form fields
-    let deleteAssignmentId = $state(prefilledAssignmentId || '');
+    let deleteAssignmentId = $derived(constantAssignmentId || prefilledIds?.join(', ') || '');
     let deleteLoading = $state(false);
 
     // Watch for prefilledAssignmentId changes
     $effect(() => {
-        if (prefilledAssignmentId) {
-            deleteAssignmentId = prefilledAssignmentId;
+        if (constantAssignmentId) {
+            deleteAssignmentId = constantAssignmentId;
         }
     });
 
@@ -60,7 +61,7 @@
 
             // Reset form
             const deletedIds = deleteAssignmentId;
-            deleteAssignmentId = '';
+            deleteAssignmentId = constantAssignmentId || '';
 
             // Callback
             callback?.(deletedIds);
@@ -126,7 +127,7 @@
         </Button>
     </form>
     <p class="mt-2 text-xs text-red-700">
-        This will permanently delete the care assignment between worker and resident. This action cannot
+        This will permanently delete the care assignment between provider and resident. This action cannot
         be undone.
     </p>
 </Card>

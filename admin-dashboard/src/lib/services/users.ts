@@ -571,17 +571,16 @@ export class UsersService {
 	}
 
 	/**
-	 * Delete provider user (via Cloud Function)
+	 * Delete user (via Cloud Function)
 	 * Soft delete by default, hard delete removes from Auth and Firestore
 	 */
-	static async deleteProvider(userId: string, hardDelete: boolean = false): Promise<void> {
+	static async delete(userId: string, hardDelete: boolean = false): Promise<void> {
 		try {
-			const deleteProviderFn = httpsCallable<DeleteUserData, CloudFunctionResponse>(
+			const deleteUserFn = httpsCallable<DeleteUserData, CloudFunctionResponse>(
 				functions,
-				'delete_provider'
+				'delete_user'
 			);
-
-			const result = await deleteProviderFn({
+			const result = await deleteUserFn({
 				userId,
 				hardDelete
 			});
@@ -590,34 +589,8 @@ export class UsersService {
 				throw new Error(result.data.message);
 			}
 		} catch (error: unknown) {
-			console.error('Error deleting provider:', error);
-			const message = error instanceof Error ? error.message : 'Failed to delete provider user';
-			throw new Error(message);
-		}
-	}
-
-	/**
-	 * Delete client user (via Cloud Function)
-	 * Soft delete by default, hard delete removes from Auth and Firestore
-	 */
-	static async deleteClient(userId: string, hardDelete: boolean = false): Promise<void> {
-		try {
-			const deleteClientFn = httpsCallable<DeleteUserData, CloudFunctionResponse>(
-				functions,
-				'delete_client'
-			);
-
-			const result = await deleteClientFn({
-				userId,
-				hardDelete
-			});
-
-			if (!result.data.success) {
-				throw new Error(result.data.message);
-			}
-		} catch (error: unknown) {
-			console.error('Error deleting client:', error);
-			const message = error instanceof Error ? error.message : 'Failed to delete client user';
+			console.error('Error deleting user:', error);
+			const message = error instanceof Error ? error.message : 'Failed to delete user';
 			throw new Error(message);
 		}
 	}

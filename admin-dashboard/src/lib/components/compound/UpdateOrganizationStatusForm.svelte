@@ -5,18 +5,20 @@
 	import Card from '$lib/components/Card.svelte';
 
 	let {
+		variant = 'independent',
 		error = $bindable(),
 		successMessage = $bindable(),
 		constantOrganizationId,
 		callback
 	}: {
+		variant?: 'independent' | 'complementary';
 		error: string | null;
 		successMessage: string | null;
 		constantOrganizationId?: string;
 		callback?: () => void;
 	} = $props();
 
-	let updateStatusId = $state(constantOrganizationId || '');
+	let updateStatusId = $derived(constantOrganizationId || '');
 	let updateStatus = $state<'active' | 'suspended' | 'cancelled'>('active');
 	let loading = $state(false);
 
@@ -52,6 +54,7 @@
 	}
 </script>
 
+{#if variant === 'independent'}
 <Card class="p-6">
 	<h2 class="mb-4 text-lg font-medium text-gray-900">Modify Organization Status</h2>
 	<form onsubmit={handleUpdateStatus} class="space-y-4">
@@ -80,3 +83,31 @@
 		</Button>
 	</form>
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+	<form onsubmit={handleUpdateStatus} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+		<Input
+			type="text"
+			placeholder="Organization ID"
+			size="md"
+			variant="outline"
+			bind:value={updateStatusId}
+			required
+			disabled={loading || !!constantOrganizationId}
+		/>
+		<select
+			bind:value={updateStatus}
+			class="rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+			required
+			disabled={loading}
+		>
+			<option value="active">Active</option>
+			<option value="suspended">Suspended</option>
+			<option value="cancelled">Cancelled</option>
+		</select>
+		<Button type="submit" size="md" variant="secondary" disabled={loading}>
+			{loading ? 'Updating...' : 'Update Status'}
+		</Button>
+	</form>
+</div>
+{/if}

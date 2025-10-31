@@ -5,19 +5,21 @@
     import Card from '$lib/components/Card.svelte';
 
     let {
+        variant = 'independent',
         error = $bindable(),
         successMessage = $bindable(),
-        prefilledAssignmentId,
+        constantAssignmentId,
         callback
     }: {
+        variant?: 'independent' | 'complementary';
         error: string | null;
         successMessage: string | null;
-        prefilledAssignmentId?: string;
+        constantAssignmentId?: string;
         callback?: (updatedAssignmentId: string) => void;
     } = $props();
 
     // Update form fields
-    let updateAssignmentId = $state(prefilledAssignmentId || '');
+    let updateAssignmentId = $derived(constantAssignmentId || '');
     let updateStatus = $state<'active' | 'inactive' | 'completed' | ''>('');
     let canModifyExercises = $state<boolean | null>(null);
     let canViewMedicalInfo = $state<boolean | null>(null);
@@ -26,8 +28,8 @@
 
     // Watch for prefilledAssignmentId changes
     $effect(() => {
-        if (prefilledAssignmentId) {
-            updateAssignmentId = prefilledAssignmentId;
+        if (constantAssignmentId) {
+            updateAssignmentId = constantAssignmentId;
         }
     });
 
@@ -88,7 +90,7 @@
 
             // Reset form
             const updatedId = updateAssignmentId;
-            updateAssignmentId = '';
+            updateAssignmentId = constantAssignmentId || '';
             updateStatus = '';
             canModifyExercises = null;
             canViewMedicalInfo = null;
@@ -149,6 +151,7 @@
     }
 </script>
 
+{#if variant === 'independent'}
 <!-- Update Assignment -->
 <Card class="p-6">
     <h2 class="mb-4 text-lg font-medium text-gray-900">Update Assignment</h2>
@@ -241,3 +244,34 @@
         Select an assignment from the table below to auto-fill the ID.
     </p>
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+    <form onsubmit={handleUpdate} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+        <Input
+            type="text"
+            placeholder="Assignment ID"
+            size="md"
+            variant="outline"
+            bind:value={updateAssignmentId}
+            required
+            disabled={updateLoading}
+        />
+        <select
+            bind:value={updateStatus}
+            class="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            disabled={updateLoading}
+        >
+            <option value="">-- Status --</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="completed">Completed</option>
+        </select>
+        <Button type="submit" size="md" disabled={updateLoading}>
+            {updateLoading ? 'Updating...' : 'Update'}
+        </Button>
+    </form>
+    <p class="mt-2 text-xs text-gray-500">
+        Quick status update. Use independent form for permission changes.
+    </p>
+</div>
+{/if}

@@ -8,12 +8,14 @@
     let {
         error = $bindable(),
         successMessage = $bindable(),
-        prefilledUserId,
+        prefilledIds,
+        constantUserId,
         callback
     }: {
         error: string | null;
+        prefilledIds?: string[];
         successMessage: string | null;
-        prefilledUserId?: string;
+        constantUserId?: string;
         callback?: (deletedAdminId: string) => void;
     } = $props();
 
@@ -21,13 +23,13 @@
     const currentUserPrivilege = $derived(currentUser?.privilege ?? AdminPrivilegeLevel.DISABLED);
 
     // Delete form fields
-    let deleteUserId = $state(prefilledUserId || '');
+    let deleteUserId = $derived(constantUserId || prefilledIds?.join(', ') || '');
     let deleteLoading = $state(false);
 
-    // Watch for prefilledUserId changes
+    // Watch for constantUserId changes
     $effect(() => {
-        if (prefilledUserId) {
-            deleteUserId = prefilledUserId;
+        if (constantUserId) {
+            deleteUserId = constantUserId;
         }
     });
 
@@ -79,7 +81,7 @@
 
             // Reset form
             const deletedId = deleteUserId;
-            deleteUserId = '';
+            deleteUserId = constantUserId || '';
 
             // Callback
             callback?.(deletedId);

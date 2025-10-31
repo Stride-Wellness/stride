@@ -63,24 +63,16 @@
         await loadAssignments();
     });
 
-    // Auto-fill forms when assignment is selected
-    $effect(() => {
-        if (selectedAssignments.length === 1) {
-            const selectedId = selectedAssignments[0].id.name;
-            updateAssignmentId = selectedId;
-            deleteAssignmentId = selectedId;
-        } else if (selectedAssignments.length > 1) {
-            // For bulk delete
-            deleteAssignmentId = selectedAssignments.map((a) => a.id.name).join(', ');
-        }
-    });
+
+    let deleteAssignmentIds = $derived(selectedAssignments.map((a) => a.id.name));
+
 
     // Transform data for table display
     const tableData = $derived(
         assignments.map((assignment) => ({
             id: { name: assignment.id, href: `/assignments/${assignment.id}` },
             'Client ID': assignment.clientId.substring(0, 8) + '...',
-            'Worker ID': assignment.workerId.substring(0, 8) + '...',
+            'Provider ID': assignment.providerId.substring(0, 8) + '...',
             'Division ID': assignment.divisionId.substring(0, 8) + '...',
             'Assigned By': assignment.assignedBy.substring(0, 8) + '...',
             Status: assignment.status,
@@ -113,23 +105,16 @@
     <title>Care Assignments - Stride Admin</title>
     <meta
         name="description"
-        content="Manage care worker and resident assignments for elderly wellness facilities"
+        content="Manage care provider and resident assignments for elderly wellness facilities"
     />
 </svelte:head>
 
-{#if loading && assignments.length === 0}
-    <div class="flex items-center justify-center p-6">
-        <Card class="p-8">
-            <p class="text-gray-600">Loading care assignments...</p>
-        </Card>
-    </div>
-{:else}
     <div class="space-y-6 p-6">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-semibold text-gray-900">Care Assignments</h1>
                 <p class="text-sm text-gray-600">
-                    Manage care worker and resident assignments across all facilities
+                    Manage care provider and resident assignments across all facilities
                 </p>
             </div>
             <Button onclick={loadAssignments} disabled={loading} size="sm" variant="secondary">
@@ -142,7 +127,7 @@
         <Message type="success" message={successMessage || undefined} />
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
             <Card class="flex items-center justify-between p-4">
                 <div>
                     <h4 class="text-sm text-gray-600">Total Assignments</h4>
@@ -188,7 +173,7 @@
                 <UpdateAssignmentForm
                     bind:error
                     bind:successMessage
-                    prefilledAssignmentId={updateAssignmentId}
+                    constantAssignmentId={updateAssignmentId}
                     callback={(updatedAssignmentId) => {
                         loadAssignments();
                         console.log('Care assignment updated with ID:', updatedAssignmentId);
@@ -200,7 +185,8 @@
                 <DeleteAssignmentForm
                     bind:error
                     bind:successMessage
-                    prefilledAssignmentId={deleteAssignmentId}
+                    constantAssignmentId={deleteAssignmentId}
+                    prefilledIds={deleteAssignmentIds}
                     callback={(deletedAssignmentId) => {
                         loadAssignments();
                         console.log('Care assignment(s) deleted:', deletedAssignmentId);
@@ -215,10 +201,11 @@
                 <h2 class="text-lg font-medium text-gray-900">Care Assignments Overview</h2>
                 <span class="text-sm text-gray-600">{assignments.length} total</span>
             </div>
+            {#key assignments.length}
             <Table data={tableData} bind:selected={selectedAssignments} class="max-h-96" />
+						{/key}
             <p class="mt-2 text-xs text-gray-500">
                 Select assignment(s) to auto-fill the update/delete forms above.
             </p>
         </Card>
     </div>
-{/if}

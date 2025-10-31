@@ -5,18 +5,26 @@
 	import Card from '$lib/components/Card.svelte';
 
 	let {
+		variant = 'independent',
 		error = $bindable(),
 		successMessage = $bindable(),
+		constantName,
+		constantStripeUserId,
+		constantTotalSeats,
 		callback
 	}: {
+		variant?: 'independent' | 'complementary';
 		error: string | null;
 		successMessage: string | null;
+		constantName?: string;
+		constantStripeUserId?: string;
+		constantTotalSeats?: number;
 		callback?: (newOrganization: Organization) => void;
 	} = $props();
 
-	let name = $state('');
-	let totalSeats = $state(10);
-	let stripeUserId = $state('');
+	let name = $derived(constantName || '');
+	let totalSeats = $derived(constantTotalSeats || 10);
+	let stripeUserId = $derived(constantStripeUserId || '');
 	let loading = $state(false);
 
 	async function handleCreateOrganization(event: Event) {
@@ -44,9 +52,9 @@
 				stripeUserId
 			});
 
-			name = '';
-			totalSeats = 10;
-			stripeUserId = '';
+			name = constantName || '';
+			totalSeats = constantTotalSeats || 10;
+			stripeUserId = constantStripeUserId || '';
 
 			successMessage = 'Organization created successfully!';
 
@@ -60,9 +68,10 @@
 	}
 </script>
 
+{#if variant === 'independent'}
 <Card class="p-6">
 	<h2 class="mb-4 text-lg font-medium text-gray-900">Add New Client Organization</h2>
-	<form onsubmit={handleCreateOrganization} class="grid grid-cols-1 gap-4 md:grid-cols-3">
+	<form onsubmit={handleCreateOrganization} class="space-y-4">
 		<Input
 			type="text"
 			placeholder="Organization Name"
@@ -71,7 +80,7 @@
 			name="name"
 			bind:value={name}
 			required
-			disabled={loading}
+			disabled={loading || !!constantName}
 		/>
 		<Input
 			type="text"
@@ -81,7 +90,7 @@
 			name="stripeUserId"
 			bind:value={stripeUserId}
 			required
-			disabled={loading}
+			disabled={loading || !!constantStripeUserId}
 		/>
 		<Input
 			type="number"
@@ -92,10 +101,47 @@
 			bind:value={totalSeats}
 			min="1"
 			required
-			disabled={loading}
+			disabled={loading || !!constantTotalSeats}
 		/>
-		<Button type="submit" size="md" class="md:col-span-3" disabled={loading}>
+		<Button type="submit" size="md" class="w-full" disabled={loading}>
 			{loading ? 'Creating...' : 'Create Organization'}
 		</Button>
 	</form>
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+	<form onsubmit={handleCreateOrganization} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+		<Input
+			type="text"
+			placeholder="Organization Name"
+			size="md"
+			variant="outline"
+			bind:value={name}
+			required
+			disabled={loading || !!constantName}
+		/>
+		<Input
+			type="text"
+			placeholder="Stripe User ID"
+			size="md"
+			variant="outline"
+			bind:value={stripeUserId}
+			required
+			disabled={loading || !!constantStripeUserId}
+		/>
+		<Input
+			type="number"
+			placeholder="Total Seats"
+			size="md"
+			variant="outline"
+			bind:value={totalSeats}
+			min="1"
+			required
+			disabled={loading || !!constantTotalSeats}
+		/>
+		<Button type="submit" size="md" disabled={loading}>
+			{loading ? 'Creating...' : 'Create'}
+		</Button>
+	</form>
+</div>
+{/if}

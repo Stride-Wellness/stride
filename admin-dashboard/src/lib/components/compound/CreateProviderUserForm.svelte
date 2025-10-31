@@ -5,24 +5,54 @@
 	import Card from '$lib/components/Card.svelte';
 
 	let {
+		variant = 'independent',
 		error = $bindable(),
 		successMessage = $bindable(),
+		divisionIdOptions,
+		constantEmail,
+		constantPassword,
+		constantName,
+		constantOrganizationId,
+		constantDivisionId,
+		constantRoles,
 		callback
 	}: {
+		variant?: 'independent' | 'complementary';
 		error: string | null;
+		divisionIdOptions?: { label: string; value: string }[];
 		successMessage: string | null;
+		constantEmail?: string;
+		constantPassword?: string;
+		constantName?: string;
+		constantOrganizationId?: string;
+		constantDivisionId?: string;
+		constantRoles?: ProviderRole[];
 		callback?: () => void;
 	} = $props();
 
+	// divisionIdOptions = divisionIdOptions?.map((option => ({
+	// 	...option,
+	// 	selected: option.value === constantDivisionId
+	// })) );
+
+
+
 	const availableRoles: ProviderRole[] = ['psw', 'lw', 'admin', 'manager'];
 
-	let createProviderEmail = $state('');
-	let createProviderPassword = $state('');
-	let createProviderName = $state('');
-	let createProviderOrgId = $state('');
-	let createProviderDivId = $state('');
-	let createProviderRoles = $state<ProviderRole[]>([]);
+	let createProviderEmail = $derived(constantEmail || '');
+	let createProviderPassword = $derived(constantPassword || '');
+	let createProviderName = $derived(constantName || '');
+	let createProviderOrgId = $derived(constantOrganizationId || '');
+	let createProviderDivId = $derived(constantDivisionId || '');
+	let createProviderRoles = $derived<ProviderRole[]>(constantRoles || []);
 	let createProviderLoading = $state(false);
+
+	// $effect(() => {
+	// 	if (constantOrganizationId !== undefined) {
+	// 		createProviderOrgId = constantOrganizationId;
+	// 	}
+	// });
+
 
 	function toggleRole(role: ProviderRole) {
 		if (createProviderRoles.includes(role)) {
@@ -38,8 +68,13 @@
 		error = null;
 		successMessage = null;
 
-		if (!createProviderEmail || !createProviderPassword || !createProviderName ||
-			!createProviderOrgId || !createProviderDivId) {
+		if (
+			!createProviderEmail ||
+			!createProviderPassword ||
+			!createProviderName ||
+			!createProviderOrgId ||
+			!createProviderDivId
+		) {
 			error = 'All fields are required';
 			createProviderLoading = false;
 			return;
@@ -57,7 +92,13 @@
 			return;
 		}
 
-		if (createProviderRoles.length === 0) {
+		// In complementary mode, use default role if none selected
+		const rolesToUse =
+			variant === 'complementary' && createProviderRoles.length === 0
+				? ['psw' as ProviderRole]
+				: createProviderRoles;
+
+		if (rolesToUse.length === 0) {
 			error = 'At least one provider role is required';
 			createProviderLoading = false;
 			return;
@@ -70,17 +111,17 @@
 				name: createProviderName,
 				organizationId: createProviderOrgId,
 				divisionId: createProviderDivId,
-				providerRole: createProviderRoles
+				providerRole: rolesToUse
 			});
 
 			successMessage = 'Provider user created successfully!';
 
-			createProviderEmail = '';
-			createProviderPassword = '';
-			createProviderName = '';
-			createProviderOrgId = '';
-			createProviderDivId = '';
-			createProviderRoles = [];
+			createProviderEmail = constantEmail || '';
+			createProviderPassword = constantPassword || '';
+			createProviderName = constantName || '';
+			createProviderOrgId = constantOrganizationId || '';
+			createProviderDivId = constantDivisionId || '';
+			createProviderRoles = constantRoles || [];
 
 			callback?.();
 		} catch (err) {
@@ -90,77 +131,165 @@
 			createProviderLoading = false;
 		}
 	}
+	$inspect(constantOrganizationId).with(console.log);
+		console.log(constantOrganizationId, "here org");
 </script>
 
-<Card class="p-6">
-	<h2 class="mb-4 text-lg font-medium text-gray-900">Create Provider User</h2>
-	<form onsubmit={handleCreateProvider} class="space-y-4">
-		<Input
-			type="email"
-			placeholder="Email"
-			size="md"
-			variant="outline"
-			bind:value={createProviderEmail}
-			required
-			disabled={createProviderLoading}
-		/>
-		<Input
-			type="password"
-			placeholder="Password (min 6 characters)"
-			size="md"
-			variant="outline"
-			bind:value={createProviderPassword}
-			required
-			disabled={createProviderLoading}
-		/>
-		<Input
-			type="text"
-			placeholder="Full Name"
-			size="md"
-			variant="outline"
-			bind:value={createProviderName}
-			required
-			disabled={createProviderLoading}
-		/>
-		<Input
-			type="text"
-			placeholder="Organization ID"
-			size="md"
-			variant="outline"
-			bind:value={createProviderOrgId}
-			required
-			disabled={createProviderLoading}
-		/>
-		<Input
-			type="text"
-			placeholder="Division ID"
-			size="md"
-			variant="outline"
-			bind:value={createProviderDivId}
-			required
-			disabled={createProviderLoading}
-		/>
+{#if variant === 'independent'}
+	<Card class="p-6">
+		<h2 class="mb-4 text-lg font-medium text-gray-900">Create Provider User</h2>
+		<form onsubmit={handleCreateProvider} class="space-y-4">
+			<Input
+				type="email"
+				placeholder="Email"
+				size="md"
+				variant="outline"
+				bind:value={createProviderEmail}
+				required
+				disabled={createProviderLoading || !!constantEmail}
+			/>
+			<Input
+				type="password"
+				placeholder="Password (min 6 characters)"
+				size="md"
+				variant="outline"
+				bind:value={createProviderPassword}
+				required
+				disabled={createProviderLoading || !!constantPassword}
+			/>
+			<Input
+				type="text"
+				placeholder="Full Name"
+				size="md"
+				variant="outline"
+				bind:value={createProviderName}
+				required
+				disabled={createProviderLoading || !!constantName}
+			/>
+			<Input
+				type="text"
+				placeholder="Organization ID"
+				size="md"
+				variant="outline"
+				bind:value={createProviderOrgId}
+				required
+				disabled={createProviderLoading || !!constantOrganizationId}
+			/>
+			<Input
+				type="text"
+				placeholder="Division ID"
+				size="md"
+				variant="outline"
+				bind:value={createProviderDivId}
+				required
+				disabled={createProviderLoading || !!constantDivisionId}
+			/>
 
-		<div class="space-y-2">
-			<label class="block text-sm font-medium text-gray-700">Provider Roles (select at least one)</label>
 			<div class="space-y-2">
-				{#each availableRoles as role}
-					<label class="flex items-center">
-						<input
-							type="checkbox"
-							checked={createProviderRoles.includes(role)}
-							onchange={() => toggleRole(role)}
-							class="mr-2 rounded"
-							disabled={createProviderLoading}
-						/>
-						<span class="text-sm capitalize">{role}</span>
-					</label>
-				{/each}
+				<label class="block text-sm font-medium text-gray-700"
+					>Provider Roles (select at least one)</label
+				>
+				<div class="space-y-2">
+					{#each availableRoles as role}
+						<label class="flex items-center">
+							<input
+								type="checkbox"
+								checked={createProviderRoles.includes(role)}
+								onchange={() => toggleRole(role)}
+								class="mr-2 rounded"
+								disabled={createProviderLoading || !!constantRoles}
+							/>
+							<span class="text-sm capitalize">{role}</span>
+						</label>
+					{/each}
+				</div>
 			</div>
-		</div>
 
-		<Button type="submit" size="md" class="w-full" disabled={createProviderLoading}>
-			{createProviderLoading ? 'Creating...' : 'Create Provider'}
-		</Button>
-	</form>
-</Card>
+			<Button type="submit" size="md" class="w-full" disabled={createProviderLoading}>
+				{createProviderLoading ? 'Creating...' : 'Create Provider'}
+			</Button>
+		</form>
+	</Card>
+{:else if variant === 'complementary'}
+	<div class="">
+		<form onsubmit={handleCreateProvider} class="space-y-4">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+				<Input
+					type="email"
+					placeholder="Email"
+					size="md"
+					variant="outline"
+					bind:value={createProviderEmail}
+					required
+					disabled={createProviderLoading || !!constantEmail}
+				/>
+				<Input
+					type="password"
+					placeholder="Password"
+					size="md"
+					variant="outline"
+					bind:value={createProviderPassword}
+					required
+					disabled={createProviderLoading || !!constantPassword}
+				/>
+				<Input
+					type="text"
+					placeholder="Full Name"
+					size="md"
+					variant="outline"
+					bind:value={createProviderName}
+					required
+					disabled={createProviderLoading || !!constantName}
+				/>
+				<Input
+					type="text"
+					placeholder="Organization ID"
+					size="md"
+					variant="outline"
+					bind:value={createProviderOrgId}
+					required
+					disabled={createProviderLoading || !!constantOrganizationId}
+				/>
+				<Input
+					type="text"
+					placeholder="Division ID"
+					size="md"
+					variant="outline"
+					as="select"
+					bind:value={createProviderDivId}
+					required
+					disabled={createProviderLoading || !!constantDivisionId}
+					options={divisionIdOptions}
+				/>
+
+				<div class="flex space-x-2 space-y-2 items-center">
+				<p class="text-sm font-medium text-gray-700">Provider Roles:</p>
+				<div class="flex space-x-3 space-y-2">
+					{#each availableRoles as role}
+						<div class="items-center">
+							<input
+								type="checkbox"
+								checked={createProviderRoles.includes(role)}
+								onchange={() => toggleRole(role)}
+								class="mr-1 rounded"
+								disabled={createProviderLoading || !!constantRoles}
+							/>
+							<span class="text-sm capitalize">{role}</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+			</div>
+
+			
+
+			<Button type="submit" size="md" class="w-full" disabled={createProviderLoading}>
+				{createProviderLoading ? 'Creating...' : 'Create'}
+			</Button>
+		</form>
+		<p class="mt-2 text-xs text-gray-500">
+			If no roles selected, default role 'psw' will be assigned. Edit roles after creation if
+			needed.
+		</p>
+	</div>
+{/if}

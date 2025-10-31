@@ -106,131 +106,7 @@
 	});
 
 	// Get available privilege levels for current user
-	const availablePrivilegeLevels = $derived(
-		AdminsService.getAvailablePrivilegeLevels(currentUserPrivilege)
-	);
 
-	async function handleUpdate(event: Event) {
-		event.preventDefault();
-		updateLoading = true;
-		error = '';
-		successMessage = '';
-
-		if (!updateUserId) {
-			error = 'Admin ID is required';
-			updateLoading = false;
-			return;
-		}
-
-		if (!updateName && !updatePrivilege) {
-			error = 'No fields to update';
-			updateLoading = false;
-			return;
-		}
-
-		try {
-			// Get target admin to check permissions
-			const targetAdmin = await AdminsService.getById(updateUserId);
-			if (!targetAdmin) {
-				error = 'Admin user not found';
-				updateLoading = false;
-				return;
-			}
-
-			if (!AdminsService.canModify(currentUserPrivilege, targetAdmin.privilege)) {
-				error = 'You do not have permission to modify this admin user';
-				updateLoading = false;
-				return;
-			}
-
-			const privilege = updatePrivilege !== '' ? updatePrivilege : undefined;
-			if (privilege !== undefined && !AdminsService.canModify(currentUserPrivilege, privilege)) {
-				error = `You cannot assign privilege level ${getPrivilegeName(privilege)}`;
-				updateLoading = false;
-				return;
-			}
-
-			await AdminsService.update({
-				userId: updateUserId,
-				name: updateName || undefined,
-				privilege
-			});
-
-			successMessage = 'Administrator updated successfully!';
-
-			// Reset form
-			updateUserId = '';
-			updateName = '';
-			updatePrivilege = '';
-
-			// Reload admins
-			await loadAdmins();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to update admin user';
-			console.error('Error updating admin:', err);
-		} finally {
-			updateLoading = false;
-		}
-	}
-
-	async function handleDelete(event: Event) {
-		event.preventDefault();
-		deleteLoading = true;
-		error = '';
-		successMessage = '';
-
-		if (!deleteUserId) {
-			error = 'Admin ID is required';
-			deleteLoading = false;
-			return;
-		}
-
-		if (deleteUserId === currentUser?.id) {
-			error = 'You cannot delete your own account';
-			deleteLoading = false;
-			return;
-		}
-
-		try {
-			// Get target admin to check permissions
-			const targetAdmin = await AdminsService.getById(deleteUserId);
-			if (!targetAdmin) {
-				error = 'Admin user not found';
-				deleteLoading = false;
-				return;
-			}
-
-			if (!AdminsService.canModify(currentUserPrivilege, targetAdmin.privilege)) {
-				error = 'You do not have permission to delete this admin user';
-				deleteLoading = false;
-				return;
-			}
-
-			if (
-				!confirm(
-					`Are you sure you want to delete admin user "${targetAdmin.name}"? This action cannot be undone.`
-				)
-			) {
-				deleteLoading = false;
-				return;
-			}
-
-			await AdminsService.delete({ userId: deleteUserId });
-
-			successMessage = 'Administrator deleted successfully!';
-
-			// Reset form
-			deleteUserId = '';
-
-			// Reload admins
-			await loadAdmins();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to delete admin user';
-			console.error('Error deleting admin:', err);
-		} finally {
-			deleteLoading = false;
-		}
-	}
 </script>
 
 <svelte:head>
@@ -253,15 +129,8 @@
 	<Message type="error" message={error} />
 	<Message type="success" message={successMessage} />
 
-	{#if loading && admins.length === 0}
-		<Card class="p-8">
-			<div class="flex items-center justify-center">
-				<p class="text-gray-600">Loading administrators...</p>
-			</div>
-		</Card>
-	{:else}
 		<!-- Summary Cards -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+		<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
 			<Card class="flex items-center justify-between p-4">
 				<div>
 					<h4 class="text-sm text-gray-600">Total Admins</h4>
@@ -314,7 +183,7 @@
 				<UpdateAdminForm
 					bind:error
 					bind:successMessage
-					prefilledUserId={updateUserId}
+					constantUserId={updateUserId}
 					callback={(updatedAdminId) => {
 						loadAdmins();
 						console.log('Admin updated with ID:', updatedAdminId);
@@ -325,7 +194,7 @@
 				<DeleteAdminForm
 					bind:error
 					bind:successMessage
-					prefilledUserId={deleteUserId}
+					constantUserId={deleteUserId}
 					callback={(deletedAdminId) => {
 						loadAdmins();
 						console.log('Admin deleted with ID:', deletedAdminId);
@@ -340,10 +209,11 @@
 				<h2 class="text-lg font-medium text-gray-900">Administrator Accounts Overview</h2>
 				<span class="text-sm text-gray-600">{admins.length} total</span>
 			</div>
+            {#key admins.length}
 			<Table data={tableData} bind:selected={selectedAdmins} class="max-h-96" />
+            {/key}
 			<p class="mt-2 text-xs text-gray-500">
 				Select an admin to auto-fill the update/delete forms above.
 			</p>
 		</Card>
-	{/if}
 </div>

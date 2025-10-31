@@ -5,12 +5,14 @@
 	import Card from '$lib/components/Card.svelte';
 
 	let {
+		variant = 'independent',
 		error = $bindable(),
 		successMessage = $bindable(),
 		constantDivisionId,
 		constantManagerId,
 		callback
 	}: {
+		variant?: 'independent' | 'complementary';
 		error: string | null;
 		successMessage: string | null;
 		constantDivisionId?: string;
@@ -18,8 +20,8 @@
 		callback?: () => void;
 	} = $props();
 
-	let assignDivisionId = $state(constantDivisionId || '');
-	let assignManagerId = $state(constantManagerId || '');
+	let assignDivisionId = $derived(constantDivisionId || '');
+	let assignManagerId = $derived(constantManagerId || '');
 	let loading = $state(false);
 
 	async function handleAssignManager(event: Event) {
@@ -35,13 +37,13 @@
 		}
 
 		try {
-			await DivisionsService.assignManager(assignDivisionId, assignManagerId);
+        await DivisionsService.assignManager(assignDivisionId, assignManagerId);
 
 			successMessage = 'Manager assigned to division successfully!';
 
 			// Reset form if not constant values
-			if (!constantDivisionId) assignDivisionId = '';
-			if (!constantManagerId) assignManagerId = '';
+			assignDivisionId = constantDivisionId || '';
+			assignManagerId = constantManagerId || '';
 
 			callback?.();
 		} catch (err: any) {
@@ -75,6 +77,7 @@
 	}
 </script>
 
+{#if variant === 'independent'}
 <Card class="p-6">
 	<h2 class="mb-4 text-lg font-medium text-gray-900">Assign Manager</h2>
 	<p class="my-2 text-xs text-gray-700">
@@ -106,3 +109,30 @@
 		</Button>
 	</form>
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+	<form onsubmit={handleAssignManager} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+		<Input
+			type="text"
+			placeholder="Division ID"
+			size="md"
+			variant="outline"
+			bind:value={assignDivisionId}
+			required
+			disabled={loading || !!constantDivisionId}
+		/>
+		<Input
+			type="text"
+			placeholder="Manager ID"
+			size="md"
+			variant="outline"
+			bind:value={assignManagerId}
+			required
+			disabled={loading || !!constantManagerId}
+		/>
+		<Button type="submit" size="md" disabled={loading}>
+			{loading ? 'Assigning...' : 'Assign Manager'}
+		</Button>
+	</form>
+</div>
+{/if}

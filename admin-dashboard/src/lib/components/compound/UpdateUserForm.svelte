@@ -5,21 +5,25 @@
 	import Card from '$lib/components/Card.svelte';
 
 	let {
+		variant = 'independent',
 		error = $bindable(),
 		successMessage = $bindable(),
 		constantUserId,
+		constantUserType,
 		callback
 	}: {
+		variant?: 'independent' | 'complementary';
 		error: string | null;
 		successMessage: string | null;
 		constantUserId?: string;
+		constantUserType?: 'provider' | 'client';
 		callback?: () => void;
 	} = $props();
 
-	let updateUserId = $state(constantUserId || '');
+	let updateUserId = $derived(constantUserId || '');
 	let updateName = $state('');
 	let updateStatus = $state<UserStatus | ''>('');
-	let updateUserType = $state<'provider' | 'client'>('provider');
+	let updateUserType = $derived<'provider' | 'client'>(constantUserType || 'provider');
 	let updateLoading = $state(false);
 
 	async function handleUpdate(event: Event) {
@@ -75,6 +79,7 @@
 	}
 </script>
 
+{#if variant === 'independent'}
 <Card class="p-6">
 	<h2 class="mb-4 text-lg font-medium text-gray-900">Update User</h2>
 	<form onsubmit={handleUpdate} class="space-y-4">
@@ -92,7 +97,7 @@
 			<select
 				bind:value={updateUserType}
 				class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-				disabled={updateLoading}
+				disabled={updateLoading || !!constantUserType}
 			>
 				<option value="provider">Provider</option>
 				<option value="client">Resident</option>
@@ -129,3 +134,47 @@
 		</p>
 	{/if}
 </Card>
+{:else if variant === 'complementary'}
+<div class="">
+	<form onsubmit={handleUpdate} class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+		<Input
+			type="text"
+			placeholder="User ID"
+			size="md"
+			variant="outline"
+			bind:value={updateUserId}
+			required
+			disabled={updateLoading || !!constantUserId}
+		/>
+		<select
+			bind:value={updateUserType}
+			class="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+			disabled={updateLoading || !!constantUserType}
+		>
+			<option value="provider">Provider</option>
+			<option value="client">Resident</option>
+		</select>
+		<Input
+			type="text"
+			placeholder="New Name"
+			size="md"
+			variant="outline"
+			bind:value={updateName}
+			disabled={updateLoading}
+		/>
+		<select
+			bind:value={updateStatus}
+			class="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+			disabled={updateLoading}
+		>
+			<option value="">Status</option>
+			<option value="active">Active</option>
+			<option value="inactive">Inactive</option>
+			<option value="pending">Pending</option>
+		</select>
+		<Button type="submit" size="md" disabled={updateLoading}>
+			{updateLoading ? 'Updating...' : 'Update'}
+		</Button>
+	</form>
+</div>
+{/if}

@@ -115,8 +115,7 @@
 	});
 
 	// Get selected user IDs and types for prefilling forms
-	const selectedUserIds = $derived(selectedUsers.map((user) => user.id.name).join(', '));
-	const selectedUserType = $derived(selectedUsers.length === 1 ? selectedUsers[0].type : undefined);
+	const selectedUserIds = $derived(selectedUsers.map((user) => user.id.name));
 </script>
 
 <svelte:head>
@@ -139,13 +138,7 @@
 	<Message type="error" message={error} />
 	<Message type="success" message={successMessage} />
 
-	{#if loading && users.length === 0}
-		<Card class="p-8">
-			<div class="flex items-center justify-center">
-				<p class="text-gray-600">Loading users...</p>
-			</div>
-		</Card>
-	{:else}
+
 		<!-- Summary Cards -->
 		<div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
 			<Card class="flex items-center justify-between p-4">
@@ -211,7 +204,6 @@
 				<UpdateUserForm
 					bind:error
 					bind:successMessage
-					constantUserId={selectedUserIds}
 					callback={loadUsers}
 				/>
 			</TabPanel>
@@ -219,7 +211,7 @@
 				<DeleteUserForm
 					bind:error
 					bind:successMessage
-					prefilledUserId={selectedUserIds}
+					prefilledIds={selectedUserIds}
 					callback={loadUsers}
 				/>
 			</TabPanel>
@@ -274,10 +266,12 @@
 					Showing {filteredUsers().length} of {users.length} users
 				</span>
 			</div>
+            {#key tableData.length}
+                
 			<Table data={tableData} bind:selected={selectedUsers} class="max-h-96" />
+            {/key}
 			<p class="mt-2 text-xs text-gray-500">
 				Select users to auto-fill the update/delete forms above.
 			</p>
 		</Card>
-	{/if}
 </div>
