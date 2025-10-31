@@ -211,6 +211,10 @@ class GetUsersRequest(BaseModel):
 
 class CreateProviderRequest(BaseModel):
     """Request to create a new provider"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
 
     email: str
     password: str
@@ -222,6 +226,10 @@ class CreateProviderRequest(BaseModel):
 
 class CreateClientRequest(BaseModel):
     """Request to create a new client"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
     email: str
     password: str
     name: str
@@ -233,7 +241,10 @@ class CreateClientRequest(BaseModel):
 
 class UpdateProviderRequest(BaseModel):
     """Request to update provider data"""
-
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
     user_id: str
     name: Optional[str] = None
     status: Optional[str] = None
@@ -243,6 +254,10 @@ class UpdateProviderRequest(BaseModel):
 
 class UpdateClientRequest(BaseModel):
     """Request to update client data"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
     user_id: str
     name: Optional[str] = None
     status: Optional[str] = None
@@ -251,5 +266,9 @@ class UpdateClientRequest(BaseModel):
 
 class DeleteUserRequest(BaseModel):
     """Request to delete a user"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
     user_id: str
     hard_delete: bool = False  # True = delete from Auth, False = soft delete

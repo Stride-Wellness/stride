@@ -11,6 +11,7 @@ import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/create_account_vm.dart';
 import 'package:stride_core/view_models/home_page_vm.dart';
 import 'package:stride_core/view_models/onboarding_vm.dart';
+import 'package:stride_core/view_models/client_quiz_list_vm.dart';
 import 'package:stride_core/view_models/sign_in_vm.dart';
 import 'package:stride_app/views/greeting_v.dart';
 import 'package:stride_app/views/home_page_v.dart';
@@ -56,6 +57,11 @@ void main() async {
             organizationRepo: context.read<OrganizationRepository>(),
             divisionRepo: context.read<DivisionRepository>(),
             userRepo: context.read<UserRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => ClientQuizListViewModel(
+            userRepository: context.read<UserRepository>(),
           ),
         ),
         ChangeNotifierProvider(

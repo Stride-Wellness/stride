@@ -4,12 +4,14 @@ class InputWidget extends StatefulWidget {
   final String hintText;
   final String? initialValue;
   final Function(String) onChanged;
+  final bool isMultiline;
 
   const InputWidget({
     super.key,
     required this.hintText,
     this.initialValue,
     required this.onChanged,
+    this.isMultiline = false,
   });
 
   @override
@@ -36,6 +38,8 @@ class _InputWidgetState extends State<InputWidget> {
     return TextField(
       controller: _controller,
       onChanged: widget.onChanged,
+      maxLines: widget.isMultiline ? null : 1,
+      minLines: widget.isMultiline ? 4 : 1,
       decoration: InputDecoration(
         hintText: widget.hintText,
         border: OutlineInputBorder(

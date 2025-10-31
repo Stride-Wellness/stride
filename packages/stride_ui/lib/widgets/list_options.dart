@@ -73,11 +73,12 @@ class _ListOptionsWidgetState extends State<ListOptionsWidget> {
     if (widget.isMultiField && option.fieldKey != null) {
       // Multi-field question
       switch (option.type) {
-        case QuestionType.input:
+        case QuestionType.input || QuestionType.longInput:
           return InputWidget(
             hintText: option.question,
             initialValue: fieldValues[option.fieldKey],
             onChanged: (value) => _updateFieldValue(option.fieldKey!, value),
+            isMultiline: option.type == QuestionType.longInput,
           );
         case QuestionType.dropdown:
           return DropdownInputWidget(
@@ -120,6 +121,21 @@ class _ListOptionsWidgetState extends State<ListOptionsWidget> {
           return InputWidget(
             hintText: option.question,
             initialValue: selected.isNotEmpty ? selected.first : null,
+            onChanged: (value) {
+              setState(() {
+                selected.clear();
+                if (value.isNotEmpty) {
+                  selected.add(value);
+                }
+              });
+              widget.onSelectionChanged(selected);
+            },
+          );
+        case QuestionType.longInput:
+          return InputWidget(
+            hintText: option.question,
+            initialValue: selected.isNotEmpty ? selected.first : null,
+            isMultiline: true,
             onChanged: (value) {
               setState(() {
                 selected.clear();

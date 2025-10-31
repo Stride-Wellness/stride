@@ -15,7 +15,7 @@ class AssignmentsRepository {
     try {
       final snapshot = await _db
           .collection(_collection)
-          .where('workerId', isEqualTo: providerId)
+          .where('providerId', isEqualTo: providerId)
           .where('status', isEqualTo: 'active')
           .get();
 
@@ -65,7 +65,7 @@ class AssignmentsRepository {
         return null;
       }
 
-      final providerId = snapshot.docs.first.data()['workerId'] as String;
+      final providerId = snapshot.docs.first.data()['providerId'] as String;
       final providerDoc = await _db.collection('users').doc(providerId).get();
 
       if (!providerDoc.exists) {
@@ -107,7 +107,7 @@ class AssignmentsRepository {
       
       await _db.collection(_collection).add({
         'clientId': clientId,
-        'workerId': providerId,
+        'providerId': providerId,
         'divisionId': divisionId,
         'assignedBy': assignedBy,
         'status': 'active',
@@ -130,7 +130,7 @@ class AssignmentsRepository {
       final snapshot = await _db
           .collection(_collection)
           .where('clientId', isEqualTo: clientId)
-          .where('workerId', isEqualTo: providerId)
+          .where('providerId', isEqualTo: providerId)
           .get();
 
       for (var doc in snapshot.docs) {
@@ -153,7 +153,7 @@ class AssignmentsRepository {
       // Check as provider
       final providerQuery = await _db
           .collection(_collection)
-          .where('workerId', isEqualTo: userId)
+          .where('providerId', isEqualTo: userId)
           .where('status', isEqualTo: 'active')
           .limit(1)
           .get();

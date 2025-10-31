@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class OnboardingQuizResult {
+class QuizResult {
   final String id;
   final String name;
   final Map<String, dynamic> answers;
   final String userId;
   final Timestamp timestamp;
 
-  OnboardingQuizResult({
+  QuizResult({
     required this.id,
     required this.name,
     required this.answers,
@@ -15,8 +15,8 @@ class OnboardingQuizResult {
     required this.timestamp,
   });
 
-  factory OnboardingQuizResult.fromMap(Map<String, dynamic> data, String id) {
-    return OnboardingQuizResult(
+  factory QuizResult.fromMap(Map<String, dynamic> data, String id) {
+    return QuizResult(
       id: id,
       name: data['name'] ?? '',
       answers: Map<String, dynamic>.from(data['answers'] ?? {}),

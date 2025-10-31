@@ -97,7 +97,7 @@ There two user types based on if they are a client or providerd to the organizat
 }
 ```
 
-**Design Decision:** Users can be either client or admin. If they are a client the can be a basic provider which belongs to a division and organization (Lifestyle Worker and Personal Support Worker). If they are a client it stores the client info. There is a field to indicate what type they are.
+**Design Decision:** Users can be either client or admin. If they are a client the can be a basic provider which belongs to a division and organization (Lifestyle Provider and Personal Support Provider). If they are a client it stores the client info. There is a field to indicate what type they are.
 
 **Constraints:** A user most belong to both a divsion and organization, the divsion must belong to the same organization.
 
@@ -127,7 +127,7 @@ There two user types based on if they are a client or providerd to the organizat
 
 **Scope:** Only managers and the admin should be able to edit. Any authenticated user should be able to read. (again does this make sense?).
 
-### Client-Worker Assignments
+### Client-Provider Assignments
 **Collection:** `assignments`
 **Purpose:** Links PSWs to their assigned clients
 
@@ -135,7 +135,7 @@ There two user types based on if they are a client or providerd to the organizat
 {
   organizationId: "org_12345",
   clientId: "user_client1",
-  workerId: "user_psw1",
+  providerId: "user_psw1",
   divisionId: "div_12345", // Changed from locationId to match constraint
   assignedBy: "user_manager1",
   status: "active", // active, inactive, completed
@@ -151,9 +151,9 @@ There two user types based on if they are a client or providerd to the organizat
 
 **Design Decision:** Explicit assignment collection provides flexible many-to-many relationships between PSWs and clients, with granular permissions and audit trails.
 
-**Constraints:** Both the client and worker must be in the database and belong to the same organization and division.
+**Constraints:** Both the client and provider must be in the database and belong to the same organization and division.
 
-**Scope:** Both worker should be able to read and delete the assignement. The client should be able to read. The manager or admin should be able to create, read, delete. A regular worker/provider should not be able to assign themselves to a client.
+**Scope:** Both provider should be able to read and delete the assignement. The client should be able to read. The manager or admin should be able to create, read, delete. A regular provider/provider should not be able to assign themselves to a client.
 
 ### Admins
 
@@ -376,7 +376,7 @@ There two user types based on if they are a client or providerd to the organizat
    - `organizationId` + `status`
 
 2. **clientAssignments**: 
-   - `organizationId` + `workerId`
+   - `organizationId` + `providerId`
    - `organizationId` + `clientId`
    - `organizationId` + `status`
 

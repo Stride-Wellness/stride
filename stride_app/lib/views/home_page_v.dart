@@ -1,55 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/views/client_quiz_list_v.dart';
 import 'package:stride_app/views/provider_clients_list_v.dart';
 import 'package:stride_app/views/account_screen_v.dart';
 import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/home_page_vm.dart';
 
 List<Widget> pages({required bool isProvider}) {
-    if (!isProvider) {
-      return [
-        const FeedPage(),
-        const ActivityPage(),
-        const NewSurveyPage(),
-        const SurveysPage(),
-        const AccountPageView(),
-      ];
-    }
-    
+  if (!isProvider) {
     return [
       const FeedPage(),
-      const ProviderClientsListView(),
+      const ActivityPage(),
+      const ClientQuizListView(),
       const AccountPageView(),
     ];
   }
-  
+
+  return [
+    const FeedPage(),
+    const ProviderClientsListView(),
+    const AccountPageView(),
+  ];
+}
+
 class HomePageView extends StatelessWidget {
   const HomePageView({super.key});
-
-
 
   @override
   Widget build(BuildContext context) {
     final homePageVM = context.watch<HomePageViewModel>();
     final authStateVM = context.watch<AuthStateViewController>();
-    
+
     // Show loading while user data is being fetched
     if (authStateVM.isLoadingUser) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final isProvider = authStateVM.isProvider;
 
-
     return Scaffold(
       body: pages(isProvider: isProvider)[homePageVM.currentIndex],
-      bottomNavigationBar: homePageVM.bottomNavigationBar(isProvider: isProvider),
+      bottomNavigationBar: homePageVM.bottomNavigationBar(
+        isProvider: isProvider,
+      ),
     );
   }
 }
-
 
 // Feed Page - Instagram-style scrollable feed
 class FeedPage extends StatelessWidget {
@@ -58,10 +54,7 @@ class FeedPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stride'),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: const Text('Stride'), centerTitle: false),
       body: ListView.builder(
         itemCount: 20,
         itemBuilder: (context, index) {
@@ -75,7 +68,10 @@ class FeedPage extends StatelessWidget {
             child: Center(
               child: Text(
                 'Post ${index + 1}',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           );
@@ -92,12 +88,8 @@ class ActivityPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activity'),
-      ),
-      body: const Center(
-        child: Placeholder(),
-      ),
+      appBar: AppBar(title: const Text('Activity')),
+      body: const Center(child: Placeholder()),
     );
   }
 }
@@ -109,12 +101,8 @@ class NewSurveyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Survey'),
-      ),
-      body: const Center(
-        child: Placeholder(),
-      ),
+      appBar: AppBar(title: const Text('Create Survey')),
+      body: const Center(child: Placeholder()),
     );
   }
 }
@@ -126,12 +114,8 @@ class SurveysPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Surveys'),
-      ),
-      body: const Center(
-        child: Placeholder(),
-      ),
+      appBar: AppBar(title: const Text('Surveys')),
+      body: const Center(child: Placeholder()),
     );
   }
 }
@@ -143,12 +127,8 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
-      body: const Center(
-        child: Placeholder(),
-      ),
+      appBar: AppBar(title: const Text('Profile')),
+      body: const Center(child: Placeholder()),
     );
   }
 }

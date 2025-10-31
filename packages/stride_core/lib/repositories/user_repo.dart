@@ -18,7 +18,7 @@ class UserRepository {
     required String name,
   }) async {
     try {
-      final quizResult = OnboardingQuizResult(
+      final quizResult = QuizResult(
         id: '', // Firestore will auto-generate
         name: name,
         answers: answers,
@@ -47,6 +47,23 @@ class UserRepository {
     return saveQuizResult_(userId: userId, answers: answers, name: name);
   }
 
+
+  Future<List<QuizResult>> getQuizzes() async {
+    final userId = _authService.currentUser?.uid;
+    if (userId == null) {
+      throw Exception('User must be authenticated to get quiz results');
+    }
+
+    final userRef =
+        UserRepository._db.collection(UserRepository._collection).doc(userId);
+    final quizResultsSnap = await userRef.collection('quiz_results').get();
+
+    return quizResultsSnap.docs.map((doc) {
+      final data = doc.data();
+      return QuizResult.fromMap(data, doc.id);
+    }).toList();
+  }
+
   /// Get user by ID
   Future<UserModel?> get_(String userId) async {
     try {
@@ -73,6 +90,7 @@ class UserRepository {
     }
     return get_(userId);
   }
+
 
 
   /// Get users by organization ID

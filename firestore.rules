@@ -39,7 +39,7 @@ service cloud.firestore {
     }
 
     // Check if user is PSW or LW
-    function isWorker() {
+    function isProvider() {
       return hasProviderRole('psw') || hasProviderRole('lw');
     }
 
@@ -170,15 +170,15 @@ service cloud.firestore {
     // ====================================================================
     match /users/{userId} {
       // Users can read their own data
-      // Workers can read clients they are assigned to
+      // Providers can read clients they are assigned to
       // Managers and admins can read users in their organization
       allow read: if true || isAuthenticated() && (
       // User reading their own data
       request.auth.uid == userId ||
       // Manager/admin reading users in their organization
       (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
-      // Worker reading assigned client
-      (isWorker() && resource.data.type == 'client' && isAssignedToClient(userId)) ||
+      // Provider reading assigned client
+      (isProvider() && resource.data.type == 'client' && isAssignedToClient(userId)) ||
       // Site admin access
       isAdminWithPrivilege(3)
       );
@@ -357,16 +357,17 @@ service cloud.firestore {
     // ASSIGNMENTS COLLECTION
     // ====================================================================
     match /assignments/{assignmentId} {
-      // Workers and clients can read their assignments
+      // Providers and clients can read their assignments
       // Managers and admins can read assignments in their organization
       allow read: if isAuthenticated() && (
-      // Worker or client involved in assignment
-      request.auth.uid == resource.data.workerId ||
-      request.auth.uid == resource.data.clientId ||
-      // Manager/admin in same organization
-      (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
-      // Site admin access
-      isAdminWithPrivilege(3)
+      // Provider or client involved in assignment
+      request.auth.uid == resource.data.providerId ||
+      request.auth.uid == resource.data.clientId 
+      // ||
+      // // Manager/admin in same organization
+      // (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
+      // // Site admin access
+      // isAdminWithPrivilege(3)
       );
 
       // Only managers and admins can create assignments
@@ -375,11 +376,11 @@ service cloud.firestore {
       isAdminWithPrivilege(2)
       ) && validateAssignmentCreation();
 
-      // Workers can delete their own assignments
+      // Providers can delete their own assignments
       // Managers and admins can delete any assignments in their organization
       allow delete: if isAuthenticated() && (
-      // Worker deleting their own assignment
-      request.auth.uid == resource.data.workerId ||
+      // Provider deleting their own assignment
+      request.auth.uid == resource.data.providerId ||
       // Manager/admin deleting assignments in their organization
       (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
       // Site admin access
@@ -394,20 +395,20 @@ service cloud.firestore {
 
       function validateAssignmentCreation() {
       	return true
-        // return hasRequiredFields(['clientId', 'workerId', 'divisionId', 'assignedBy', 'status']) &&
+        // return hasRequiredFields(['clientId', 'providerId', 'divisionId', 'assignedBy', 'status']) &&
         //        isValidAssignmentStatus(request.resource.data.status) &&
         //        // Division must exist
         //        exists(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId)) &&
-        //        // Client and worker must exist
+        //        // Client and provider must exist
         //        exists(/databases/$(database)/documents/users/$(request.resource.data.clientId)) &&
-        //        exists(/databases/$(database)/documents/users/$(request.resource.data.workerId)) &&
+        //        exists(/databases/$(database)/documents/users/$(request.resource.data.providerId)) &&
         //        // Get division data to determine organization
         //        validateAssignmentUsersInSameDivision() &&
-        //        // Client must be client type and worker must be provider type
+        //        // Client must be client type and provider must be provider type
         //        get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.type == 'client' &&
-        //        get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.type == 'provider' &&
-        //        // Worker must have PSW or LW role
-        //        (get(/databases/$(database)/documents/users/$(request.resource.data.workerId)).data.providerRole.hasAny(['psw', 'lw'])) &&
+        //        get(/databases/$(database)/documents/users/$(request.resource.data.providerId)).data.type == 'provider' &&
+        //        // Provider must have PSW or LW role
+        //        (get(/databases/$(database)/documents/users/$(request.resource.data.providerId)).data.providerRole.hasAny(['psw', 'lw'])) &&
         //        // Creator must belong to organization (unless site admin)
         //        (isAdminWithPrivilege(2) || validateAssignmentCreatorPermissions()) &&
         //        // Validate permissions if provided
@@ -417,14 +418,14 @@ service cloud.firestore {
       function validateAssignmentUsersInSameDivision() {
         let division = get(/databases/$(database)/documents/divisions/$(request.resource.data.divisionId));
         let client = get(/databases/$(database)/documents/users/$(request.resource.data.clientId));
-        let worker = get(/databases/$(database)/documents/users/$(request.resource.data.workerId));
+        let provider = get(/databases/$(database)/documents/users/$(request.resource.data.providerId));
         
         return // All users must belong to the same organization (via division)
                client.data.organizationId == division.data.organizationId &&
-               worker.data.organizationId == division.data.organizationId &&
+               provider.data.organizationId == division.data.organizationId &&
                // All users must belong to the same division
                client.data.divisionId == request.resource.data.divisionId &&
-               worker.data.divisionId == request.resource.data.divisionId;
+               provider.data.divisionId == request.resource.data.divisionId;
       }
 
       function validateAssignmentCreatorPermissions() {

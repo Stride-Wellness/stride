@@ -1,5 +1,5 @@
 
-enum QuestionType { select, input, dropdown }
+enum QuestionType { select, input, dropdown, longInput }
 
 class QuestionOption {
   final String question;

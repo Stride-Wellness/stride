@@ -29,7 +29,7 @@ class AssignmentPermissions(BaseModel):
 
 
 class Assignment(BaseModel):
-    """Client-worker assignment model"""
+    """Client-provider assignment model"""
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -38,7 +38,7 @@ class Assignment(BaseModel):
 
     id: str
     client_id: str
-    worker_id: str
+    provider_id: str
     division_id: str
     assigned_by: str
     status: AssignmentStatus

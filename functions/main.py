@@ -293,82 +293,6 @@ def update_provider(req: https_fn.CallableRequest) -> dict:
             message=f"Internal error: {str(e)}"
         )
 
-
-@https_fn.on_call(cors=cors_options)
-def delete_provider(req: https_fn.CallableRequest) -> dict:
-    """
-    Delete provider (soft delete by default, hard delete removes from Auth)
-    Only admins can call this
-    """
-
-    db = get_db()
-
-    try:
-        # Verify admin
-        admin, error = verify_admin(req)
-        if req.auth is None or admin is None or not admin.can_modify():
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.PERMISSION_DENIED,
-                message=error or "User is not authorized"
-            )
-
-        # Validate request
-        try:
-            request = DeleteUserRequest.model_validate(req.data)
-        except ValidationError as e:
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
-                message=f"Invalid request: {str(e)}"
-            )
-
-        # Check user exists and is provider
-        user_ref = db.collection('users').document(request.user_id)
-        user_doc = user_ref.get()
-
-        if not user_doc.exists:
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.NOT_FOUND,
-                message=f"User {request.user_id} not found"
-            )
-
-        user_data = user_doc.to_dict()
-        if (user_data or {}).get("type") != "provider":
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
-                message=f"User {request.user_id} is not an provider",
-            )
-
-        if request.hard_delete:
-            # Hard delete: Remove from Auth and Firestore
-            try:
-                auth.delete_user(request.user_id)
-            except Exception as e:
-                print(f"Warning: Could not delete auth user: {e}")
-
-            user_ref.delete()
-            message = f"Provider {request.user_id} permanently deleted"
-        else:
-            # Soft delete: Mark as deleted in Firestore
-            user_ref.update({
-                'status': 'deleted',
-                'deletedAt': datetime.now(),
-                'deletedBy': req.auth.uid
-            })
-            message = f"Provider {request.user_id} soft deleted"
-
-        return {"success": True, "message": message}
-
-    except https_fn.HttpsError:
-        raise
-    except Exception as e:
-        print(f"Error in delete_provider: {str(e)}")
-        print(traceback.format_exc())
-        raise https_fn.HttpsError(
-            code=https_fn.FunctionsErrorCode.INTERNAL,
-            message=f"Internal error: {str(e)}"
-        )
-
-
 # ============================================================================
 # Client CRUD Functions
 # ============================================================================
@@ -548,80 +472,8 @@ def update_client(req: https_fn.CallableRequest) -> dict:
         )
 
 
-@https_fn.on_call(cors=cors_options)
-def delete_client(req: https_fn.CallableRequest) -> dict:
-    """
-    Delete client (soft delete by default, hard delete removes from Auth)
-    Only admins can call this
-    """
-    db = get_db()
-    try:
-        # Verify admin
-        admin, error = verify_admin(req)
-        if req.auth is None or admin is None or not admin.can_modify():
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.PERMISSION_DENIED,
-                message=error or "User is not authorized"
-            )
-
-        # Validate request
-        try:
-            request = DeleteUserRequest.model_validate(req.data)
-        except ValidationError as e:
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
-                message=f"Invalid request: {str(e)}"
-            )
-
-        # Check user exists and is client
-        user_ref = db.collection('users').document(request.user_id)
-        user_doc = user_ref.get()
-
-        if not user_doc.exists:
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.NOT_FOUND,
-                message=f"User {request.user_id} not found"
-            )
-
-        user_data = user_doc.to_dict()
-        if (user_data or {}).get('type') != 'client':
-            raise https_fn.HttpsError(
-                code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
-                message=f"User {request.user_id} is not a client"
-            )
-
-        if request.hard_delete:
-            # Hard delete: Remove from Auth and Firestore
-            try:
-                auth.delete_user(request.user_id)
-            except Exception as e:
-                print(f"Warning: Could not delete auth user: {e}")
-
-            user_ref.delete()
-            message = f'Client {request.user_id} permanently deleted'
-        else:
-            # Soft delete: Mark as deleted in Firestore
-            user_ref.update({
-                'status': 'deleted',
-                'deletedAt': datetime.now(),
-                'deletedBy': req.auth.uid
-            })
-            message = f'Client {request.user_id} soft deleted'
-
-        return {"success": True, "message": message}
-
-    except https_fn.HttpsError:
-        raise
-    except Exception as e:
-        print(f"Error in delete_client: {str(e)}")
-        print(traceback.format_exc())
-        raise https_fn.HttpsError(
-            code=https_fn.FunctionsErrorCode.INTERNAL,
-            message=f"Internal error: {str(e)}",
-        )
-
 # ============================================================================
-# General User Read Functions
+# General User CRUD Functions
 # ============================================================================
 
 
@@ -862,6 +714,74 @@ def get_user_stats(req: https_fn.CallableRequest) -> dict:
         raise
     except Exception as e:
         print(f"Error in get_user_stats: {str(e)}")
+        print(traceback.format_exc())
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INTERNAL,
+            message=f"Internal error: {str(e)}",
+        )
+
+
+@https_fn.on_call(cors=cors_options)
+def delete_user(req: https_fn.CallableRequest) -> dict:
+    """
+    Delete user (soft delete by default, hard delete removes from Auth)
+    Only admins can call this
+    """
+    db = get_db()
+    try:
+        # Verify admin
+        admin, error = verify_admin(req)
+        if req.auth is None or admin is None or not admin.can_modify():
+            raise https_fn.HttpsError(
+                code=https_fn.FunctionsErrorCode.PERMISSION_DENIED,
+                message=error or "User is not authorized",
+            )
+
+        # Validate request
+        try:
+            request = DeleteUserRequest.model_validate(req.data)
+        except ValidationError as e:
+            raise https_fn.HttpsError(
+                code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+                message=f"Invalid request: {str(e)}",
+            )
+
+        # Check user exists and is client
+        user_ref = db.collection("users").document(request.user_id)
+        user_doc = user_ref.get()
+
+        if not user_doc.exists:
+            raise https_fn.HttpsError(
+                code=https_fn.FunctionsErrorCode.NOT_FOUND,
+                message=f"User {request.user_id} not found",
+            )
+
+        if request.hard_delete:
+            # Hard delete: Remove from Auth and Firestore
+            try:
+                auth.delete_user(request.user_id)
+            except Exception as e:
+                print(f"Warning: Could not delete auth user: {e}")
+
+            user_ref.delete()
+            message = f"User {request.user_id} permanently deleted"
+        else:
+            # Soft delete: Mark as deleted in Firestore
+            user_ref.update(
+                {
+                    "status": "deleted",
+                    "deletedAt": datetime.now(),
+                    "deletedBy": req.auth.uid,
+                }
+            )
+            message = f"User {request.user_id} soft deleted"
+
+        return {"success": True, "message": message}
+
+    except https_fn.HttpsError:
+        raise
+    except Exception as e:
+        print(f"Error in delete_user: {str(e)}")
         print(traceback.format_exc())
         raise https_fn.HttpsError(
             code=https_fn.FunctionsErrorCode.INTERNAL,
