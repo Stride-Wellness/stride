@@ -25,22 +25,10 @@
     } = $props();
 
     // Form state for creating assignments
-    let clientId = $state(constantClientId || '');
-    $effect(() => {
-        clientId = constantClientId || '';
-    });
-    let providerId = $state(constantProviderId || '');
-    $effect(() => {
-        providerId = constantProviderId || '';
-    });
-    let divisionId = $state(constantDivisionId || '');
-    $effect(() => {
-        divisionId = constantDivisionId || '';
-    });
-    let assignedBy = $state(constantAssignedBy || '');
-    $effect(() => {
-        assignedBy = constantAssignedBy || '';
-    });
+    let clientId = $derived(constantClientId || '');
+    let providerId = $derived(constantProviderId || '');
+    let divisionId = $derived(constantDivisionId || '');
+    let assignedBy = $derived(constantAssignedBy || '');
     let canModifyExercises = $state(false);
     let canViewMedicalInfo = $state(false);
     let canScheduleSessions = $state(false);
