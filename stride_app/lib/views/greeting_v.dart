@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_app/views/get_started_options_page_v.dart';
-import 'package:stride_app/views/sign_in_page_v.dart';
+import 'package:stride_app/features/signin/v.dart';
 import 'package:stride_ui/widgets/button.dart';
 import 'package:stride_ui/widgets/logo.dart';
 

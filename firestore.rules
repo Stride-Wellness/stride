@@ -504,6 +504,10 @@ service cloud.firestore {
       }
     }
 
+    match /exercises/{exerciseId} {
+      allow read : if true;
+      allow write: if true;
+    }
     // ====================================================================
     // DEFAULT DENY RULE
     // ====================================================================

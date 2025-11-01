@@ -47,8 +47,8 @@ class DivisionRepository {
   }
 
   /// Get divisions by organization ID - excludes deleted divisions by default
-  Future<List<DivisionModel>> getByOrganizationId(
-    String organizationId, {
+  Future<List<DivisionModel>> getByOrganizationId({
+    required String organizationId,
     bool includeDeleted = false,
   }) async {
     try {

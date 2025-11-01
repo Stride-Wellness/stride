@@ -270,7 +270,7 @@ class _ProvidersTable extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
-          headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+          headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
           columns: const [
             DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold))),
             DataColumn(label: Text('Email', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -309,12 +309,12 @@ class _ProvidersTable extends StatelessWidget {
                     spacing: 4,
                     children: provider.providerRole.map((role) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getRoleColor(role).withOpacity(0.1),
+                          color: _getRoleColor(role).withAlpha(20),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: _getRoleColor(role).withOpacity(0.3),
+                            color: _getRoleColor(role).withAlpha(30),
                           ),
                         ),
                         child: Text(
@@ -331,7 +331,7 @@ class _ProvidersTable extends StatelessWidget {
                 ),
                 DataCell(
                   Text(provider.divisionId),
-                ), // TODO: Show division name instead of ID
+                ),
                 DataCell(
                   Row(
                     children: [

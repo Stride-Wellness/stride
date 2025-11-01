@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/sign_in_vm.dart';
 import 'package:stride_web/widgets/button.dart';
 import 'package:stride_web/widgets/card.dart';
@@ -12,6 +13,7 @@ class WebSignInView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<SignInViewModel>();
+    final authState = context.read<AuthStateController>();
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -101,6 +103,7 @@ class WebSignInView extends StatelessWidget {
                         : () async {
                             if (formKey.currentState!.validate()) {
                               final success = await viewModel.signIn(dashboardSignIn: true);
+                              authState.reloadUser();
                               
                               if (success && context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

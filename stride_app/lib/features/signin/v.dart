@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/features/signin/vm.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_core/models/question_node_m.dart';
-import 'package:stride_core/view_models/sign_in_vm.dart';
 import 'package:stride_ui/widgets/button.dart';
 import 'package:stride_ui/widgets/list_options.dart';
 
@@ -11,7 +11,7 @@ class SignInScreenView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final signInVM = context.watch<SignInViewModel>();
+    final signInVM = context.watch<SignInVM>();
     final navigator = Navigator.of(context);
 
     final questions = [

@@ -1,11 +1,19 @@
 import 'package:flutter/foundation.dart';
+import 'package:provider/provider.dart';
 import 'package:stride_core/models/onboarding_quiz_result_m.dart';
+import 'package:stride_core/models/question_node_m.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 
-class ClientQuizListViewModel extends ChangeNotifier {
+get clientQuizzesVMP => ChangeNotifierProvider(
+    create: (context) => ClientQuizzesVM(
+      userRepository: context.read<UserRepository>(),
+    ),
+  );
+
+class ClientQuizzesVM extends ChangeNotifier {
   final UserRepository _userRepository;
 
-  ClientQuizListViewModel({required UserRepository userRepository})
+  ClientQuizzesVM({required UserRepository userRepository})
       : _userRepository = userRepository;
 
   List<QuizResult> _quizzes = [];
@@ -18,6 +26,25 @@ class ClientQuizListViewModel extends ChangeNotifier {
 
   Map<String, String> answers = {};
 
+  final quizQuestions = [
+    QuestionOption(
+      "How are you feeling today?",
+      QuestionType.dropdown,
+      dropdownOptions: ["Great", "Good", "Okay", "Bad", "Terrible"],
+      fieldKey: "feeling_today",
+    ),
+    QuestionOption(
+      "Anything specific on your mind?",
+      QuestionType.longInput,
+      fieldKey: "specific_mind",
+    ),
+  ];
+
+  final quizQuestionTexts = {
+    "feeling_today": "How are you feeling today?",
+    "specific_mind": "Anything specific on your mind?",
+  };
+
   Future<void> submitQuiz() async {
     _isLoading = true;
     _error = null;
@@ -28,9 +55,10 @@ class ClientQuizListViewModel extends ChangeNotifier {
         throw Exception("No answers provided");
       }
       await _userRepository.saveQuizResult(
-        answers: answers,
-        name: "Checkin - ${DateTime.now().toIso8601String().split('T').first}"
-      );
+          questions: quizQuestionTexts,
+          answers: answers,
+          name:
+              "Checkin - ${DateTime.now().toIso8601String().split('T').first}");
       await loadQuizzes(); // Refresh the quiz list after submission
     } catch (e) {
       _error = e.toString();
@@ -40,7 +68,7 @@ class ClientQuizListViewModel extends ChangeNotifier {
     }
   }
 
-    void updateAnswers(List<String> selected) {
+  void updateAnswers(List<String> selected) {
     for (String entry in selected) {
       if (entry.contains(':')) {
         List<String> parts = entry.split(':');
@@ -53,7 +81,6 @@ class ClientQuizListViewModel extends ChangeNotifier {
     }
     notifyListeners();
   }
-
 
   Future<void> loadQuizzes() async {
     _isLoading = true;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_core/models/question_node_m.dart';
 import 'package:stride_core/view_models/onboarding_vm.dart';
@@ -22,16 +22,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
     var onboardingViewModel = context.watch<OnboardingViewModel>();
 
     return Scaffold(
+      appBar: AppBar(title: const Text("Onboarding")),
       body: SafeArea(
         child: Column(
           children: [
-            SmoothPageIndicator(
-              controller: onboardingViewModel.pageController,
-              count: onboardingViewModel.questionList.length,
-              effect: WormEffect(
-                activeDotColor: Theme.of(context).primaryColor,
-              ),
-            ),
             Expanded(
               child: PageView.builder(
                 controller: onboardingViewModel.pageController,
@@ -47,6 +41,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   });
                 },
                 itemBuilder: (context, index) {
+
                   var question = onboardingViewModel.getQuestion(index);
                   return MultipleSelectQuestion(
                     question: question.text(onboardingViewModel.answers),
@@ -110,7 +105,6 @@ class MultipleSelectQuestion extends StatelessWidget {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            SizedBox(height: 100),
             Text(question, style: Theme.of(context).textTheme.headlineMedium),
             SizedBox(height: 50),
             ListOptionsWidget(
@@ -122,7 +116,6 @@ class MultipleSelectQuestion extends StatelessWidget {
               onSelectionChanged: onSelectionChanged,
               alreadySelected: alreadySelected,
             ),
-            SizedBox(height: 100),
           ],
         ),
       ),
@@ -144,20 +137,6 @@ class OnboardingNavigation extends StatelessWidget {
       ).copyWith(bottom: 16.0),
       child: Row(
         children: [
-          SizedBox(
-            width: 100,
-            child: Button(
-              varient: ButtonVarient.secondary,
-              onPressed: () {
-                onboardingController.pageController.previousPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              child: const Text("Back"),
-            ),
-          ),
-          SizedBox(width: 10),
           Expanded(
             child: Button(
               varient: ButtonVarient.primary,
@@ -179,7 +158,16 @@ class OnboardingNavigation extends StatelessWidget {
                               ),
                             ),
                           );
-                          Navigator.pushReplacementNamed(context, '/home');
+                          if (context.mounted) {
+                            await context
+                                .read<AuthStateController>()
+                                .reloadUser();
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/home',
+                              (route) => false,
+                            );
+                          }
                         } else {
                           if (onboardingController.errorMessage != null) {
                             messenger.showSnackBar(

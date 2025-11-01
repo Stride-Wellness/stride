@@ -13,6 +13,7 @@ class OnboardingViewModel extends ChangeNotifier {
 
   String _currentQuestionId = PersonalInfoQuestion.id;
   Map<String, List<String>> answers = {};
+  Map<String, String> questionsText = {};
   Map<String, QuestionNode> questionMap = questionGraph;
   List<QuestionNode> questionList = [questionGraph[PersonalInfoQuestion.id]!];
 
@@ -50,11 +51,15 @@ class OnboardingViewModel extends ChangeNotifier {
             String fieldKey = parts[0];
             String value = parts[1];
             answers['${question.questionId}_$fieldKey'] = [value];
+            questionsText['${question.questionId}_$fieldKey'] =
+                '${question.text(answers)} ($fieldKey)';
+
           }
         }
       }
     } else {
       // Handle regular single-field questions
+      questionsText[question.questionId] = question.text(answers);
       answers[question.questionId] = selected;
     }
     
@@ -101,12 +106,16 @@ class OnboardingViewModel extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+
+
+    
     try {
       // Use the high-level method from UserRepository
       await userRepo.createClientFromOnboarding(
         name: name!,
         email: email!,
         password: password!,
+        quizQuestions: questionsText,
         quizAnswers: getQuizAnswersForResult(),
         sendEmailVerification: true,
       );

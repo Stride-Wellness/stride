@@ -1,33 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/features/quizzes/vm.dart';
 import 'package:stride_core/models/onboarding_quiz_result_m.dart';
-import 'package:stride_core/models/question_node_m.dart';
-import 'package:stride_core/view_models/client_quiz_list_vm.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_ui/widgets/button.dart';
 import 'package:stride_ui/widgets/list_options.dart';
 
-class ClientQuizListView extends StatefulWidget {
-  const ClientQuizListView({super.key});
+class ClientQuizzesV extends StatefulWidget {
+  const ClientQuizzesV({super.key});
 
   @override
-  State<ClientQuizListView> createState() => _ClientQuizListViewState();
+  State<ClientQuizzesV> createState() => _ClientQuizzesVState();
 }
 
-class _ClientQuizListViewState extends State<ClientQuizListView> {
+class _ClientQuizzesVState extends State<ClientQuizzesV> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ClientQuizListViewModel>().loadQuizzes();
+      context.read<ClientQuizzesVM>().loadQuizzes();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Quizzes')),
-      body: Consumer<ClientQuizListViewModel>(
+      appBar: AppBar(title: const Text('My Quizzes'), centerTitle: false),
+      body: Consumer<ClientQuizzesVM>(
         builder: (context, viewModel, child) {
           if (viewModel.isLoading) {
             return const _LoadingWidget();
@@ -76,23 +75,9 @@ class _ClientQuizListViewState extends State<ClientQuizListView> {
 class CheckinPageView extends StatelessWidget {
   CheckinPageView({super.key});
 
-  final quizQuestions = [
-    QuestionOption(
-      "How are you feeling today?",
-      QuestionType.dropdown,
-      dropdownOptions: ["Great", "Good", "Okay", "Bad", "Terrible"],
-      fieldKey: "feeling_today",
-    ),
-    QuestionOption(
-      "Anything specific on your mind?",
-      QuestionType.longInput,
-      fieldKey: "specific_mind",
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<ClientQuizListViewModel>();
+    final viewModel = context.watch<ClientQuizzesVM>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Check-in Survey')),
@@ -103,7 +88,7 @@ class CheckinPageView extends StatelessWidget {
             children: [
               Expanded(
                 child: ListOptionsWidget(
-                  options: quizQuestions,
+                  options: viewModel.quizQuestions,
                   maxSelected: 1,
                   minSelected: 1,
                   isMultiField: true,
@@ -350,7 +335,7 @@ class _QuizDetailsSheet extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final entry = quiz.answers.entries.elementAt(index);
                   return _QuizAnswerItem(
-                    question: entry.key,
+                    question: quiz.questions[entry.key] ?? entry.key,
                     answer: entry.value,
                   );
                 },

@@ -50,6 +50,24 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "cloud_functions",
+      "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/cloud_functions-6.0.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "cloud_functions_platform_interface",
+      "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/cloud_functions_platform_interface-5.8.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "cloud_functions_web",
+      "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/cloud_functions_web-5.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "collection",
       "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/collection-1.19.1",
       "packageUri": "lib/",
@@ -81,7 +99,7 @@
     },
     {
       "name": "firebase_core",
-      "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/firebase_core-4.2.0",
+      "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/firebase_core-4.2.1",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
@@ -93,7 +111,7 @@
     },
     {
       "name": "firebase_core_web",
-      "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/firebase_core_web-3.2.0",
+      "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/firebase_core_web-3.3.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },

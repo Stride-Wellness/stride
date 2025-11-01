@@ -15,12 +15,14 @@ class UserRepository {
   Future<void> saveQuizResult_({
     required String userId,
     required Map<String, dynamic> answers,
+    required Map<String, String> questions,
     required String name,
   }) async {
     try {
       final quizResult = QuizResult(
         id: '', // Firestore will auto-generate
         name: name,
+        questions: questions,
         answers: answers,
         userId: userId,
         timestamp: Timestamp.now(),
@@ -38,13 +40,15 @@ class UserRepository {
   /// Save quiz result for currently authenticated user
   Future<void> saveQuizResult({
     required Map<String, dynamic> answers,
+    required Map<String, String> questions,
     String name = 'onboarding',
   }) async {
     final userId = _authService.currentUser?.uid;
     if (userId == null) {
       throw Exception('User must be authenticated to save quiz results');
     }
-    return saveQuizResult_(userId: userId, answers: answers, name: name);
+    return saveQuizResult_(
+        userId: userId, answers: answers, questions: questions, name: name);
   }
 
 
@@ -329,6 +333,7 @@ class UserRepository {
     required String email,
     required String password,
     required Map<String, dynamic> quizAnswers,
+    required Map<String, String> quizQuestions,
     bool sendEmailVerification = true,
   }) async {
     late ClientUserModel user;
@@ -343,6 +348,7 @@ class UserRepository {
 
       // 3. Save onboarding quiz result under user
       await saveQuizResult_(
+        questions: quizQuestions,
         userId: user.id,
         answers: quizAnswers,
         name: 'onboarding',
@@ -404,11 +410,6 @@ class UserRepository {
       return null;
     }
     return updateLastLogin_(userId);
-  }
-
-  /// Sign out current user
-  Future<void> signOut() async {
-    await _authService.signOut();
   }
 
   /// Check if current user is authenticated

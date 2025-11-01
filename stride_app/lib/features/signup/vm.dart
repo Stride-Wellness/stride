@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:stride_core/models/division_m.dart';
 import 'package:stride_core/models/organization_m.dart';
 import 'package:stride_core/models/user_m.dart';
-import '../repositories/division_repo.dart';
-import '../repositories/organization_repo.dart';
-import '../repositories/user_repo.dart';
+import 'package:stride_core/repositories/division_repo.dart';
+import 'package:stride_core/repositories/organization_repo.dart';
+import 'package:stride_core/repositories/user_repo.dart';
 
-class CreateAccountViewModel extends ChangeNotifier {
+
+class CreateAccountVM extends ChangeNotifier {
   final OrganizationRepository organizationRepo;
   final UserRepository userRepo;
   final DivisionRepository divisionRepo;
 
-  CreateAccountViewModel({
+  CreateAccountVM({
     required this.organizationRepo,
     required this.divisionRepo,
     required this.userRepo,

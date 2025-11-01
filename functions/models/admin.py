@@ -2,12 +2,7 @@ from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime
 from typing import Any, Optional
-
-
-def to_camel(string: str) -> str:
-    """Convert snake_case to camelCase"""
-    components = string.split('_')
-    return components[0] + ''.join(x.title() for x in components[1:])
+from .utils import to_camel
 
 class AdminPrivilegeLevel(int, Enum):
     """Admin privilege levels: 0=super admin, 1=admin, 2=moderator, 3=read-only"""

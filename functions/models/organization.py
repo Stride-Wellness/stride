@@ -2,13 +2,7 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime
 from typing import Any
 from enum import Enum
-
-
-def to_camel(string: str) -> str:
-    """Convert snake_case to camelCase"""
-    components = string.split('_')
-    return components[0] + ''.join(x.title() for x in components[1:])
-
+from .utils import to_camel
 
 class OrganizationStatus(str, Enum):
     ACTIVE = 'active'

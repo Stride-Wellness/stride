@@ -11,8 +11,48 @@ final questionGraph = {
   EnergyLevelQuestion.id: EnergyLevelQuestion(),
   TimePreferenceQuestion.id: TimePreferenceQuestion(),
   WellnessGoalsQuestion.id: WellnessGoalsQuestion(),
+  ExtraNotesQuestion.id: ExtraNotesQuestion(),
   EmailPasswordQuestion.id: EmailPasswordQuestion(),
 };
+
+class ExtraNotesQuestion extends QuestionNode {
+  static const String id = "extra_notes_question";
+
+  @override
+  String get questionId => id;
+
+  @override
+  int get maxSelected => 1;
+
+  @override
+  int get minSelected => 0;
+
+  @override
+  String text(Map<String, List<String>> answers) {
+    return "Any extra notes or considerations?";
+  }
+
+  @override
+  List<QuestionOption> options(Map<String, List<String>> answers) {
+    return [
+      QuestionOption(
+        "Please share any additional notes or considerations you have",
+        QuestionType.longInput,
+        fieldKey: 'extra_notes',
+      ),
+    ];
+  }
+
+  @override
+  bool answered(Map<String, List<String>> answers) {
+    return true; // Optional question
+  }
+
+  @override
+  String? getNextId(Map<String, List<String>> answers) {
+    return EmailPasswordQuestion.id;
+  }
+}
 
 // Step 1: Personal Information
 class PersonalInfoQuestion extends QuestionNode {
@@ -342,13 +382,16 @@ class HobbiesGoalsQuestion extends QuestionNode {
     return [
       QuestionOption(
         "What are some of your favourite hobbies or interests?", 
-        QuestionType.input, fieldKey: 'hobbies'),
+          QuestionType.longInput,
+          fieldKey: 'hobbies'),
       QuestionOption(
         "What are you looking forward to in the next 2-4 weeks?", 
-        QuestionType.input, fieldKey: 'short_goals'),
+          QuestionType.longInput,
+          fieldKey: 'short_goals'),
       QuestionOption(
         "What are you looking forward to in the next 2-6 months?", 
-        QuestionType.input, fieldKey: 'long_goals'),
+          QuestionType.longInput,
+          fieldKey: 'long_goals'),
     ];
   }
 
@@ -496,11 +539,6 @@ class WellnessGoalsQuestion extends QuestionNode {
         "Cognition - Improve mental sharpness and coordination",
         QuestionType.select,
       ),
-      QuestionOption(
-        "Special notes & considerations (optional)",
-        QuestionType.input,
-        fieldKey: 'special_notes',
-      ),
     ];
   }
 
@@ -520,7 +558,7 @@ class WellnessGoalsQuestion extends QuestionNode {
 
   @override
   String? getNextId(Map<String, List<String>> answers) {
-    return EmailPasswordQuestion.id;
+    return ExtraNotesQuestion.id;
   }
 }
 

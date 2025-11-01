@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/models/division_m.dart';
 import 'package:stride_core/repositories/division_repo.dart';
 
 class DivisionsViewModel extends ChangeNotifier {
   final DivisionRepository _divisionRepo;
+  final AuthStateController _authStateController;
 
   List<DivisionModel> _divisions = [];
   bool _isLoading = false;
@@ -11,17 +13,18 @@ class DivisionsViewModel extends ChangeNotifier {
 
   DivisionsViewModel({
     required DivisionRepository divisionRepo,
-  }) : _divisionRepo = divisionRepo {
+    required AuthStateController authStateController,
+  })  : _divisionRepo = divisionRepo,
+        _authStateController = authStateController {
     loadDivisions();
   }
-
 
   List<DivisionModel> get divisions => _divisions;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasDivisions => _divisions.isNotEmpty;
 
- // Store counts for each division
+  // Store counts for each division
   Map<String, Map<String, int>> _divisionCounts = {};
 
   /// Get provider count for a specific division
@@ -39,44 +42,19 @@ class DivisionsViewModel extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-
-    try {
-      _divisions = await _divisionRepo.getAll(includeDeleted: includeDeleted);
-      
-      // Load counts for all divisions
-      if (_divisions.isNotEmpty) {
-        final divisionIds = _divisions.map((d) => d.id).toList();
-        _divisionCounts = await _divisionRepo.getCountsForDivisions(divisionIds);
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-      _divisions = [];
-      _divisionCounts = {};
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  /// Load divisions by organization
-  Future<void> loadDivisionsByOrganization(
-    String organizationId, {
-    bool includeDeleted = false,
-  }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+    print("here");
+    print(_authStateController.user);
 
     try {
       _divisions = await _divisionRepo.getByOrganizationId(
-        organizationId,
-        includeDeleted: includeDeleted,
-      );
-      
+          organizationId: _authStateController.user!.organizationId,
+          includeDeleted: includeDeleted);
+
       // Load counts for all divisions
       if (_divisions.isNotEmpty) {
         final divisionIds = _divisions.map((d) => d.id).toList();
-        _divisionCounts = await _divisionRepo.getCountsForDivisions(divisionIds);
+        _divisionCounts =
+            await _divisionRepo.getCountsForDivisions(divisionIds);
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -118,7 +96,7 @@ class DivisionsViewModel extends ChangeNotifier {
 
     try {
       await _divisionRepo.update(divisionId, data);
-      
+
       // Update local list
       final index = _divisions.indexWhere((d) => d.id == divisionId);
       if (index != -1) {
@@ -128,7 +106,7 @@ class DivisionsViewModel extends ChangeNotifier {
           _divisions[index] = updated;
         }
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -144,7 +122,7 @@ class DivisionsViewModel extends ChangeNotifier {
 
     try {
       await _divisionRepo.assignManager(divisionId, managerId);
-      
+
       // Update local list
       final index = _divisions.indexWhere((d) => d.id == divisionId);
       if (index != -1) {
@@ -153,7 +131,7 @@ class DivisionsViewModel extends ChangeNotifier {
           _divisions[index] = updated;
         }
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -169,10 +147,10 @@ class DivisionsViewModel extends ChangeNotifier {
 
     try {
       await _divisionRepo.softDelete(divisionId);
-      
+
       // Remove from local list
       _divisions.removeWhere((d) => d.id == divisionId);
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -188,10 +166,10 @@ class DivisionsViewModel extends ChangeNotifier {
 
     try {
       await _divisionRepo.restore(divisionId);
-      
+
       // Reload divisions to include restored one
       await loadDivisions();
-      
+
       return true;
     } catch (e) {
       _errorMessage = e.toString();

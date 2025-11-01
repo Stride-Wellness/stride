@@ -44,9 +44,6 @@ void main() async {
           create: (context) =>
               AssignmentsRepository(authService: context.read<AuthService>()),
         ),
-        ChangeNotifierProvider(create: (context) => DivisionsViewModel(
-          divisionRepo: context.read<DivisionRepository>(),
-        )),
         ChangeNotifierProvider(
           create: (context) => UsersViewModel(
             userRepo: context.read<UserRepository>(),
@@ -54,9 +51,15 @@ void main() async {
           ),
         ),
         ChangeNotifierProvider(
-          create: (context) => AuthStateViewController(
+          create: (context) => AuthStateController(
             authService: context.read<AuthService>(),
             userRepo: context.read<UserRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => DivisionsViewModel(
+            divisionRepo: context.read<DivisionRepository>(),
+            authStateController: context.read<AuthStateController>(),
           ),
         ),
         ChangeNotifierProvider(
@@ -77,7 +80,7 @@ class StrideWebApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthStateViewController>();
+    final authState = context.watch<AuthStateController>();
 
     // Define routes
     final router = GoRouter(

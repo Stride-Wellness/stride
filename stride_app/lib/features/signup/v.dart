@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/features/signup/vm.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_core/models/question_node_m.dart';
-import 'package:stride_core/view_models/create_account_vm.dart';
 import 'package:stride_ui/widgets/button.dart';
 import 'package:stride_ui/widgets/list_options.dart';
 
@@ -11,7 +11,7 @@ class CreateAccountScreenView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final createAccountVM = context.watch<CreateAccountViewModel>();
+    final createAccountVM = context.watch<CreateAccountVM>();
     final navigator = Navigator.of(context);
 
     final questions = [

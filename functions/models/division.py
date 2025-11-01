@@ -3,12 +3,7 @@ from datetime import datetime
 from typing import Optional, Any
 from enum import Enum
 from .user import UserStatus 
-
-
-def to_camel(string: str) -> str:
-    """Convert snake_case to camelCase"""
-    components = string.split('_')
-    return components[0] + ''.join(x.title() for x in components[1:])
+from .utils import to_camel
 
 
 class DivisionType(str, Enum):

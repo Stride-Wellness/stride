@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_core/view_models/provider_clients_list_vm.dart';
+import 'package:stride_app/features/provider_clients/vm.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
 
-class ProviderClientsListView extends StatelessWidget {
-  const ProviderClientsListView({super.key});
+class ProviderClientsListV extends StatelessWidget {
+  const ProviderClientsListV({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => ProviderClientsListViewModel(
+      create: (context) => ProviderClientsListVM(
         assignmentsRepo: context.read<AssignmentsRepository>(),
       ),
       child: const _ProviderClientsListContent(),
@@ -22,7 +22,7 @@ class _ProviderClientsListContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<ProviderClientsListViewModel>();
+    final viewModel = context.watch<ProviderClientsListVM>();
 
     return Scaffold(
       appBar: AppBar(
@@ -39,7 +39,7 @@ class _ProviderClientsListContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, ProviderClientsListViewModel viewModel) {
+  Widget _buildBody(BuildContext context, ProviderClientsListVM viewModel) {
     if (viewModel.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }

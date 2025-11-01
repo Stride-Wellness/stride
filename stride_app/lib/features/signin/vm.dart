@@ -1,13 +1,20 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:stride_core/repositories/user_repo.dart';
-import '../services/auth_service.dart';
+import 'package:stride_core/services/auth_service.dart';
 
-class SignInViewModel extends ChangeNotifier {
+get signInVMP => ChangeNotifierProvider(
+    create: (context) => SignInVM(
+      authService: context.read<AuthService>(),
+      userRepo: context.read<UserRepository>(),
+    ),
+  );
+
+class SignInVM extends ChangeNotifier {
   final AuthService authService;
   final UserRepository userRepo;
 
-  SignInViewModel({required this.authService, required this.userRepo});
+  SignInVM({required this.authService, required this.userRepo});
 
   Map<String, String> credentials = {
     "email": "",
@@ -56,6 +63,7 @@ class SignInViewModel extends ChangeNotifier {
         email: credentials["email"]!,
         password: credentials["password"]!,
       );
+      
       if (dashboardSignIn) {
         final user = await userRepo.get();
         // print(user!.asProvider?.providerRole.contains('admin'));
@@ -63,7 +71,6 @@ class SignInViewModel extends ChangeNotifier {
             null == user.asProvider?.providerRole.contains('admin')) {
           await authService.signOut();
           _errorMessage = "Access denied. Admins only.";
-          notifyListeners();
           _isLoading = false;
           notifyListeners();
           return false;

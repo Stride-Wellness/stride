@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:stride_core/models/user_m.dart';
-import '../repositories/assignments_repo.dart';
+import 'package:stride_core/repositories/assignments_repo.dart';
 
-class ProviderClientsListViewModel extends ChangeNotifier {
+class ProviderClientsListVM extends ChangeNotifier {
   final AssignmentsRepository _assignmentsRepo;
 
   List<ClientUserModel> _clients = [];
   bool _isLoading = false;
   String? _errorMessage;
 
-  ProviderClientsListViewModel({
+  ProviderClientsListVM({
     required AssignmentsRepository assignmentsRepo,
   }) : _assignmentsRepo = assignmentsRepo {
     loadClients();
