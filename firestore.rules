@@ -362,7 +362,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
       // Provider or client involved in assignment
       request.auth.uid == resource.data.providerId ||
-      request.auth.uid == resource.data.clientId 
+      request.auth.uid == resource.data.clientId || isAdminWithPrivilege(3)
       // ||
       // // Manager/admin in same organization
       // (belongsToOrganization(resource.data.organizationId) && (isManager() || isOrgAdmin())) ||
