@@ -3,11 +3,15 @@ from typing import Any, Optional
 from google.cloud.firestore_v1.client import Client as FirestoreClient
 from datetime import datetime
 import json
+import logging
 
 from functions.user import get_user_by_id_data
 from models.assessment import Assessment
 from models.exercise import Exercise, ExerciseType, DifficultyLevel
 from models.user import ClientUser
+
+
+logger = logging.getLogger(__name__)
 
 
 def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str:
@@ -21,6 +25,10 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
     Returns:
         Formatted string prompt for AI model
     """
+    logger.debug(
+        f"Formatting prompt for user {user_data.id} with {len(user_history)} assessments"
+    )
+
     # Header with user information
     prompt_parts = [
         "=== CLIENT PROFILE ===",
@@ -30,17 +38,17 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
         f"Account Created: {user_data.created_at.strftime('%Y-%m-%d')}",
         ""
     ]
-    
+
     # Add profile information if available
     if user_data.profile:
         prompt_parts.append("--- Personal Information ---")
-        
+
         if user_data.profile.phone:
             prompt_parts.append(f"Phone: {user_data.profile.phone}")
-        
+
         if user_data.profile.date_of_birth:
             prompt_parts.append(f"Date of Birth: {user_data.profile.date_of_birth}")
-        
+
         # Emergency contact
         if user_data.profile.emergency_contact:
             ec = user_data.profile.emergency_contact
@@ -51,7 +59,7 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
                 f"Phone: {ec.phone}",
                 f"Relationship: {ec.relationship}"
             ])
-        
+
         # Medical information
         if user_data.profile.medical_info:
             med = user_data.profile.medical_info
@@ -60,18 +68,18 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
                 "--- Medical Information ---",
                 f"Mobility: {med.mobility}"
             ])
-            
+
             if med.conditions:
                 prompt_parts.append(f"Medical Conditions: {', '.join(med.conditions)}")
-            
+
             if med.medications:
                 prompt_parts.append(f"Current Medications: {', '.join(med.medications)}")
-            
+
             if med.notes:
                 prompt_parts.append(f"Additional Notes: {med.notes}")
-        
+
         prompt_parts.append("")
-    
+
     # Assessment history
     if user_history:
         prompt_parts.extend([
@@ -79,10 +87,10 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
             f"Total Assessments: {len(user_history)}",
             ""
         ])
-        
+
         # Sort by timestamp (most recent first)
         sorted_history = sorted(user_history, key=lambda a: a.timestamp, reverse=True)
-        
+
         for idx, assessment in enumerate(sorted_history, 1):
             prompt_parts.extend([
                 f"--- Assessment #{idx} ---",
@@ -90,11 +98,11 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
                 f"Assessment Name: {assessment.name}",
                 ""
             ])
-            
+
             # Format questions and answers
             if assessment.questions and assessment.answers:
                 prompt_parts.append("Questions & Answers:")
-                
+
                 for question_id, question_text in assessment.questions.items():
                     answer = assessment.answers.get(question_id, "No answer provided")
                     prompt_parts.extend([
@@ -102,7 +110,7 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
                         f"  A: {answer}",
                         ""
                     ])
-            
+
             # Add separator between assessments
             if idx < len(sorted_history):
                 prompt_parts.append("---")
@@ -113,7 +121,7 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
             "No assessment history available for this client.",
             ""
         ])
-    
+
     # Add context for the AI
     prompt_parts.extend([
         "=== TASK ===",
@@ -126,8 +134,10 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
         "6. Includes clear instructions and modifications as needed",
         ""
     ])
-    
-    return "\n".join(prompt_parts)
+
+    prompt = "\n".join(prompt_parts)
+    logger.debug(f"Generated prompt length: {len(prompt)} characters")
+    return prompt
 
 
 def _get_exercise_json_schema() -> dict[str, Any]:
@@ -263,20 +273,32 @@ def generate_exercise_plan_with_ai(
     Generate exercise plan using OpenAI based on user input
     Returns (exercise_list, error_message)
     """
+    logger.info(
+        f"Generating exercise plan for user: {user_id}, assessment: {assessment_id}"
+    )
+
     try:
         # Get user data
+        logger.debug(f"Fetching user data for {user_id}")
         user_data, error = get_user_by_id_data(db, user_id)
         if error or user_data is None:
+            logger.error(f"Failed to get user data: {error}")
             return [], error or "User not found"
-        
+
         # Ensure it's a client user
         if user_data.type != "client":
+            logger.error(f"User {user_id} is not a client (type: {user_data.type})")
             return [], "Exercise plans can only be generated for client users"
-        
+
+        logger.info(
+            f"User data retrieved: {user_data.name}, mobility: {user_data.profile.medical_info.mobility if user_data.profile and user_data.profile.medical_info else 'unknown'}"
+        )
+
         # Get user's assessment history
+        logger.debug(f"Fetching assessment history for user {user_id}")
         assessments_ref = db.collection("assessments").where("userId", "==", user_id)
         assessment_docs = assessments_ref.stream()
-        
+
         user_history = []
         for doc in assessment_docs:
             assessment_dict = doc.to_dict()
@@ -286,19 +308,25 @@ def generate_exercise_plan_with_ai(
                     assessment = Assessment.from_dict(assessment_dict)
                     user_history.append(assessment)
                 except Exception as e:
-                    print(f"Warning: Could not parse assessment {doc.id}: {e}")
+                    logger.warning(f"Could not parse assessment {doc.id}: {e}")
                     continue
-        
+
+        logger.info(f"Retrieved {len(user_history)} assessments for user {user_id}")
+
         # Format prompt with user data and history
         base_prompt = _format_prompt(user_data, user_history)
-        
+
         # Add user-specific requests if provided
         if user_requests:
+            logger.info(f"Adding user requests to prompt: {user_requests[:100]}...")
             base_prompt += f"\n\n=== ADDITIONAL REQUESTS ===\n{user_requests}\n"
-        
+
         # Add JSON schema instructions
         schema = _get_exercise_json_schema()
         base_prompt += f"\n\n=== OUTPUT FORMAT ===\nGenerate your response in JSON format matching this exact schema:\n{json.dumps(schema, indent=2)}\n"
+
+        logger.info("Calling OpenAI API to generate exercise plan")
+        logger.debug(f"Prompt length: {len(base_prompt)} characters")
 
         response = openai_client.chat.completions.create(
             model="gpt-4-turbo-preview",
@@ -312,19 +340,25 @@ def generate_exercise_plan_with_ai(
             response_format={"type": "json_object"},
         )
 
+        logger.info("Received response from OpenAI API")
+
         # Parse response
         result = response.choices[0].message.content
         if not result:
+            logger.error("Empty response from OpenAI")
             return [], "Empty response from AI"
 
+        logger.debug(f"Response length: {len(result)} characters")
         exercise_data = json.loads(result)
         exercises_json = exercise_data.get("exercises", [])
-        
+
+        logger.info(f"Parsed {len(exercises_json)} exercises from AI response")
+
         # Convert JSON to Exercise model instances
         exercises = []
         now = datetime.now()
         base_assessment_id = assessment_id or "initial_assessment"
-        
+
         for idx, ex_json in enumerate(exercises_json):
             try:
                 # Add required metadata fields
@@ -333,22 +367,24 @@ def generate_exercise_plan_with_ai(
                 ex_json["basedOff"] = base_assessment_id
                 ex_json["createdAt"] = now
                 ex_json["usedAt"] = []
-                
+
                 # Parse into Exercise model
                 exercise = Exercise.from_dict(ex_json)
                 exercises.append(exercise)
-                
+
             except Exception as e:
-                print(f"Warning: Could not parse exercise {idx}: {e}")
+                logger.warning(f"Could not parse exercise {idx}: {e}")
                 continue
-        
+
         if not exercises:
+            logger.error("No exercises could be parsed from AI response")
             return [], "Failed to parse any exercises from AI response"
 
+        logger.info(
+            f"Successfully generated {len(exercises)} exercises for user {user_id}"
+        )
         return exercises, None
 
     except Exception as e:
-        print(f"Error generating exercise plan: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error generating exercise plan: {str(e)}", exc_info=True)
         return [], f"Error generating exercise plan: {str(e)}"

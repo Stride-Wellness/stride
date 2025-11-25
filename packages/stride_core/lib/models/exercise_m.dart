@@ -203,9 +203,13 @@ class ExerciseModel {
               ?.map((e) => e as String)
               .toList() ??
           [],
-      createdAt: DateTime.parse(map['createdAt'] as String),
+      createdAt: map['createdAt'] is String
+          ? DateTime.parse(map['createdAt'])
+          : (map['createdAt'] as Timestamp).toDate(),
       usedAt: (map['usedAt'] as List<dynamic>?)
-              ?.map((e) => DateTime.parse(e as String))
+              ?.map((e) => map['usedAt'] is String
+                  ? DateTime.parse(e)
+                  : (e as Timestamp).toDate())
               .toList() ??
           [],
       notes: map['notes'] as String?,

@@ -33,8 +33,9 @@ class _ExerciseVState extends State<ExerciseV> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Exercises & Brain Games'),
+        title: Text(vm.pageTitle, maxLines: 2),
         centerTitle: false,
+        // toolbarHeight: 100,
       ),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())

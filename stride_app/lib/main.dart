@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:stride_app/features/account/vm.dart';
 import 'package:stride_app/features/exercise/vm.dart';
 import 'package:stride_app/features/home/vm.dart';
+import 'package:stride_app/features/provider_clients/vm.dart';
 import 'package:stride_app/features/quizzes/vm.dart';
 import 'package:stride_app/features/signin/vm.dart';
 import 'package:stride_app/features/signup/vm.dart';
@@ -65,6 +66,7 @@ void main() async {
         ),
         clientQuizzesVMP,
         exerciseVMP,
+        providerClientsVMProvider,
         signInVMP,
         accountVMP,
       ],

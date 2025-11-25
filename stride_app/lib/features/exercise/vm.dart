@@ -3,11 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:stride_core/controllers/auth_state_controller.dart';
 import 'package:stride_core/models/exercise_m.dart';
 import 'package:stride_core/repositories/exercise_repo.dart';
+import 'package:stride_core/repositories/user_repo.dart';
 
 get exerciseVMP => ChangeNotifierProvider(
     create: (context) => ExerciseVM(
+
       exerciseRepo: context.read<ExerciseRepository>(),
       authController: context.read<AuthStateController>(),
+    userRepository: context.read<UserRepository>(),
     ),
   );
 
@@ -21,16 +24,20 @@ enum ExerciseViewState {
 class ExerciseVM extends ChangeNotifier {
   final ExerciseRepository _exerciseRepo;
   final AuthStateController _authController;
+  final UserRepository _userRepository;
 
   ExerciseVM({
     required ExerciseRepository exerciseRepo,
     required AuthStateController authController,
+    required UserRepository userRepository,
   })  : _exerciseRepo = exerciseRepo,
-        _authController = authController;
+       _authController = authController,
+       _userRepository = userRepository;
 
   // State
   ExerciseViewState _state = ExerciseViewState.idle;
   String? _errorMessage;
+  String? clientId;
   
   // Generated exercises waiting for selection
   List<ExerciseModel> _generatedExercises = [];
@@ -54,9 +61,22 @@ class ExerciseVM extends ChangeNotifier {
   bool get hasError => _state == ExerciseViewState.error;
   bool get hasGeneratedExercises => _generatedExercises.isNotEmpty;
 
+  String _pageTitle = "Exercises & Brain Games";
+
+  get pageTitle => _pageTitle;
+
   /// Initialize - load pending and completed exercises
   Future<void> initialize() async {
+    if (clientId != null) {
+      var client = await _userRepository.get_(clientId!);
+      _pageTitle = "Exercises & Brain Games (${client!.name})";
+    }
     await loadExercises();
+  }
+
+  /// Use provided clientId (case where provider is view the clients exercises) or default to current user
+  String get _clientId {
+    return clientId ?? _authController.user!.id;
   }
 
   /// Load all exercises for the user
@@ -66,10 +86,12 @@ class ExerciseVM extends ChangeNotifier {
       _errorMessage = null;
 
       // Load pending exercises
-      _pendingExercises = await _exerciseRepo.getPendingExercises(_authController.user!.id);
+      _pendingExercises = await _exerciseRepo.getPendingExercises(_clientId);
 
       // Load completed exercises (last 30 days)
-      _completedExercises = await _exerciseRepo.getCompletedExercises(_authController.user!.id);
+      _completedExercises = await _exerciseRepo.getCompletedExercises(
+        _clientId,
+      );
 
       _setState(ExerciseViewState.idle);
     } catch (e) {
@@ -100,7 +122,7 @@ class ExerciseVM extends ChangeNotifier {
       _errorMessage = null;
 
       final exercises = await _exerciseRepo.generateExercisePlan(
-        userId: _authController.user!.id,
+        userId: _clientId,
         assessmentId: assessmentId,
         userRequests: userRequests,
       );

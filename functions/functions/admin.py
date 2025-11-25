@@ -2,6 +2,7 @@ from google.cloud.firestore_v1.client import Client as FirestoreClient
 from firebase_admin import auth
 from datetime import datetime
 from typing import Optional, Any
+import logging
 from models.admin import (
     Admin,
     CreateAdminRequest,
@@ -9,6 +10,8 @@ from models.admin import (
     UpdateAdminRequest,
     DeleteAdminRequest,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def create_admin_user(
@@ -21,8 +24,15 @@ def create_admin_user(
     Create a new admin user (Firebase Auth + Firestore)
     Returns (admin, error_message)
     """
+    logger.info(
+        f"Creating admin user: {request.name} ({request.email}), privilege: {request.privilege.name}"
+    )
+
     # Check privilege level
     if request.privilege.value <= created_by_admin.privilege.value:
+        logger.warning(
+            f"Insufficient privilege to create admin. Creator: {created_by_admin.privilege.name}, Requested: {request.privilege.name}"
+        )
         return None, f"Cannot create admin with equal or higher privilege. Your level: {created_by_admin.privilege.name}, Requested: {request.privilege.name}"
 
     # Create Firebase Auth user
@@ -55,6 +65,7 @@ def create_admin_user(
         auth.delete_user(auth_user.uid)
         return None, f"Error creating Firestore document: {str(e)}"
 
+    logger.info(f"Admin created successfully: {auth_user.uid}")
     return Admin.from_dict(admin_data), None
 
 
@@ -67,6 +78,8 @@ def update_admin_user(
     Update admin data in Firestore
     Returns (updated_admin, error_message)
     """
+    logger.info(f"Updating admin: {request.user_id}")
+
     # Check if there are any updates
     if not request.has_updates():
         return None, "No fields to update"
@@ -111,14 +124,15 @@ def update_admin_user(
 
     # Update Firestore
     admin_ref.update(update_data)
-    
+
     # Get updated admin data
     updated_doc = admin_ref.get()
     updated_dict = updated_doc.to_dict()
     if updated_dict:
         updated_dict["id"] = updated_doc.id
+        logger.info(f"Admin updated successfully: {request.user_id}")
         return Admin.from_dict(updated_dict), None
-    
+
     return None, "Could not retrieve updated admin data"
 
 
@@ -132,8 +146,11 @@ def delete_admin_user(
     Delete admin (hard delete - removes from Auth and Firestore)
     Returns (deleted_admin, error_message)
     """
+    logger.info(f"Deleting admin: {user_id}")
+
     # Cannot delete yourself
     if user_id == deleted_by_uid:
+        logger.warning(f"Attempted to delete self: {user_id}")
         return None, "Cannot delete yourself"
 
     # Check target admin exists
@@ -161,6 +178,7 @@ def delete_admin_user(
         print(f"Warning: Could not delete auth user: {e}")
 
     admin_ref.delete()
+    logger.info(f"Admin permanently deleted: {user_id}")
     return target_admin, None
 
 
@@ -171,6 +189,10 @@ def get_admins_list(
     Get admin users with Auth metadata
     Returns (admins_list, error_message)
     """
+    logger.info(
+        f"Fetching admins list, privilege filter: {request.privilege_level}, limit: {request.limit}"
+    )
+
     # Build Firestore query
     admins_ref = db.collection("admins")
 
@@ -222,6 +244,7 @@ def get_admins_list(
             print(f"Warning: Could not parse admin {doc.id}: {e}")
             continue
 
+    logger.info(f"Successfully fetched {len(admins_list)} admins")
     return admins_list, None
 
 
@@ -232,6 +255,8 @@ def get_admin_by_id_data(
     Get single admin by ID with Auth metadata
     Returns (admin, error_message)
     """
+    logger.debug(f"Fetching admin by ID: {user_id}")
+
     # Get from Firestore
     admin_doc = db.collection("admins").document(user_id).get()
 
@@ -260,6 +285,7 @@ def get_admin_by_id_data(
 
     try:
         admin = Admin.from_dict(admin_dict)
+        logger.debug(f"Successfully fetched admin: {user_id}")
         return admin, None
     except Exception as e:
         return None, f"Error parsing admin data: {str(e)}"
