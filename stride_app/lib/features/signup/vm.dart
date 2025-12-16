@@ -6,25 +6,26 @@ import 'package:stride_core/repositories/division_repo.dart';
 import 'package:stride_core/repositories/organization_repo.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 
+enum SignupType { client, provider }
 
-class CreateAccountVM extends ChangeNotifier {
-  final OrganizationRepository organizationRepo;
+class SignupVM extends ChangeNotifier {
   final UserRepository userRepo;
-  final DivisionRepository divisionRepo;
+  final OrganizationRepository? organizationRepo;
+  final DivisionRepository? divisionRepo;
+  final SignupType signupType;
+  final Map<String, dynamic>? quizData;
 
-  CreateAccountVM({
-    required this.organizationRepo,
-    required this.divisionRepo,
+  SignupVM({
     required this.userRepo,
+    required this.signupType,
+    this.organizationRepo,
+    this.divisionRepo,
+    this.quizData,
   });
-  
-  Map<String, String> accountInfo = {
-    "email": "",
-    "full_name": "",
-    "organization_name": "",
-    "password": "",
-    "confirm_password": "",
-  };
+
+  final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -32,31 +33,34 @@ class CreateAccountVM extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
   bool get isValid {
-    return accountInfo.values.every((value) => value.isNotEmpty) &&
-           accountInfo["password"] == accountInfo["confirm_password"] &&
-           accountInfo["password"]!.length >= 6;
+    final hasName = signupType == SignupType.client || nameController.text.isNotEmpty;
+    return hasName &&
+        emailController.text.isNotEmpty &&
+        passwordController.text.isNotEmpty &&
+        passwordController.text.length >= 6;
   }
 
-  void updateAnswers(List<String> selected) {
-    for (String entry in selected) {
-      if (entry.contains(':')) {
-        List<String> parts = entry.split(':');
-        if (parts.length == 2) {
-          String fieldKey = parts[0];
-          String value = parts[1];
-          accountInfo[fieldKey] = value;
-        }
-      }
+  String get greeting {
+    if (signupType == SignupType.client && quizData?['name'] != null) {
+      return "Almost done, ${quizData!['name']}!";
     }
-    notifyListeners();
+    return signupType == SignupType.client ? "Create Your Account" : "Create Provider Account";
   }
 
-  Future<ProviderUserModel?> createAccount() async {
+  Future<bool> createAccount() async {
     if (!isValid) {
       _errorMessage = "Please fill in all fields correctly";
       notifyListeners();
-      return null;
+      return false;
     }
 
     _isLoading = true;
@@ -64,53 +68,52 @@ class CreateAccountVM extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step 1: Create organization in Firestore
-      final org = await organizationRepo.create(CreateOrganizationDataModel(
-        name: accountInfo["organization_name"]!,
-        totalSeats: 100,
-        stripeUserId: "",
-      ));
+      if (signupType == SignupType.client) {
+        await userRepo.createClientFromOnboarding(
+          name: quizData!['name'],
+          email: emailController.text,
+          password: passwordController.text,
+          quizQuestions: quizData!['questions'],
+          quizAnswers: quizData!['answers'],
+          sendEmailVerification: true,
+        );
+      } else {
+        final orgName = (quizData?['answers'] as Map<String, List<String>>?)
+            ?['organization_info_question_organization_name']?.first ?? 'Organization';
 
-      // Step 2: Create division
-      final div = await divisionRepo.create(CreateDivisionDataModel(
-        name: "default",
-        organizationId: org.id, 
-        divisionType: 'homecare_provider',
-      ));
+        final org = await organizationRepo!.create(CreateOrganizationDataModel(
+          name: orgName,
+          totalSeats: 100,
+          stripeUserId: "",
+        ));
 
-      // Step 3: Create provider account with auth (using high-level method)
-      final user = await userRepo.createProvider(
-        email: accountInfo["email"]!,
-        password: accountInfo["password"]!,
-        name: accountInfo["full_name"]!,
-        organizationId: org.id,
-        divisionId: div.id,
-        providerRole: [
-          ProviderRole.admin,
-          ProviderRole.manager,
-          ProviderRole.psw,
-        ],
-        sendEmailVerification: true,
-      );
+        final div = await divisionRepo!.create(CreateDivisionDataModel(
+          name: "default",
+          organizationId: org.id,
+          divisionType: 'homecare_provider',
+        ));
 
-      // Step 4: Assign user as division manager
-      await divisionRepo.update(div.id, UpdateDivisionDataModel(
-        managerId: user.id,
-      ));
+        final user = await userRepo.createProvider(
+          email: emailController.text,
+          password: passwordController.text,
+          name: nameController.text,
+          organizationId: org.id,
+          divisionId: div.id,
+          providerRole: [ProviderRole.admin, ProviderRole.manager, ProviderRole.psw],
+          sendEmailVerification: true,
+        );
+
+        await divisionRepo!.update(div.id, UpdateDivisionDataModel(managerId: user.id));
+      }
 
       _isLoading = false;
       notifyListeners();
-      return user;
+      return true;
     } catch (e) {
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
-      return null;
+      return false;
     }
-  }
-
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
   }
 }

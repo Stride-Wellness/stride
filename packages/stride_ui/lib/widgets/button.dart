@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum ButtonVarient {
+enum ButtonVariant {
   primary,
   secondary,
   danger,
@@ -9,13 +9,13 @@ enum ButtonVarient {
 }
 
 class Button extends StatelessWidget {
-  final ButtonVarient varient;
+  final ButtonVariant variant;
   final void Function()? onPressed;
   final Widget? child;
 
   const Button ({
     super.key,
-    required this.varient,
+    required this.variant,
     this.onPressed,
     this.child
   });
@@ -24,13 +24,13 @@ class Button extends StatelessWidget {
   Widget build(BuildContext context) {
     // final theme = Theme.of(context);
 
-    switch (varient) {
-      case ButtonVarient.primary:
+    switch (variant) {
+      case ButtonVariant.primary:
         return FilledButton(
           onPressed: onPressed,
           child: child,
         );
-      case ButtonVarient.secondary:
+      case ButtonVariant.secondary:
         return OutlinedButton(
           onPressed: onPressed,
           child: child,

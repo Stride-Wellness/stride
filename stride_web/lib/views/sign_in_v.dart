@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_core/controllers/auth_state_controller.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
 import 'package:stride_core/view_models/sign_in_vm.dart';
 import 'package:stride_web/widgets/button.dart';
 import 'package:stride_web/widgets/card.dart';

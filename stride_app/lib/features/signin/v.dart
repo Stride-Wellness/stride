@@ -108,7 +108,7 @@ class SignInScreenView extends StatelessWidget {
                 width: double.infinity,
                 height: KSizes.buttonHeight,
                 child: Button(
-                  varient: ButtonVarient.primary,
+                  variant: ButtonVariant.primary,
                   onPressed: signInVM.isLoading
                       ? null
                       : () async {

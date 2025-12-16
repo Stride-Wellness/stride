@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_app/features/account/vm.dart';
-import 'package:stride_app/features/exercise/vm.dart';
-import 'package:stride_app/features/home/vm.dart';
-import 'package:stride_app/features/provider_clients/vm.dart';
 import 'package:stride_app/features/quizzes/vm.dart';
 import 'package:stride_app/features/signin/vm.dart';
-import 'package:stride_app/features/signup/vm.dart';
+import 'package:stride_app/features/signup/v.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
 import 'package:stride_core/repositories/division_repo.dart';
 import 'package:stride_core/repositories/exercise_repo.dart';
@@ -14,11 +10,10 @@ import 'package:stride_core/repositories/organization_repo.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 import 'package:stride_core/services/auth_service.dart';
 import 'package:stride_core/services/firebase_config.dart';
-import 'package:stride_core/controllers/auth_state_controller.dart';
-import 'package:stride_core/view_models/onboarding_vm.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
+import 'package:stride_app/controllers/page_controller.dart';
 import 'package:stride_app/views/greeting_v.dart';
 import 'package:stride_app/features/home/v.dart';
-import 'package:stride_app/views/onboarding_v.dart';
 import 'package:stride_ui/theme/app_theme.dart';
 
 
@@ -48,27 +43,21 @@ void main() async {
         Provider(create: (context) => ExerciseRepository()),
 
         // Controllers
-        authStateControllerProvider,
-
-        // Viewm Models
-        homeVMP,
         ChangeNotifierProvider(
-          create: (context) =>
-              OnboardingViewModel(userRepo: context.read<UserRepository>()),
-        ),
-
-        ChangeNotifierProvider(
-          create: (context) => CreateAccountVM(
-            organizationRepo: context.read<OrganizationRepository>(),
-            divisionRepo: context.read<DivisionRepository>(),
+          create: (context) => AuthStateController(
+            authService: context.read<AuthService>(),
             userRepo: context.read<UserRepository>(),
           ),
         ),
+
+        ChangeNotifierProvider(
+          create: (context) => HomePageController(
+            authStateController: context.read<AuthStateController>(),
+          ),
+        ),
+
         clientQuizzesVMP,
-        exerciseVMP,
-        providerClientsVMProvider,
         signInVMP,
-        accountVMP,
       ],
       child: App(key: Key("HomePage")),
     ),
@@ -92,7 +81,7 @@ class App extends StatelessWidget {
           ? HomePageView()
           : GreetingPage(),
       routes: {
-        '/onboarding': (context) => OnboardingPage(),
+        '/onboarding': (context) => SignupView(),
         '/home': (context) => HomePageView(),
       },
     );

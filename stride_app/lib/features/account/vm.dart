@@ -1,21 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:stride_app/features/home/vm.dart';
-import 'package:stride_core/controllers/auth_state_controller.dart';
-
-get accountVMP => ChangeNotifierProvider(
-    create: (context) => AccountVM(
-      authStateController: context.read<AuthStateController>(),
-      homePageVM: context.read<HomeVM>(),
-    ),
-);
-
+import 'package:stride_app/controllers/page_controller.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
 
 class AccountVM extends ChangeNotifier {
   final AuthStateController authStateController;
-  final HomeVM homePageVM;
+  final HomePageController homePageController;
 
-  AccountVM({required this.authStateController, required this.homePageVM}) {
+  AccountVM({
+    required this.authStateController,
+    required this.homePageController,
+  }) {
     // Listen to changes in AuthStateController
     authStateController.addListener(notifyListeners);
   }
@@ -64,7 +58,7 @@ class AccountVM extends ChangeNotifier {
   Future<bool> signOutAndResetHomeIndex() async {
     try {
       await signOut();
-      homePageVM.setIndex(0);
+      homePageController.setIndex(0);
       return true;
     } catch (e) {
       // Optionally store error for the view to read

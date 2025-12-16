@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_core/controllers/auth_state_controller.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
 import 'package:stride_core/models/user_m.dart';
 import 'package:stride_web/views/clients_v.dart';
 import 'package:stride_web/views/divisions_v.dart';

@@ -1,13 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/controllers/page_controller.dart';
 import 'package:stride_app/features/account/vm.dart';
 import 'package:stride_app/views/greeting_v.dart';
-import 'package:stride_core/controllers/auth_state_controller.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_ui/widgets/button.dart';
 
 class AccountV extends StatelessWidget {
   const AccountV({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => AccountVM(
+        authStateController: context.read<AuthStateController>(),
+        homePageController: context.read<HomePageController>(),
+      ),
+      child: const _AccountVContent(),
+    );
+  }
+}
+
+class _AccountVContent extends StatelessWidget {
+  const _AccountVContent();
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +200,7 @@ class _VerifyEmailButton extends StatelessWidget {
     return _ActionButton(
       icon: Icons.email,
       label: 'Send Verification Email',
-      varient: ButtonVarient.secondary,
+      varient: ButtonVariant.secondary,
       onPressed: () async {
         final messenger = ScaffoldMessenger.of(context);
         try {
@@ -219,7 +235,7 @@ class _DeleteAccountButton extends StatelessWidget {
     return _ActionButton(
       icon: Icons.delete_outline,
       label: 'Delete Account',
-      varient: ButtonVarient.secondary,
+      varient: ButtonVariant.secondary,
       textColor: Colors.red,
       onPressed: () async {
         final confirmed = await showDialog<bool>(
@@ -273,7 +289,7 @@ class _SignOutButton extends StatelessWidget {
     return _ActionButton(
       icon: Icons.logout,
       label: 'Sign Out',
-      varient: ButtonVarient.primary,
+      varient: ButtonVariant.primary,
       onPressed: () async {
         final messenger = ScaffoldMessenger.of(context);
         final success = await vm.signOutAndResetHomeIndex();
@@ -354,7 +370,7 @@ class _InfoRow extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final ButtonVarient varient;
+  final ButtonVariant varient;
   final VoidCallback onPressed;
   final Color? textColor;
 
@@ -372,7 +388,7 @@ class _ActionButton extends StatelessWidget {
       width: double.infinity,
       height: KSizes.buttonHeight,
       child: Button(
-        varient: varient,
+        variant: varient,
         onPressed: onPressed,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:stride_core/controllers/auth_state_controller.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
 import 'package:stride_core/models/division_m.dart';
 import 'package:stride_core/repositories/division_repo.dart';
 

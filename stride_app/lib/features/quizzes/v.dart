@@ -50,7 +50,7 @@ class _ClientQuizzesVState extends State<ClientQuizzesV> {
                   child: SizedBox(
                     width: double.infinity,
                     child: Button(
-                      varient: ButtonVarient.primary,
+                      variant: ButtonVariant.primary,
                       child: const Text("Checkin"),
                       onPressed: () {
                         Navigator.push(
@@ -99,7 +99,10 @@ class CheckinPageView extends StatelessWidget {
               ),
               SizedBox(
                 width: double.infinity,
-                child: Button(varient: ButtonVarient.primary, child: const Text("Submit"), onPressed: () {
+                child: Button(
+                  variant: ButtonVariant.primary,
+                  child: const Text("Submit"),
+                  onPressed: () {
                   viewModel.submitQuiz();
                   Navigator.pop(context);
                 }),

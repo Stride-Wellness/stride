@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:stride_app/features/signup/v.dart';
 import 'package:stride_ui/constants/layout.dart';
-import 'package:stride_app/views/get_started_options_page_v.dart';
 import 'package:stride_app/features/signin/v.dart';
 import 'package:stride_ui/widgets/button.dart';
 import 'package:stride_ui/widgets/logo.dart';
@@ -33,11 +33,11 @@ class GreetingPage extends StatelessWidget {
                 height: 50,
                 width: double.infinity,
                 child: Button(
-                  varient: ButtonVarient.primary,
+                  variant: ButtonVariant.primary,
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const GetStartedPageView(),
+                      builder: (context) => const SignupView(),
                     ),
                   ),
                   child: const Text("Get Started"),
@@ -48,7 +48,7 @@ class GreetingPage extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: Button(
-                  varient: ButtonVarient.secondary,
+                  variant: ButtonVariant.secondary,
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(

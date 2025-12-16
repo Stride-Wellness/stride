@@ -3,15 +3,12 @@ from typing import Any, Optional
 from google.cloud.firestore_v1.client import Client as FirestoreClient
 from datetime import datetime
 import json
-import logging
 
+from utils.logger import Logger
 from functions.user import get_user_by_id_data
 from models.assessment import Assessment
 from models.exercise import Exercise, ExerciseType, DifficultyLevel
 from models.user import ClientUser
-
-
-logger = logging.getLogger(__name__)
 
 
 def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str:
@@ -25,8 +22,10 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
     Returns:
         Formatted string prompt for AI model
     """
-    logger.debug(
-        f"Formatting prompt for user {user_data.id} with {len(user_history)} assessments"
+    Logger.debug(
+        "Formatting prompt",
+        f"Formatting prompt for user {user_data.id} with {len(user_history)} assessments",
+        {"userId": user_data.id, "assessmentCount": len(user_history)},
     )
 
     # Header with user information
@@ -136,7 +135,11 @@ def _format_prompt(user_data: ClientUser, user_history: list[Assessment]) -> str
     ])
 
     prompt = "\n".join(prompt_parts)
-    logger.debug(f"Generated prompt length: {len(prompt)} characters")
+    Logger.debug(
+        "Generated prompt",
+        f"Generated prompt with length {len(prompt)} characters",
+        {"promptLength": len(prompt)},
+    )
     return prompt
 
 
@@ -273,29 +276,54 @@ def generate_exercise_plan_with_ai(
     Generate exercise plan using OpenAI based on user input
     Returns (exercise_list, error_message)
     """
-    logger.info(
-        f"Generating exercise plan for user: {user_id}, assessment: {assessment_id}"
+    Logger.info(
+        "Generating exercise plan",
+        f"Generating exercise plan for user {user_id} with assessment {assessment_id}",
+        {"userId": user_id, "assessmentId": assessment_id},
     )
 
     try:
         # Get user data
-        logger.debug(f"Fetching user data for {user_id}")
+        Logger.debug(
+            "Fetching user data",
+            f"Fetching user data for user {user_id}",
+            {"userId": user_id},
+        )
         user_data, error = get_user_by_id_data(db, user_id)
         if error or user_data is None:
-            logger.error(f"Failed to get user data: {error}")
+            Logger.error(
+                "Failed to get user data",
+                f"Failed to get user data for user {user_id}: {error}",
+                {"userId": user_id, "error": error},
+            )
             return [], error or "User not found"
 
         # Ensure it's a client user
         if user_data.type != "client":
-            logger.error(f"User {user_id} is not a client (type: {user_data.type})")
+            Logger.error(
+                "User is not a client",
+                f"User {user_id} has type {user_data.type}, not client",
+                {"userId": user_id, "userType": user_data.type},
+            )
             return [], "Exercise plans can only be generated for client users"
 
-        logger.info(
-            f"User data retrieved: {user_data.name}, mobility: {user_data.profile.medical_info.mobility if user_data.profile and user_data.profile.medical_info else 'unknown'}"
+        mobility = (
+            user_data.profile.medical_info.mobility
+            if user_data.profile and user_data.profile.medical_info
+            else "unknown"
+        )
+        Logger.info(
+            "User data retrieved",
+            f"Retrieved user data for {user_data.name} (user {user_id}) with mobility {mobility}",
+            {"userId": user_id, "userName": user_data.name, "mobility": mobility},
         )
 
         # Get user's assessment history
-        logger.debug(f"Fetching assessment history for user {user_id}")
+        Logger.debug(
+            "Fetching assessment history",
+            f"Fetching assessment history for user {user_id}",
+            {"userId": user_id},
+        )
         assessments_ref = db.collection("assessments").where("userId", "==", user_id)
         assessment_docs = assessments_ref.stream()
 
@@ -308,25 +336,45 @@ def generate_exercise_plan_with_ai(
                     assessment = Assessment.from_dict(assessment_dict)
                     user_history.append(assessment)
                 except Exception as e:
-                    logger.warning(f"Could not parse assessment {doc.id}: {e}")
+                    Logger.warning(
+                        "Could not parse assessment",
+                        f"Could not parse assessment {doc.id}: {str(e)}",
+                        {"assessmentId": doc.id, "error": str(e)},
+                    )
                     continue
 
-        logger.info(f"Retrieved {len(user_history)} assessments for user {user_id}")
+        Logger.info(
+            "Retrieved assessments",
+            f"Retrieved {len(user_history)} assessments for user {user_id}",
+            {"userId": user_id, "assessmentCount": len(user_history)},
+        )
 
         # Format prompt with user data and history
         base_prompt = _format_prompt(user_data, user_history)
 
         # Add user-specific requests if provided
         if user_requests:
-            logger.info(f"Adding user requests to prompt: {user_requests[:100]}...")
+            Logger.info(
+                "Adding user requests",
+                f"Adding user requests to prompt for user {user_id}: {user_requests[:100]}",
+                {"userId": user_id, "requestPreview": user_requests[:100]},
+            )
             base_prompt += f"\n\n=== ADDITIONAL REQUESTS ===\n{user_requests}\n"
 
         # Add JSON schema instructions
         schema = _get_exercise_json_schema()
         base_prompt += f"\n\n=== OUTPUT FORMAT ===\nGenerate your response in JSON format matching this exact schema:\n{json.dumps(schema, indent=2)}\n"
 
-        logger.info("Calling OpenAI API to generate exercise plan")
-        logger.debug(f"Prompt length: {len(base_prompt)} characters")
+        Logger.info(
+            "Calling OpenAI API",
+            f"Calling OpenAI API to generate exercise plan for user {user_id}",
+            {"userId": user_id},
+        )
+        Logger.debug(
+            "Full prompt",
+            f"Full prompt for user {user_id} has {len(base_prompt)} characters",
+            {"prompt": base_prompt},
+        )
 
         response = openai_client.chat.completions.create(
             model="gpt-4-turbo-preview",
@@ -340,19 +388,35 @@ def generate_exercise_plan_with_ai(
             response_format={"type": "json_object"},
         )
 
-        logger.info("Received response from OpenAI API")
+        Logger.info(
+            "Received OpenAI response",
+            f"Received response from OpenAI API for user {user_id}",
+            {"userId": user_id},
+        )
 
         # Parse response
         result = response.choices[0].message.content
         if not result:
-            logger.error("Empty response from OpenAI")
+            Logger.error(
+                "Empty response from OpenAI",
+                f"Empty response from OpenAI for user {user_id}",
+                {"userId": user_id},
+            )
             return [], "Empty response from AI"
 
-        logger.debug(f"Response length: {len(result)} characters")
+        Logger.debug(
+            "Response received",
+            f"Response received for user {user_id} with length {len(result)} characters",
+            {"userId": user_id, "responseLength": len(result)},
+        )
         exercise_data = json.loads(result)
         exercises_json = exercise_data.get("exercises", [])
 
-        logger.info(f"Parsed {len(exercises_json)} exercises from AI response")
+        Logger.info(
+            "Parsed exercises",
+            f"Parsed {len(exercises_json)} exercises from AI response for user {user_id}",
+            {"userId": user_id, "exerciseCount": len(exercises_json)},
+        )
 
         # Convert JSON to Exercise model instances
         exercises = []
@@ -373,18 +437,32 @@ def generate_exercise_plan_with_ai(
                 exercises.append(exercise)
 
             except Exception as e:
-                logger.warning(f"Could not parse exercise {idx}: {e}")
+                Logger.warning(
+                    "Could not parse exercise",
+                    f"Could not parse exercise {idx} for user {user_id}: {str(e)}",
+                    {"userId": user_id, "exerciseIndex": idx, "error": str(e)},
+                )
                 continue
 
         if not exercises:
-            logger.error("No exercises could be parsed from AI response")
+            Logger.error(
+                "No exercises parsed",
+                f"No exercises could be parsed from AI response for user {user_id}",
+                {"userId": user_id},
+            )
             return [], "Failed to parse any exercises from AI response"
 
-        logger.info(
-            f"Successfully generated {len(exercises)} exercises for user {user_id}"
+        Logger.info(
+            "Successfully generated exercises",
+            f"Successfully generated {len(exercises)} exercises for user {user_id}",
+            {"userId": user_id, "exerciseCount": len(exercises)},
         )
         return exercises, None
 
     except Exception as e:
-        logger.error(f"Error generating exercise plan: {str(e)}", exc_info=True)
+        Logger.error(
+            "Error generating exercise plan",
+            f"Error generating exercise plan for user {user_id}: {type(e).__name__} - {str(e)}",
+            {"userId": user_id, "error": str(e), "errorType": type(e).__name__},
+        )
         return [], f"Error generating exercise plan: {str(e)}"

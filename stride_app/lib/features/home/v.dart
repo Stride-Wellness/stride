@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
+import 'package:stride_app/controllers/page_controller.dart';
 import 'package:stride_app/features/home/vm.dart';
 import 'package:stride_app/features/home/widgets/client_bottom_bar.dart';
 import 'package:stride_app/features/home/widgets/provider_bottom_bar.dart';
@@ -7,7 +9,6 @@ import 'package:stride_app/features/quizzes/v.dart';
 import 'package:stride_app/features/provider_clients/v.dart';
 import 'package:stride_app/features/account/v.dart';
 import 'package:stride_app/features/exercise/v.dart'; 
-import 'package:stride_core/controllers/auth_state_controller.dart';
 
 
 const providerPages = [
@@ -28,7 +29,22 @@ class HomePageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<HomeVM>();
+    return ChangeNotifierProvider(
+      create: (context) => HomePageVM(
+        pageController: context.read<HomePageController>(),
+        authStateController: context.read<AuthStateController>(),
+      ),
+      child: const _HomePageContent(),
+    );
+  }
+}
+
+class _HomePageContent extends StatelessWidget {
+  const _HomePageContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<HomePageVM>();
 
     switch (vm.authStatus) {
       case AuthStatus.signedOut:

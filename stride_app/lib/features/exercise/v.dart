@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/exercise/vm.dart';
-import 'package:stride_core/controllers/auth_state_controller.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
 import 'package:stride_core/models/exercise_m.dart';
+import 'package:stride_core/repositories/exercise_repo.dart';
+import 'package:stride_core/repositories/user_repo.dart';
 
-class ExerciseV extends StatefulWidget {
-  const ExerciseV({super.key});
+class ExerciseV extends StatelessWidget {
+  const ExerciseV({super.key, this.clientId});
+
+  final String? clientId;
 
   @override
-  State<ExerciseV> createState() => _ExerciseVState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => ExerciseVM(
+        clientId: clientId,
+        exerciseRepo: context.read<ExerciseRepository>(),
+        authController: context.read<AuthStateController>(),
+        userRepository: context.read<UserRepository>(),
+      )..initialize(),
+      child: const _ExerciseVContent(),
+    );
+  }
 }
 
-class _ExerciseVState extends State<ExerciseV> {
-  @override
-  void initState() {
-    super.initState();
-    // Initialize exercises on page load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authController = context.read<AuthStateController>();
-      final userId = authController.user?.id;
-
-      if (userId != null) {
-        final exerciseVM = context.read<ExerciseVM>();
-        exerciseVM.initialize();
-      }
-    });
-  }
+class _ExerciseVContent extends StatelessWidget {
+  const _ExerciseVContent();
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +41,8 @@ class _ExerciseVState extends State<ExerciseV> {
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.hasError
-          ? _buildErrorState(vm)
-          : _buildContent(vm),
+          ? _buildErrorState(context, vm)
+          : _buildContent(context, vm),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: vm.isLoading ? null : () => _showGenerateDialog(context, vm),
         icon: const Icon(Icons.auto_awesome),
@@ -50,7 +51,7 @@ class _ExerciseVState extends State<ExerciseV> {
     );
   }
 
-  Widget _buildErrorState(ExerciseVM vm) {
+  Widget _buildErrorState(BuildContext context, ExerciseVM vm) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -74,10 +75,10 @@ class _ExerciseVState extends State<ExerciseV> {
     );
   }
 
-  Widget _buildContent(ExerciseVM vm) {
+  Widget _buildContent(BuildContext context, ExerciseVM vm) {
     // Show generated exercises selection if available
     if (vm.hasGeneratedExercises) {
-      return _buildExerciseSelection(vm);
+      return _buildExerciseSelection(context, vm);
     }
 
     // Show pending and completed exercises
@@ -158,7 +159,7 @@ class _ExerciseVState extends State<ExerciseV> {
     );
   }
 
-  Widget _buildExerciseSelection(ExerciseVM vm) {
+  Widget _buildExerciseSelection(BuildContext context, ExerciseVM vm) {
     return Column(
       children: [
         Container(

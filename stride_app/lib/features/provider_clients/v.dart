@@ -2,9 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/exercise/v.dart';
 import 'package:stride_app/features/provider_clients/vm.dart';
+import 'package:stride_core/repositories/assignments_repo.dart';
 
 class ProviderClientsListV extends StatelessWidget {
   const ProviderClientsListV({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => ProviderClientsListVM(
+        assignmentsRepo: context.read<AssignmentsRepository>(),
+      ),
+      child: const _ProviderClientsListContent(),
+    );
+  }
+}
+
+class _ProviderClientsListContent extends StatelessWidget {
+  const _ProviderClientsListContent();
 
   @override
   Widget build(BuildContext context) {
@@ -90,10 +105,11 @@ class ProviderClientsListV extends StatelessWidget {
                 clientStatus: client.status.name,
                 client: client,
                 onTap: () {
-                  viewModel.onClientCardTap(client.id);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ExerciseV()),
+                    MaterialPageRoute(
+                      builder: (context) => ExerciseV(clientId: client.id),
+                    ),
                   );
                 },
               );
@@ -101,7 +117,24 @@ class ProviderClientsListV extends StatelessWidget {
           ),
         );
       }(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Add your action here
+          // e.g., Navigator.push to add new client screen
+        },
+        child: const Icon(Icons.add),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
+  }
+}
+
+class _NewClientButton extends StatelessWidget {
+  const _NewClientButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Placeholder();
   }
 }
 

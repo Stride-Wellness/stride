@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:stride_app/features/exercise/vm.dart';
 import 'package:stride_core/models/user_m.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
 
-get providerClientsVMProvider => ChangeNotifierProvider(
-  create: (context) => ProviderClientsListVM(
-    assignmentsRepo: context.read<AssignmentsRepository>(),
-    exerciseVM: context.read<ExerciseVM>(),
-  ),
-);
-
 class ProviderClientsListVM extends ChangeNotifier {
   final AssignmentsRepository _assignmentsRepo;
-  final ExerciseVM _exerciseVM;
 
   List<ClientUserModel> _clients = [];
   bool _isLoading = false;
@@ -21,9 +11,8 @@ class ProviderClientsListVM extends ChangeNotifier {
 
   ProviderClientsListVM({
     required AssignmentsRepository assignmentsRepo,
-    required ExerciseVM exerciseVM,
-  }) : _assignmentsRepo = assignmentsRepo,
-       _exerciseVM = exerciseVM {
+  })
+    : _assignmentsRepo = assignmentsRepo {
     loadClients();
   }
 
@@ -50,11 +39,6 @@ class ProviderClientsListVM extends ChangeNotifier {
 
   Future<void> refresh() async {
     await loadClients();
-  }
-
-  void onClientCardTap(String clientId) {
-    _exerciseVM.clientId = clientId;
-    _exerciseVM.initialize();
   }
 
   void clearError() {
