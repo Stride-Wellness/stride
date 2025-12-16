@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/exercise/v.dart';
+import 'package:stride_app/features/provider_assisted_client_signup/v.dart';
 import 'package:stride_app/features/provider_clients/vm.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
 
@@ -119,22 +120,17 @@ class _ProviderClientsListContent extends StatelessWidget {
       }(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Add your action here
-          // e.g., Navigator.push to add new client screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ProviderAssistedClientSignupV(),
+            ),
+          );      
         },
         child: const Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
-  }
-}
-
-class _NewClientButton extends StatelessWidget {
-  const _NewClientButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
   }
 }
 

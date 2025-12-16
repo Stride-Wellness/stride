@@ -33,7 +33,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
       listenable: _viewModel,
       builder: (context, _) {
         return Scaffold(
-          appBar: AppBar(title: const Text("Welcome to Stride")),
+          appBar: AppBar(title: Text(_viewModel.pageTitle)),
           body: SafeArea(
             child: Column(
               children: [
@@ -67,28 +67,34 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Personal Information",
+            "${_viewModel.fromProvider ? "Client " : ""}Personal Information",
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 24),
-          _buildTextField("Name", _viewModel.nameController),
           _buildTextField(
-            "Age",
+            "${_viewModel.fromProvider ? "Client's " : ""}Name",
+            _viewModel.nameController,
+          ),
+          _buildTextField(
+            "${_viewModel.fromProvider ? "Client's " : ""}Age",
             _viewModel.ageController,
             keyboardType: TextInputType.number,
           ),
-          _buildDropdown("Sex", _viewModel.sex, [
+          _buildDropdown(
+            "${_viewModel.fromProvider ? "Client's " : ""}Sex",
+            _viewModel.sex,
+            [
             "Male",
             "Female",
             "Prefer not to say",
           ], (value) => _viewModel.sex = value),
           _buildTextField(
-            "Height (in inches or cm)",
+            "${_viewModel.fromProvider ? "Client's " : ""}Height (in inches or cm)",
             _viewModel.heightController,
             keyboardType: TextInputType.number,
           ),
           _buildTextField(
-            "Weight (in pounds or kg)",
+            "${_viewModel.fromProvider ? "Client's " : ""}Weight (in pounds or kg)",
             _viewModel.weightController,
             keyboardType: TextInputType.number,
           ),
@@ -104,14 +110,14 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Health & Activity",
+            "${_viewModel.fromProvider ? "Client " : ""}Health & Activity",
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 24),
 
           // Activity Level
           Text(
-            "How often do you currently do physical activity?",
+            "How often ${_viewModel.fromProvider ? "does your client" : "do you"} currently do physical activity?",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -135,7 +141,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Health Conditions
           Text(
-            "Health conditions (select all that apply)",
+            "${_viewModel.fromProvider ? "Client's " : ""}Health conditions (select all that apply)",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -172,7 +178,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Pain & Mobility
           Text(
-            "Pain or discomfort areas (select all that apply)",
+            "${_viewModel.fromProvider ? "Client's " : ""}Pain or discomfort areas (select all that apply)",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -215,14 +221,14 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Preferences & Goals",
+            "${_viewModel.fromProvider ? "Client's " : ""}Preferences & Goals",
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 24),
 
           // Exercise Preferences
           Text(
-            "Types of exercise you enjoy (select all that apply)",
+            "Types of exercise ${_viewModel.fromProvider ? "your client enjoys" : "you enjoy"} (select all that apply)",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -253,7 +259,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Equipment Available
           Text(
-            "Equipment available at home",
+            "${_viewModel.fromProvider ? "Client's " : ""}Equipment available at home",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -262,18 +268,18 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
             "Resistance Bands",
             "Light Weights (1-5 lbs)",
             "Step or Stairs",
-            "None - I prefer no equipment workouts",
+            "None - prefer no equipment workouts",
           ].map(
             (equipment) => CheckboxListTile(
               title: Text(equipment),
               value: _viewModel.equipment.contains(equipment),
               onChanged: (checked) => setState(() {
                 if (checked == true) {
-                  if (equipment == "None - I prefer no equipment workouts") {
+                  if (equipment == "None - prefer no equipment workouts") {
                     _viewModel.equipment.clear();
                   } else {
                     _viewModel.equipment.remove(
-                      "None - I prefer no equipment workouts",
+                      "None - prefer no equipment workouts",
                     );
                   }
                   _viewModel.equipment.add(equipment);
@@ -288,7 +294,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Mobility Aids
           Text(
-            "Mobility aids used",
+            "${_viewModel.fromProvider ? "Client's " : ""}Mobility aids used",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -322,7 +328,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Wellness Goals
           Text(
-            "Main wellness goals",
+            "${_viewModel.fromProvider ? "Client's " : ""}Main wellness goals",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -348,17 +354,17 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Hobbies & Goals
           _buildTextField(
-            "Favourite hobbies or interests",
+            "${_viewModel.fromProvider ? "Client's " : ""}Favourite Hobbies or Interests",
             _viewModel.hobbiesController,
             maxLines: 3,
           ),
           _buildTextField(
-            "What are you looking forward to in the next 2-4 weeks?",
+            "${_viewModel.fromProvider ? "What is your client" : "What are you"} looking forward to in the next 2-4 weeks?",
             _viewModel.shortGoalsController,
             maxLines: 3,
           ),
           _buildTextField(
-            "What are you looking forward to in the next 2-6 months?",
+            "${_viewModel.fromProvider ? "What is your client" : "What are you"} looking forward to in the next 2-6 months?",
             _viewModel.longGoalsController,
             maxLines: 3,
           ),
@@ -367,7 +373,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Energy Level
           Text(
-            "Preferred energy level for workouts",
+            "${_viewModel.fromProvider ? "Client's " : ""}Preferred energy level for workouts",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -380,9 +386,9 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
             child: Column(
               children: [
                 ...[
-                  "Low - I prefer gentle movements",
-                  "Moderate - I can handle some challenge",
-                  "High - I want to push myself",
+                  "Low - ${_viewModel.fromProvider ? "My client prefers" : "I prefer"} gentle movements",
+                  "Moderate - ${_viewModel.fromProvider ? "My client can handle" : "I can handle"} some challenge",
+                  "High - ${_viewModel.fromProvider ? "My client wants" : "I want"} to push myself",
                 ].map(
                   (level) =>
                       RadioListTile<String>(title: Text(level), value: level),
@@ -395,7 +401,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Time Preference
           Text(
-            "Preferred time of day to exercise",
+            "${_viewModel.fromProvider ? "Client's " : ""}Preferred time of day to exercise",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
@@ -417,7 +423,7 @@ class _ClientOnboardingQuizViewState extends State<ClientOnboardingQuizView> {
 
           // Extra Notes
           _buildTextField(
-            "Any extra notes or considerations? (optional)",
+            "Any extra notes or considerations${_viewModel.fromProvider ? " from your client" : ""}? (optional)",
             _viewModel.extraNotesController,
             maxLines: 4,
           ),

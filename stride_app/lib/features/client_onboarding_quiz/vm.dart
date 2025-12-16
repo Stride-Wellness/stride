@@ -8,6 +8,10 @@ enum ClientOnboardingMode {
 class OnboardingQuizVM extends ChangeNotifier {
   final ClientOnboardingMode mode;
 
+  get fromProvider => mode == ClientOnboardingMode.providerAssistedRegistration;
+
+  get pageTitle => fromProvider ? "Client Onboarding" : "Welcome to Stride";
+
   OnboardingQuizVM({
     required this.mode,
   }) {
