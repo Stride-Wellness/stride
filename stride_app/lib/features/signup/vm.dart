@@ -3,6 +3,7 @@ import 'package:stride_core/models/division_m.dart';
 import 'package:stride_core/models/organization_m.dart';
 import 'package:stride_core/models/user_m.dart';
 import 'package:stride_core/repositories/division_repo.dart';
+import 'package:stride_core/repositories/invitations_repo.dart';
 import 'package:stride_core/repositories/organization_repo.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 
@@ -11,17 +12,23 @@ enum SignupType { client, provider }
 class SignupVM extends ChangeNotifier {
   final UserRepository userRepo;
   final OrganizationRepository? organizationRepo;
+  final InvitationsRepository invitationRepo;
   final DivisionRepository? divisionRepo;
   final SignupType signupType;
   final Map<String, dynamic>? quizData;
 
   SignupVM({
-    required this.userRepo,
-    required this.signupType,
+    required this.userRepo, 
     this.organizationRepo,
     this.divisionRepo,
+    required this.invitationRepo,
+    required this.signupType,
     this.quizData,
-  });
+  }) {
+    nameController.addListener(notifyListeners);
+    emailController.addListener(notifyListeners);
+    passwordController.addListener(notifyListeners);
+  }
 
   final nameController = TextEditingController();
   final emailController = TextEditingController();
@@ -69,6 +76,7 @@ class SignupVM extends ChangeNotifier {
 
     try {
       if (signupType == SignupType.client) {
+        
         await userRepo.createClientFromOnboarding(
           name: quizData!['name'],
           email: emailController.text,
@@ -77,6 +85,10 @@ class SignupVM extends ChangeNotifier {
           quizAnswers: quizData!['answers'],
           sendEmailVerification: true,
         );
+
+        if (quizData!['invitationId'] != null) {
+          await invitationRepo.deleteInvitation(quizData!['invitationId']);
+        }
       } else {
         final orgName = (quizData?['answers'] as Map<String, List<String>>?)
             ?['organization_info_question_organization_name']?.first ?? 'Organization';

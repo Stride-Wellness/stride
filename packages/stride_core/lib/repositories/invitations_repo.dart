@@ -39,6 +39,10 @@ class InvitationsRepository {
     return InvitationModel.fromMap(docSnapshot.data()!, docSnapshot.id);
   }
 
+  Future<void> deleteInvitation(String id) async {
+    await _db.collection(_collection).doc(id).delete();
+  }
+
   Future<List<InvitationModel>> getInvitationsByUser_(String userId) async {
     final querySnapshot = await _db
         .collection(_collection)
