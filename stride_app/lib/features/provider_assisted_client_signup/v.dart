@@ -5,6 +5,7 @@ import 'package:stride_app/features/client_onboarding_quiz/vm.dart';
 import 'package:stride_app/features/provider_assisted_client_signup/vm.dart';
 import 'package:stride_app/media/completion_checkmark_animation.dart';
 import 'package:stride_app/media/new_client_animation.dart';
+import 'package:stride_core/repositories/invitations_repo.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_ui/widgets/button.dart';
 
@@ -14,7 +15,9 @@ class ProviderAssistedClientSignupV extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => ProviderAssistedClientSignupVM(),
+      create: (context) => ProviderAssistedClientSignupVM(
+        invitationsRepo: context.read<InvitationsRepository>(),
+      ),
       child: const _ProviderAssistedClientSignupVContent(),
     );
   }
@@ -61,12 +64,13 @@ class _ProviderAssistedClientSignupVContent extends StatelessWidget {
                       ),
                     );
                     if (quizResult != null) {
-                      // Use quizResult as needed, then navigate to a different page
+                      final code = await vm.createClientInvitation(quizResult);
+
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              YourNextPage(result: quizResult),
+                              InvitationConfirmationPage(code: code),
                         ),
                       );
                     }
@@ -82,18 +86,13 @@ class _ProviderAssistedClientSignupVContent extends StatelessWidget {
   }
 }
 
-class YourNextPage extends StatelessWidget {
-  final dynamic result;
+class InvitationConfirmationPage extends StatelessWidget {
+  final int code;
 
-  const YourNextPage({super.key, this.result});
+  const InvitationConfirmationPage({super.key, required this.code});
 
   @override
   Widget build(BuildContext context) {
-    // Assume result contains a code field, fallback if not
-    final String code = result is Map && result['code'] != null
-        ? result['code'].toString()
-        : '683 124';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Invitation Created"),
@@ -128,7 +127,7 @@ class YourNextPage extends StatelessWidget {
               const SizedBox(height: 16),
               const Spacer(flex: 3),
               SelectableText(
-                code,
+                code.toString(),
                 style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,

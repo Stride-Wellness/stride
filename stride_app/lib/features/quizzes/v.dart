@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/quizzes/vm.dart';
-import 'package:stride_core/models/onboarding_quiz_result_m.dart';
+import 'package:stride_core/models/quiz_result_m.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_ui/widgets/button.dart';
 import 'package:stride_ui/widgets/list_options.dart';

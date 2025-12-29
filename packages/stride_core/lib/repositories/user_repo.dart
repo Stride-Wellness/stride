@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:stride_core/models/user_m.dart';
-import 'package:stride_core/models/onboarding_quiz_result_m.dart';
+import 'package:stride_core/models/quiz_result_m.dart';
 import 'package:stride_core/services/auth_service.dart';
 
 class UserRepository {

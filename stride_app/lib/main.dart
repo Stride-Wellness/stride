@@ -6,6 +6,7 @@ import 'package:stride_app/features/signup/v.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
 import 'package:stride_core/repositories/division_repo.dart';
 import 'package:stride_core/repositories/exercise_repo.dart';
+import 'package:stride_core/repositories/invitations_repo.dart';
 import 'package:stride_core/repositories/organization_repo.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 import 'package:stride_core/services/auth_service.dart';
@@ -36,6 +37,10 @@ void main() async {
         ),
         Provider(create: (context) => OrganizationRepository()),
         Provider(create: (context) => DivisionRepository()),
+        Provider(
+          create: (context) =>
+              InvitationsRepository(authService: context.read<AuthService>()),
+        ),
         Provider(
           create: (context) =>
               AssignmentsRepository(authService: context.read<AuthService>()),

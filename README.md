@@ -9,3 +9,23 @@ Some use cases are:
 Grandchild (Bob) wants to help their grandparent (Joe) stay healthy. They buy stride with one seat. They are admin, manager, and Personal Support Provider (PSW). Bob fills out the form with Joe, he says what his goals are and then it gives Bob a list of excerisis to give Joe. Optionally, if fit, Joe can install the app too and only have access to the excersises.
 
 Retirement home owner (Bob) wants to help keep residents healthier. Bob buys Stride with a bunch of seats. Bob has two retirement homes so he assignes a manager to each of them. Bob only pays the bill for th number of seats, but the managers create seats for life style providers and residents. Then managers can also handle invinting providers and residents, if fit. They can manage which providers can view which residents, and have a dashboard of all residents.
+
+
+## Dev
+
+Deploy rules using:
+
+```firebase deploy --only firestore:rules
+```
+
+Deploy functions using:
+
+```firebase deploy --only functions
+```
+
+Deploy everything using:
+
+```firebase deploy
+```
+
+rules are in `firestore.rules`

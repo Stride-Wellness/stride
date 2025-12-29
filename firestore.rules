@@ -508,6 +508,10 @@ service cloud.firestore {
       allow read : if true;
       allow write: if true;
     }
+
+    match /invitations/{invitationId} {
+      allow read, write: if true;
+    }
     // ====================================================================
     // DEFAULT DENY RULE
     // ====================================================================

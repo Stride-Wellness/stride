@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-import 'package:stride_core/models/onboarding_quiz_result_m.dart';
+import 'package:stride_core/models/quiz_result_m.dart';
 import 'package:stride_core/models/question_node_m.dart';
 import 'package:stride_core/repositories/user_repo.dart';
 

@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/exercise/v.dart';
 import 'package:stride_app/features/provider_assisted_client_signup/v.dart';
 import 'package:stride_app/features/provider_clients/vm.dart';
+import 'package:stride_core/models/invitation_m.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
+import 'package:stride_core/repositories/invitations_repo.dart';
 
 class ProviderClientsListV extends StatelessWidget {
   const ProviderClientsListV({super.key});
@@ -12,6 +15,7 @@ class ProviderClientsListV extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => ProviderClientsListVM(
+        invitationsRepo: context.read<InvitationsRepository>(),
         assignmentsRepo: context.read<AssignmentsRepository>(),
       ),
       child: const _ProviderClientsListContent(),
@@ -98,22 +102,33 @@ class _ProviderClientsListContent extends StatelessWidget {
           onRefresh: viewModel.refresh,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: viewModel.clients.length,
+            itemCount: viewModel.clients.length + viewModel.invitations.length,
             itemBuilder: (context, index) {
-              final client = viewModel.clients[index];
-              return _ClientCard(
-                clientName: client.name,
-                clientStatus: client.status.name,
-                client: client,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ExerciseV(clientId: client.id),
-                    ),
-                  );
-                },
-              );
+              if (index < viewModel.clients.length) {
+                final client = viewModel.clients[index];
+                return _ClientCard(
+                  clientName: client.name,
+                  clientStatus: client.status.name,
+                  client: client,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ExerciseV(clientId: client.id),
+                      ),
+                    );
+                  },
+                );
+              } else {
+                final invitation =
+                    viewModel.invitations[index - viewModel.clients.length];
+                return _InvitationCard(
+                  invitation: invitation,
+                  onTap: () {
+                    // Handle invitation tap - maybe show details or copy code
+                  },
+                );
+              }
             },
           ),
         );
@@ -125,12 +140,131 @@ class _ProviderClientsListContent extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => const ProviderAssistedClientSignupV(),
             ),
-          );      
+          );
         },
         child: const Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
+  }
+}
+
+class _InvitationCard extends StatelessWidget {
+  final InvitationModel invitation;
+  final VoidCallback? onTap;
+
+  const _InvitationCard({required this.invitation, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: screenHeight * 0.3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 240,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 35,
+                    backgroundColor: Colors.orange[100],
+                    child: const Icon(
+                      Icons.person_add,
+                      size: 32,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          invitation
+                              .quizResult
+                              .answers["personal_info_question_name"][0],
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Awaiting Response',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.orange,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _InfoRow(
+                      icon: Icons.qr_code,
+                      label: 'Invitation Code',
+                      value: invitation.code,
+                    ),
+                    _InfoRow(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Created',
+                      value: _formatDate(invitation.createdAt),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${date.month}/${date.day}/${date.year}';
+    }
   }
 }
 
@@ -167,9 +301,7 @@ class _ClientCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
           onTap();
@@ -287,11 +419,7 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 18,
-          color: Colors.grey[600],
-        ),
+        Icon(icon, size: 18, color: Colors.grey[600]),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
