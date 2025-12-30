@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/provider_onboarding_quiz/vm.dart';
+import 'package:stride_app/features/shared/widgets/labeled_text_field.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_ui/widgets/button.dart';
 
@@ -66,11 +67,16 @@ class _OrganizationInfoPage extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 24),
-          _InputField(
+          LabeledTextField(
             label: "Organization Name",
             controller: vm.organizationNameController,
+            textInputAction: TextInputAction.next,
           ),
-          _InputField(label: "Your Role/Title", controller: vm.roleController),
+          LabeledTextField(
+            label: "Your Role/Title",
+            controller: vm.roleController,
+            textInputAction: TextInputAction.next,
+          ),
         ],
       ),
     );
@@ -149,36 +155,6 @@ class _ServiceDetailsPage extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _InputField extends StatelessWidget {
-  const _InputField({
-    required this.label,
-    required this.controller,
-    this.keyboardType,
-    this.maxLines = 1,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final TextInputType? keyboardType;
-  final int maxLines;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
       ),
     );
   }

@@ -51,7 +51,6 @@ class ExerciseVM extends ChangeNotifier {
 
   get pageTitle => _pageTitle;
 
-
   /// Initialize - load pending and completed exercises
   Future<void> initialize() async {
     var client = await _userRepository.get_(_clientId);
@@ -77,7 +76,6 @@ class ExerciseVM extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       _setState(ExerciseViewState.error);
-      rethrow;
     }
   }
 
@@ -96,8 +94,7 @@ class ExerciseVM extends ChangeNotifier {
     String? assessmentId,
     String? userRequests,
   }) async {
-    // try
-    {
+    try {
       _setState(ExerciseViewState.generating);
       _errorMessage = null;
 
@@ -107,16 +104,12 @@ class ExerciseVM extends ChangeNotifier {
         userRequests: userRequests,
       );
 
-      print("here1");
       _generatedExercises = exercises;
-      print("here2");
       _setState(ExerciseViewState.idle);
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setState(ExerciseViewState.error);
     }
-    //catch (e) {
-    //   _errorMessage = e.toString();
-    //   _setState(ExerciseViewState.error);
-    //   rethrow;
-    // }
   }
 
   /// Select an exercise from generated list (moves to pending)
@@ -173,7 +166,7 @@ class ExerciseVM extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
-      rethrow;
+      _setState(ExerciseViewState.error);
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:stride_app/features/exercise/v.dart';
 import 'package:stride_app/features/provider_assisted_client_signup/v.dart';
 import 'package:stride_app/features/provider_clients/vm.dart';
+import 'package:stride_app/features/shared/widgets/app_info_row.dart';
 import 'package:stride_core/models/invitation_m.dart';
 import 'package:stride_core/repositories/assignments_repo.dart';
 import 'package:stride_core/repositories/invitations_repo.dart';
@@ -231,12 +232,12 @@ class _InvitationCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _InfoRow(
+                    AppInfoRow(
                       icon: Icons.qr_code,
                       label: 'Invitation Code',
                       value: invitation.code,
                     ),
-                    _InfoRow(
+                    AppInfoRow(
                       icon: Icons.calendar_today_outlined,
                       label: 'Created',
                       value: _formatDate(invitation.createdAt),
@@ -378,17 +379,17 @@ class _ClientCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _InfoRow(
+                    AppInfoRow(
                       icon: Icons.email_outlined,
                       label: 'Email',
                       value: client.email ?? 'N/A',
                     ),
-                    _InfoRow(
+                    AppInfoRow(
                       icon: Icons.phone_outlined,
                       label: 'Phone',
                       value: client.profile.phone ?? 'N/A',
                     ),
-                    _InfoRow(
+                    AppInfoRow(
                       icon: Icons.cake_outlined,
                       label: 'Date of Birth',
                       value: client.profile.dateOfBirth ?? 'N/A',
@@ -400,51 +401,6 @@ class _ClientCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

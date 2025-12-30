@@ -8,9 +8,11 @@ enum ClientOnboardingMode {
 class OnboardingQuizVM extends ChangeNotifier {
   final ClientOnboardingMode mode;
 
-  get fromProvider => mode == ClientOnboardingMode.providerAssistedRegistration;
+  bool get fromProvider =>
+      mode == ClientOnboardingMode.providerAssistedRegistration;
 
-  get pageTitle => fromProvider ? "Client Onboarding" : "Welcome to Stride";
+  String get pageTitle =>
+      fromProvider ? "Client Onboarding" : "Welcome to Stride";
 
   OnboardingQuizVM({
     required this.mode,
@@ -49,7 +51,7 @@ class OnboardingQuizVM extends ChangeNotifier {
   // Page 2: Health & Activity
   String? _activityLevel;
   String? get activityLevel => _activityLevel;
-  set activityLevel(String? value) {
+  void setActivityLevel(String? value) {
     if (_activityLevel != value) {
       _activityLevel = value;
       notifyListeners();
@@ -58,57 +60,97 @@ class OnboardingQuizVM extends ChangeNotifier {
 
   final Set<String> _healthConditions = {};
   Set<String> get healthConditions => _healthConditions;
-  void addHealthCondition(String value) {
-    if (_healthConditions.add(value)) notifyListeners();
-  }
-  void removeHealthCondition(String value) {
-    if (_healthConditions.remove(value)) notifyListeners();
+  void toggleHealthCondition(String value, bool isSelected) {
+    if (isSelected) {
+      if (value == 'None of the above') {
+        _healthConditions
+          ..clear()
+          ..add(value);
+      } else {
+        _healthConditions.remove('None of the above');
+        _healthConditions.add(value);
+      }
+    } else {
+      _healthConditions.remove(value);
+    }
+    notifyListeners();
   }
 
   final Set<String> _painAreas = {};
   Set<String> get painAreas => _painAreas;
-  void addPainArea(String value) {
-    if (_painAreas.add(value)) notifyListeners();
-  }
-  void removePainArea(String value) {
-    if (_painAreas.remove(value)) notifyListeners();
+  void togglePainArea(String value, bool isSelected) {
+    if (isSelected) {
+      if (value == 'No pain or discomfort') {
+        _painAreas
+          ..clear()
+          ..add(value);
+      } else {
+        _painAreas.remove('No pain or discomfort');
+        _painAreas.add(value);
+      }
+    } else {
+      _painAreas.remove(value);
+    }
+    notifyListeners();
   }
 
   // Page 3: Preferences & Goals
   final Set<String> _exercisePreferences = {};
   Set<String> get exercisePreferences => _exercisePreferences;
-  void addExercisePreference(String value) {
-    if (_exercisePreferences.add(value)) notifyListeners();
-  }
-  void removeExercisePreference(String value) {
-    if (_exercisePreferences.remove(value)) notifyListeners();
+  void toggleExercisePreference(String value, bool isSelected) {
+    if (isSelected) {
+      _exercisePreferences.add(value);
+    } else {
+      _exercisePreferences.remove(value);
+    }
+    notifyListeners();
   }
 
   final Set<String> _equipment = {};
   Set<String> get equipment => _equipment;
-  void addEquipment(String value) {
-    if (_equipment.add(value)) notifyListeners();
-  }
-  void removeEquipment(String value) {
-    if (_equipment.remove(value)) notifyListeners();
+  void toggleEquipment(String value, bool isSelected) {
+    if (isSelected) {
+      if (value == 'None - prefer no equipment workouts') {
+        _equipment
+          ..clear()
+          ..add(value);
+      } else {
+        _equipment.remove('None - prefer no equipment workouts');
+        _equipment.add(value);
+      }
+    } else {
+      _equipment.remove(value);
+    }
+    notifyListeners();
   }
 
   final Set<String> _mobilityAids = {};
   Set<String> get mobilityAids => _mobilityAids;
-  void addMobilityAid(String value) {
-    if (_mobilityAids.add(value)) notifyListeners();
-  }
-  void removeMobilityAid(String value) {
-    if (_mobilityAids.remove(value)) notifyListeners();
+  void toggleMobilityAid(String value, bool isSelected) {
+    if (isSelected) {
+      if (value == 'None - No mobility aids needed') {
+        _mobilityAids
+          ..clear()
+          ..add(value);
+      } else {
+        _mobilityAids.remove('None - No mobility aids needed');
+        _mobilityAids.add(value);
+      }
+    } else {
+      _mobilityAids.remove(value);
+    }
+    notifyListeners();
   }
 
   final Set<String> _wellnessGoals = {};
   Set<String> get wellnessGoals => _wellnessGoals;
-  void addWellnessGoal(String value) {
-    if (_wellnessGoals.add(value)) notifyListeners();
-  }
-  void removeWellnessGoal(String value) {
-    if (_wellnessGoals.remove(value)) notifyListeners();
+  void toggleWellnessGoal(String value, bool isSelected) {
+    if (isSelected) {
+      _wellnessGoals.add(value);
+    } else {
+      _wellnessGoals.remove(value);
+    }
+    notifyListeners();
   }
 
   final TextEditingController hobbiesController = TextEditingController();
@@ -117,7 +159,7 @@ class OnboardingQuizVM extends ChangeNotifier {
 
   String? _energyLevel;
   String? get energyLevel => _energyLevel;
-  set energyLevel(String? value) {
+  void setEnergyLevel(String? value) {
     if (_energyLevel != value) {
       _energyLevel = value;
       notifyListeners();
@@ -126,7 +168,7 @@ class OnboardingQuizVM extends ChangeNotifier {
 
   String? _timePreference;
   String? get timePreference => _timePreference;
-  set timePreference(String? value) {
+  void setTimePreference(String? value) {
     if (_timePreference != value) {
       _timePreference = value;
       notifyListeners();

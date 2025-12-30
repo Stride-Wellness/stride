@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/signin/vm.dart';
+import 'package:stride_app/features/shared/widgets/async_button.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_core/models/question_node_m.dart';
-import 'package:stride_ui/widgets/button.dart';
 import 'package:stride_ui/widgets/list_options.dart';
 
 class SignInScreenView extends StatelessWidget {
@@ -20,9 +20,7 @@ class SignInScreenView extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign In'),
-      ),
+      appBar: AppBar(title: const Text('Sign In')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(KPadding.pagePadding),
@@ -41,7 +39,7 @@ class SignInScreenView extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 60),
-              
+
               // Show error message if any
               if (signInVM.errorMessage != null)
                 Container(
@@ -65,7 +63,7 @@ class SignInScreenView extends StatelessWidget {
                     ],
                   ),
                 ),
-              
+
               ListOptionsWidget(
                 options: questions,
                 isMultiField: true,
@@ -75,9 +73,9 @@ class SignInScreenView extends StatelessWidget {
                   signInVM.updateCredentials(value);
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Forgot password button
               Align(
                 alignment: Alignment.centerRight,
@@ -87,7 +85,7 @@ class SignInScreenView extends StatelessWidget {
                       : () async {
                           final messenger = ScaffoldMessenger.of(context);
                           await signInVM.sendPasswordReset();
-                          
+
                           if (signInVM.errorMessage == null) {
                             messenger.showSnackBar(
                               const SnackBar(
@@ -104,53 +102,35 @@ class SignInScreenView extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Sign in button
-              SizedBox(
-                width: double.infinity,
-                height: KSizes.buttonHeight,
-                child: Button(
-                  variant: ButtonVariant.primary,
-                  onPressed: signInVM.isLoading
-                      ? null
-                      : () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          
-                          final success = await signInVM.signIn();
-          
-                          
-                          if (success) {
-                            messenger.showSnackBar(
-                              const SnackBar(content: Text('Signed in successfully!')),
-                            );
-                            navigator.pushNamedAndRemoveUntil(
-                              '/home',
-                              (route) => false,
-                            );
-                          } else {
-                            if (signInVM.errorMessage != null) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(signInVM.errorMessage!),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  child: signInVM.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text("Sign In"),
-                ),
+              AsyncButton(
+                label: "Sign In",
+                isLoading: signInVM.isLoading,
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+
+                  final success = await signInVM.signIn();
+
+                  if (success) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Signed in successfully!')),
+                    );
+                    navigator.pushNamedAndRemoveUntil(
+                      '/home',
+                      (route) => false,
+                    );
+                  } else if (signInVM.errorMessage != null) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(signInVM.errorMessage!),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Create account link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -164,7 +144,7 @@ class SignInScreenView extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const Spacer(),
             ],
           ),

@@ -6,6 +6,7 @@ import 'package:stride_app/views/greeting_v.dart';
 import 'package:stride_app/controllers/auth_state_controller.dart';
 import 'package:stride_ui/constants/layout.dart';
 import 'package:stride_ui/widgets/button.dart';
+import 'package:stride_app/features/shared/widgets/app_info_row.dart';
 
 class AccountV extends StatelessWidget {
   const AccountV({super.key});
@@ -75,9 +76,7 @@ class _AccountVContent extends StatelessWidget {
 // Organizational Widgets
 
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({
-    required this.vm,
-  });
+  const _ProfileHeader({required this.vm});
 
   final AccountVM vm;
 
@@ -87,9 +86,7 @@ class _ProfileHeader extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 50,
-          backgroundColor: Theme.of(
-            context,
-          ).primaryColor.withAlpha(20),
+          backgroundColor: Theme.of(context).primaryColor.withAlpha(20),
           child: Icon(
             Icons.person,
             size: 50,
@@ -99,9 +96,9 @@ class _ProfileHeader extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           vm.name,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         Text(
@@ -116,9 +113,7 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({
-    required this.vm,
-  });
+  const _ProfileCard({required this.vm});
 
   final AccountVM vm;
 
@@ -137,17 +132,18 @@ class _ProfileCard extends StatelessWidget {
           children: [
             Text(
               'Account Information',
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _InfoRow(
+            AppInfoRow(
               icon: Icons.email_outlined,
               label: 'Email',
               value: vm.userEmail,
             ),
             const Divider(height: 24),
-            _InfoRow(
+            AppInfoRow(
               icon: Icons.verified_outlined,
               label: 'Email Verified',
               value: vm.userEmailVerifiedLabel,
@@ -156,7 +152,7 @@ class _ProfileCard extends StatelessWidget {
             // Provider-specific info
             if (vm.userIsProvider ?? false) ...[
               const Divider(height: 24),
-              _InfoRow(
+              AppInfoRow(
                 icon: Icons.work_outline,
                 label: 'Role',
                 value: vm.providerRole,
@@ -166,18 +162,18 @@ class _ProfileCard extends StatelessWidget {
             if (vm.userIsClient ?? false) ...[
               if (vm.userPhone != null) ...[
                 const Divider(height: 24),
-                _InfoRow(
+                AppInfoRow(
                   icon: Icons.phone_outlined,
                   label: 'Phone',
-                  value: vm.userPhone,
+                  value: vm.userPhone!,
                 ),
               ],
               if (vm.userDateOfBirth != null) ...[
                 const Divider(height: 24),
-                _InfoRow(
+                AppInfoRow(
                   icon: Icons.cake_outlined,
                   label: 'Date of Birth',
-                  value: vm.userDateOfBirth,
+                  value: vm.userDateOfBirth!,
                 ),
               ],
             ],
@@ -189,9 +185,7 @@ class _ProfileCard extends StatelessWidget {
 }
 
 class _VerifyEmailButton extends StatelessWidget {
-  const _VerifyEmailButton({
-    required this.vm,
-  });
+  const _VerifyEmailButton({required this.vm});
 
   final AccountVM vm;
 
@@ -206,16 +200,11 @@ class _VerifyEmailButton extends StatelessWidget {
         try {
           await vm.sendEmailVerification();
           messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Verification email sent!'),
-            ),
+            const SnackBar(content: Text('Verification email sent!')),
           );
         } catch (e) {
           messenger.showSnackBar(
-            SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
           );
         }
       },
@@ -224,9 +213,7 @@ class _VerifyEmailButton extends StatelessWidget {
 }
 
 class _DeleteAccountButton extends StatelessWidget {
-  const _DeleteAccountButton({
-    required this.vm,
-  });
+  const _DeleteAccountButton({required this.vm});
 
   final AccountVM vm;
 
@@ -252,9 +239,7 @@ class _DeleteAccountButton extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
                 child: const Text('Delete'),
               ),
             ],
@@ -265,9 +250,7 @@ class _DeleteAccountButton extends StatelessWidget {
           if (context.mounted) {
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                builder: (context) => const GreetingPage(),
-              ),
+              MaterialPageRoute(builder: (context) => const GreetingPage()),
               (route) => false,
             );
           }
@@ -278,9 +261,7 @@ class _DeleteAccountButton extends StatelessWidget {
 }
 
 class _SignOutButton extends StatelessWidget {
-  const _SignOutButton({
-    required this.vm,
-  });
+  const _SignOutButton({required this.vm});
 
   final AccountVM vm;
 
@@ -295,15 +276,11 @@ class _SignOutButton extends StatelessWidget {
         final success = await vm.signOutAndResetHomeIndex();
         if (success) {
           messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Signed out successfully'),
-            ),
+            const SnackBar(content: Text('Signed out successfully')),
           );
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(
-              builder: (context) => const GreetingPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const GreetingPage()),
             (route) => false,
           );
         } else {
@@ -315,54 +292,6 @@ class _SignOutButton extends StatelessWidget {
           );
         }
       },
-    );
-  }
-}
-
-
-// Reusable Widgets
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: valueColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

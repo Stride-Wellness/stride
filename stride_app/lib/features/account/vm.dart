@@ -14,33 +14,33 @@ class AccountVM extends ChangeNotifier {
     authStateController.addListener(notifyListeners);
   }
 
-  get name => authStateController.user!.name;
+  String get name => authStateController.user!.name;
 
-  get authState => authStateController.status;
+  AuthStatus get authState => authStateController.status;
 
-  get userStatus => authStateController.user!.status.name;
+  String get userStatus => authStateController.user!.status.name;
 
-  get userEmail => authStateController.user!.email;
+  String get userEmail => authStateController.user!.email;
 
-  get userEmailVerified => authStateController.isEmailVerified;
+  bool get userEmailVerified => authStateController.isEmailVerified;
 
-  get userEmailVerifiedLabel =>
+  String get userEmailVerifiedLabel =>
       authStateController.isEmailVerified ? 'Yes' : 'No';
 
-  get userEmailVerifiedColor =>
+  Color get userEmailVerifiedColor =>
       authStateController.isEmailVerified ? Colors.green : Colors.orange;
 
-  get userIsClient => authStateController.isClient;
+  bool? get userIsClient => authStateController.isClient;
 
-  get userIsProvider => authStateController.isProvider;
+  bool? get userIsProvider => authStateController.isProvider;
 
-  get userPhone => authStateController.user!.asClient?.profile.phone;
+  String? get userPhone => authStateController.user!.asClient?.profile.phone;
 
-  get providerRole => authStateController.user!.asProvider?.providerRole
+  String get providerRole => authStateController.user!.asProvider!.providerRole
       .map((role) => role.name)
       .join(', ');
 
-  get userDateOfBirth =>
+  String? get userDateOfBirth =>
       authStateController.user!.asClient?.profile.dateOfBirth;
 
   Future<void> sendEmailVerification() async {
@@ -64,5 +64,11 @@ class AccountVM extends ChangeNotifier {
       // Optionally store error for the view to read
       return false;
     }
+  }
+
+  @override
+  void dispose() {
+    authStateController.removeListener(notifyListeners);
+    super.dispose();
   }
 }

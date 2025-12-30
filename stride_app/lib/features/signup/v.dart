@@ -6,6 +6,8 @@ import 'package:stride_app/features/client_onboarding_quiz/vm.dart';
 import 'package:stride_app/features/inviation_onboarding_quiz/v.dart';
 import 'package:stride_app/features/provider_onboarding_quiz/v.dart';
 import 'package:stride_app/features/signup/vm.dart';
+import 'package:stride_app/features/shared/widgets/async_button.dart';
+import 'package:stride_app/features/shared/widgets/labeled_text_field.dart';
 import 'package:stride_core/repositories/division_repo.dart';
 import 'package:stride_core/repositories/invitations_repo.dart';
 import 'package:stride_core/repositories/organization_repo.dart';
@@ -205,16 +207,22 @@ class _SignupFormContent extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               if (vm.signupType == SignupType.provider)
-                _InputField(label: "Full Name", controller: vm.nameController),
-              _InputField(
+                LabeledTextField(
+                  label: "Full Name",
+                  controller: vm.nameController,
+                  textInputAction: TextInputAction.next,
+                ),
+              LabeledTextField(
                 label: "Email Address",
                 controller: vm.emailController,
                 keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
               ),
-              _InputField(
+              LabeledTextField(
                 label: "Password",
                 controller: vm.passwordController,
                 obscureText: true,
+                textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 8),
               Text(
@@ -229,10 +237,12 @@ class _SignupFormContent extends StatelessWidget {
                 ),
               ],
               const Spacer(),
-              _SubmitButton(
+              AsyncButton(
+                label: "Create Account",
                 isLoading: vm.isLoading,
-                isValid: vm.isValid,
-                onPressed: () => _handleCreateAccount(context, vm),
+                onPressed: vm.isValid
+                    ? () => _handleCreateAccount(context, vm)
+                    : null,
               ),
             ],
           ),
@@ -258,76 +268,8 @@ class _SignupFormContent extends StatelessWidget {
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
     } else if (vm.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(vm.errorMessage!),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(vm.errorMessage!), backgroundColor: Colors.red),
       );
     }
-  }
-}
-
-/// Reusable text input field
-class _InputField extends StatelessWidget {
-  const _InputField({
-    required this.label,
-    required this.controller,
-    this.keyboardType,
-    this.obscureText = false,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final TextInputType? keyboardType;
-  final bool obscureText;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: obscureText,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-}
-
-/// Submit button with loading state
-class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({
-    required this.isLoading,
-    required this.isValid,
-    required this.onPressed,
-  });
-
-  final bool isLoading;
-  final bool isValid;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Button(
-        variant: ButtonVariant.primary,
-        onPressed: isLoading || !isValid ? null : onPressed,
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Text("Create Account"),
-      ),
-    );
   }
 }

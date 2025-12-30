@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stride_app/features/inviation_onboarding_quiz/vm.dart';
+import 'package:stride_app/features/shared/widgets/async_button.dart';
 import 'package:stride_core/repositories/invitations_repo.dart';
 import 'package:stride_ui/constants/layout.dart';
-import 'package:stride_ui/widgets/button.dart';
 
 class InvitationCodeInputScreen extends StatelessWidget {
   const InvitationCodeInputScreen({super.key});
@@ -52,19 +52,12 @@ class _InvitationCodeInputContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
               ],
-              Button(
-                variant: ButtonVariant.primary,
-                onPressed: vm.isLoading ? null : () => _handleSubmit(context, vm),
-                child: vm.isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text("Submit"),
+              AsyncButton(
+                label: "Submit",
+                isLoading: vm.isLoading,
+                onPressed: vm.isLoading
+                    ? null
+                    : () => _handleSubmit(context, vm),
               ),
             ],
           ),
@@ -73,13 +66,16 @@ class _InvitationCodeInputContent extends StatelessWidget {
     );
   }
 
-  Future<void> _handleSubmit(BuildContext context, InvitationOnboardingQuizVM vm) async {
+  Future<void> _handleSubmit(
+    BuildContext context,
+    InvitationOnboardingQuizVM vm,
+  ) async {
     if (vm.codeController.text.isEmpty) {
       return;
     }
 
     final quizData = await vm.getQuizData();
-    
+
     if (quizData != null && context.mounted) {
       Navigator.pop(context, quizData);
     }
