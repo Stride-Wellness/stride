@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stride_app/controllers/auth_state_controller.dart';
 import 'package:stride_app/features/client_onboarding_quiz/v.dart';
 import 'package:stride_app/features/client_onboarding_quiz/vm.dart';
 import 'package:stride_app/features/provider_assisted_client_signup/vm.dart';
@@ -16,6 +17,7 @@ class ProviderAssistedClientSignupV extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => ProviderAssistedClientSignupVM(
+        authController: context.read<AuthStateController>(),
         invitationsRepo: context.read<InvitationsRepository>(),
       ),
       child: const _ProviderAssistedClientSignupVContent(),

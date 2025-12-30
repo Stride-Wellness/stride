@@ -65,6 +65,7 @@ class InvitationsRepository {
 
   Future<InvitationModel> createInvitation_({
     required String userId,
+    required UserModel user,
     required Map<String, dynamic> answers,
     required Map<String, String> questions,
   }) async {
@@ -77,11 +78,12 @@ class InvitationsRepository {
       userId: userId,
       timestamp: currentTime,
     );
-
     final invitationData = InvitationModel(
       id: '',
       quizResult: quizResult,
       createdBy: userId,
+      divisionId: user.asProvider!.divisionId,
+      organizationId: user.asProvider!.organizationId,
       code: await _generateInvitationCode(),
       createdAt: currentTime,
     );
@@ -92,6 +94,7 @@ class InvitationsRepository {
   }
 
   Future<InvitationModel> createInvitation({
+    required UserModel user,
     required Map<String, dynamic> answers,
     required Map<String, String> questions,
   }) async {
@@ -101,6 +104,7 @@ class InvitationsRepository {
     }
 
     final invitation = await createInvitation_(
+      user: user,
       userId: currentUser.uid,
       answers: answers,
       questions: questions,

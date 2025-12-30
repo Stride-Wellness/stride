@@ -77,7 +77,7 @@ class SignupVM extends ChangeNotifier {
     try {
       if (signupType == SignupType.client) {
         
-        await userRepo.createClientFromOnboarding(
+        var client = await userRepo.createClientFromOnboarding(
           name: quizData!['name'],
           email: emailController.text,
           password: passwordController.text,
@@ -87,7 +87,17 @@ class SignupVM extends ChangeNotifier {
         );
 
         if (quizData!['invitationId'] != null) {
+          final invitation = await invitationRepo.getInvitationById(
+            quizData!['invitationId'],
+          );
+          final divisionId = invitation!.divisionId;
+          final organizationId = invitation.organizationId;
           await invitationRepo.deleteInvitation(quizData!['invitationId']);
+          userRepo.addClientToDivision(
+            clientId: client.id,
+            divisionId: divisionId,
+            organizationId: organizationId,
+          );
         }
       } else {
         final orgName = (quizData?['answers'] as Map<String, List<String>>?)

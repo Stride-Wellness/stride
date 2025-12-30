@@ -44,6 +44,8 @@ class InvitationOnboardingQuizVM extends ChangeNotifier {
         'name': quizResult.answers['personal_info_question_name']!.first,
         'questions': quizResult.questions,
         'invitationId': invitation.id,
+        'divisionId': invitation.divisionId,
+        'organizationId': invitation.organizationId,
       };
     } catch (e) {
       _errorMessage = 'Error loading invitation: ${e.toString()}';

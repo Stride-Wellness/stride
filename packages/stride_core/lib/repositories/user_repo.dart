@@ -366,6 +366,25 @@ class UserRepository {
     }
   }
 
+  Future<bool> addClientToDivision({
+    required String clientId,
+    required String organizationId,
+    required String divisionId,
+  }) async {
+    try {
+      final userRef = _db.collection(_collection).doc(clientId);
+      await userRef.update({
+        'organizationId': organizationId,
+        'divisionId': divisionId,
+        'updatedAt': Timestamp.now(),
+      });
+      return true;
+    } catch (e) {
+      print('Error adding client to organization: $e');
+      return false;
+    }
+  }
+
   /// Sign in and update last login timestamp
   Future<UserModel?> signIn({
     required String email,
