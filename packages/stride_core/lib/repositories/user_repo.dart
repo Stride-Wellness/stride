@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:stride_core/models/user_m.dart';
 import 'package:stride_core/models/quiz_result_m.dart';
 import 'package:stride_core/services/auth_service.dart';
@@ -7,9 +8,30 @@ class UserRepository {
   static const String _collection = 'users';
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
   final AuthService _authService;
+  final FirebaseFunctions _functions;
 
-  UserRepository({required AuthService authService}) 
-    : _authService = authService;
+  UserRepository({required AuthService authService, FirebaseFunctions? functions})
+      : _authService = authService,
+        _functions = functions ?? FirebaseFunctions.instance;
+
+  Future<Map<String, dynamic>> _callFunction(
+    String name,
+    Map<String, dynamic> data,
+  ) async {
+    final callable = _functions.httpsCallable(name);
+    final result = await callable.call(data);
+    final raw = result.data;
+    if (raw is! Map) {
+      throw Exception('Unexpected response from $name');
+    }
+    return Map<String, dynamic>.from(raw as Map);
+  }
+
+  UserModel _parseUser(dynamic rawUser) {
+    final userMap = Map<String, dynamic>.from(rawUser as Map);
+    final id = userMap['id'] as String? ?? '';
+    return UserModel.fromMap(userMap, id);
+  }
 
   /// Save onboarding quiz result under user's subcollection
   Future<void> saveQuizResult_({
@@ -117,6 +139,224 @@ class UserRepository {
     } catch (e) {
       print('Error getting users by organization: $e');
       throw Exception('Failed to get users by organization');
+    }
+  }
+
+  /// Admin-facing Cloud Function accessors
+  Future<List<UserModel>> getUsersViaFunctions({
+    int limitCount = 100,
+    bool includeDeleted = false,
+    List<String>? userIds,
+    String? organizationId,
+    String? divisionId,
+    UserType? userType,
+    UserStatus? status,
+  }) async {
+    final response = await _callFunction('get_users', {
+      'limit': limitCount,
+      'includeDeleted': includeDeleted,
+      if (userIds != null) 'userIds': userIds,
+      if (organizationId != null) 'organizationId': organizationId,
+      if (divisionId != null) 'divisionId': divisionId,
+      if (userType != null) 'userType': userType.name,
+      if (status != null) 'status': status.name,
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to get users');
+    }
+
+    return (response['users'] as List<dynamic>? ?? [])
+        .map((user) => _parseUser(user))
+        .toList();
+  }
+
+  Future<UserModel?> getUserByIdViaFunctions(String userId) async {
+    final response = await _callFunction('get_user_by_id', {'userId': userId});
+    if (!(response['success'] as bool? ?? false)) {
+      return null;
+    }
+    return _parseUser(response['user']);
+  }
+
+  Future<List<UserModel>> getUsersByIdsViaFunctions(List<String> userIds) async {
+    if (userIds.length > 10) {
+      throw Exception('Cannot get more than 10 users by ID at once');
+    }
+
+    return getUsersViaFunctions(userIds: userIds);
+  }
+
+  Future<List<UserModel>> getUsersByOrganizationViaFunctions(
+    String organizationId, {
+    bool includeDeleted = false,
+  }) async {
+    return getUsersViaFunctions(
+      organizationId: organizationId,
+      includeDeleted: includeDeleted,
+      limitCount: 1000,
+    );
+  }
+
+  Future<List<UserModel>> getUsersByDivisionViaFunctions(
+    String divisionId, {
+    bool includeDeleted = false,
+  }) async {
+    return getUsersViaFunctions(
+      divisionId: divisionId,
+      includeDeleted: includeDeleted,
+      limitCount: 1000,
+    );
+  }
+
+  Future<List<UserModel>> getUsersByTypeAndOrganizationViaFunctions(
+    UserType type,
+    String organizationId, {
+    bool includeDeleted = false,
+  }) async {
+    return getUsersViaFunctions(
+      organizationId: organizationId,
+      userType: type,
+      includeDeleted: includeDeleted,
+      limitCount: 1000,
+    );
+  }
+
+  Future<List<UserModel>> getUsersByStatusAndOrganizationViaFunctions(
+    UserStatus status,
+    String organizationId,
+  ) async {
+    return getUsersViaFunctions(
+      organizationId: organizationId,
+      status: status,
+      limitCount: 1000,
+    );
+  }
+
+  Future<Map<String, int>> getUserStats({String? organizationId}) async {
+    final response = await _callFunction('get_user_stats', {
+      if (organizationId != null) 'organizationId': organizationId,
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to get user statistics');
+    }
+
+    final statsRaw = Map<String, dynamic>.from(response['stats'] ?? {});
+    return statsRaw.map((key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0));
+  }
+
+  Future<String> createProviderViaFunctions({
+    required String email,
+    required String password,
+    required String name,
+    required String organizationId,
+    required String divisionId,
+    required List<ProviderRole> providerRole,
+  }) async {
+    final response = await _callFunction('create_provider', {
+      'email': email,
+      'password': password,
+      'name': name,
+      'organizationId': organizationId,
+      'divisionId': divisionId,
+      'providerRole': providerRole.map((e) => e.name).toList(),
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to create provider');
+    }
+
+    return response['userId'] as String;
+  }
+
+  Future<String> createClientViaFunctions({
+    required String email,
+    required String password,
+    required String name,
+    required String organizationId,
+    required String divisionId,
+    String? phone,
+    String? dateOfBirth,
+  }) async {
+    final response = await _callFunction('create_client', {
+      'email': email,
+      'password': password,
+      'name': name,
+      'organizationId': organizationId,
+      'divisionId': divisionId,
+      if (phone != null) 'phone': phone,
+      if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to create client');
+    }
+
+    return response['userId'] as String;
+  }
+
+  Future<void> updateProviderViaFunctions(
+    String userId,
+    UpdateProviderUserDataModel data,
+  ) async {
+    final response = await _callFunction('update_provider', {
+      'userId': userId,
+      if (data.name != null) 'name': data.name,
+      if (data.status != null) 'status': data.status!.name,
+      if (data.providerRole != null)
+        'providerRole': data.providerRole!.map((role) => role.name).toList(),
+      if (data.profile != null) 'profile': data.profile,
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to update provider');
+    }
+  }
+
+  Future<void> updateClientViaFunctions(
+    String userId,
+    UpdateClientUserDataModel data,
+  ) async {
+    final response = await _callFunction('update_client', {
+      'userId': userId,
+      if (data.name != null) 'name': data.name,
+      if (data.status != null) 'status': data.status!.name,
+      if (data.profile != null) 'profile': data.profile!.toMap(),
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to update client');
+    }
+  }
+
+  Future<void> deleteUserViaFunctions(String userId, {bool hardDelete = false}) async {
+    final response = await _callFunction('delete_user', {
+      'userId': userId,
+      'hardDelete': hardDelete,
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to delete user');
+    }
+  }
+
+  Future<void> resetUserPasswordViaFunctions(String userId) async {
+    final response = await _callFunction('reset_user_password', {'userId': userId});
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to reset password');
+    }
+  }
+
+  Future<void> updateUserEmailViaFunctions(String userId, String newEmail) async {
+    final response = await _callFunction('update_user_email', {
+      'userId': userId,
+      'newEmail': newEmail,
+    });
+
+    if (!(response['success'] as bool? ?? false)) {
+      throw Exception(response['message'] ?? 'Failed to update email');
     }
   }
 

@@ -97,9 +97,12 @@
 		}
 
 		try {
-			await UsersService.delete(userId, true);
+			const ids = userId.split(',').map((id) => id.trim());
+			for (const id of ids) {
+				await UsersService.delete(id, true);
+			}
 
-			successMessage = 'User permanently deleted successfully!';
+			successMessage = 'User(s) permanently deleted successfully!';
 
 			// Reset form
 

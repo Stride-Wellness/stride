@@ -111,7 +111,7 @@ class BaseUser(BaseModel):
     status: UserStatus
     created_at: datetime
     updated_at: datetime
-    last_sign_in: datetime | None
+    last_sign_in: Optional[datetime] = None
 
 
 class ProviderUser(BaseUser):
