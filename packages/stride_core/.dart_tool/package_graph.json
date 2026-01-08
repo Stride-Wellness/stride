@@ -12,8 +12,7 @@
         "firebase_auth",
         "firebase_core",
         "flutter",
-        "provider",
-        "stride_ui"
+        "provider"
       ],
       "devDependencies": []
     },
@@ -70,14 +69,6 @@
         "firebase_core_web",
         "flutter",
         "meta"
-      ]
-    },
-    {
-      "name": "stride_ui",
-      "version": "0.0.0",
-      "dependencies": [
-        "flutter",
-        "stride_core"
       ]
     },
     {

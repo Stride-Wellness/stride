@@ -230,12 +230,6 @@
       "languageVersion": "3.3"
     },
     {
-      "name": "stride_ui",
-      "rootUri": "../../stride_ui",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
       "name": "string_scanner",
       "rootUri": "file:///Users/levirogalla/.pub-cache/hosted/pub.dev/string_scanner-1.4.1",
       "packageUri": "lib/",
