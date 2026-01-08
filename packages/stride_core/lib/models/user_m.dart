@@ -163,11 +163,16 @@ abstract class BaseUserModel {
       return timestamp.toDate();
     } else if (timestamp is DateTime) {
       return timestamp;
+    } else if (timestamp is String) {
+      return DateTime.tryParse(timestamp) ?? DateTime.now();
     }
     return DateTime.now();
   }
 
   static BaseUserDataModel baseFromMap(Map<String, dynamic> data, String id) {
+    final lastLoginRaw =
+        data['lastLoginAt'] ?? data['lastLogin'] ?? data['lastSignIn'];
+
     return BaseUserDataModel(
       id: id,
       email: data['email'] ?? '',
@@ -178,9 +183,7 @@ abstract class BaseUserModel {
         (e) => e.name == data['status'],
         orElse: () => UserStatus.active,
       ),
-      lastLoginAt: data['lastLoginAt'] != null
-          ? _timestampToDate(data['lastLoginAt'])
-          : null,
+      lastLoginAt: lastLoginRaw != null ? _timestampToDate(lastLoginRaw) : null,
       deletedAt: data['deletedAt'] != null
           ? _timestampToDate(data['deletedAt'])
           : null,

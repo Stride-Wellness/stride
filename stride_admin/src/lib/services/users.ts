@@ -25,7 +25,7 @@ export interface MedicalInfo {
 	medications: string[];
 	mobility: 'independent' | 'cane' | 'walker' | 'wheelchair';
 	notes: string;
-	[key: string]: string | string[] | null | undefined;
+	additionalInfo?: Record<string, unknown>;
 }
 
 export interface ClientProfile {
@@ -33,7 +33,7 @@ export interface ClientProfile {
 	dateOfBirth?: string;
 	emergencyContact?: EmergencyContact;
 	medicalInfo?: MedicalInfo;
-	[key: string]: string | EmergencyContact | MedicalInfo | null | undefined;
+	additionalInfo?: Record<string, unknown>;
 }
 
 export interface BaseUser {
@@ -43,7 +43,8 @@ export interface BaseUser {
 	organizationId: string;
 	divisionId: string;
 	status: UserStatus;
-	lastSignIn?: Date;
+	lastLoginAt?: Date;
+	lastSignIn?: Date; // Alias kept for backward compatibility
 	deletedAt?: Date;
 	createdAt: Date;
 	updatedAt: Date;
@@ -73,6 +74,7 @@ export interface CreateProviderUserData {
 	organizationId: string;
 	divisionId: string;
 	providerRole: ProviderRole[];
+	profile?: ProviderProfile;
 }
 
 export interface CreateClientUserData {
@@ -83,6 +85,7 @@ export interface CreateClientUserData {
 	divisionId: string;
 	phone?: string;
 	dateOfBirth?: string;
+	profile?: ClientProfile;
 }
 
 export interface UpdateProviderUserData {
@@ -169,6 +172,16 @@ export class UsersService {
 	 * Parse user data from Cloud Function response
 	 */
 	private static _parseUser(userData: User): User {
+		const lastLoginRaw =
+			(userData as unknown as { lastLoginAt?: Date; lastLogin?: Date }).lastLoginAt ??
+			(userData as unknown as { lastLogin?: Date }).lastLogin ??
+			userData.lastSignIn;
+
+		const lastLoginAt = lastLoginRaw ? toSafeDate(lastLoginRaw) : undefined;
+		const deletedAt = userData.deletedAt ? toSafeDate(userData.deletedAt) : undefined;
+		const createdAt = userData.createdAt ? toSafeDate(userData.createdAt) : toSafeDate(new Date());
+		const updatedAt = userData.updatedAt ? toSafeDate(userData.updatedAt) : toSafeDate(new Date());
+
 		const baseUser = {
 			id: userData.id,
 			email: userData.email,
@@ -176,10 +189,11 @@ export class UsersService {
 			organizationId: userData.organizationId,
 			divisionId: userData.divisionId,
 			status: userData.status as UserStatus,
-			lastSignIn: userData.lastSignIn ? toSafeDate(userData.lastSignIn) : undefined,
-			deletedAt: userData.deletedAt ? toSafeDate(userData.deletedAt) : undefined,
-			createdAt: toSafeDate(userData.createdAt),
-			updatedAt: toSafeDate(userData.updatedAt)
+			lastLoginAt,
+			lastSignIn: lastLoginAt,
+			deletedAt,
+			createdAt,
+			updatedAt
 		};
 
 		if (userData.type === 'provider') {
@@ -457,7 +471,8 @@ export class UsersService {
 				name: data.name,
 				organizationId: data.organizationId,
 				divisionId: data.divisionId,
-				providerRole: data.providerRole
+				providerRole: data.providerRole,
+				profile: data.profile
 			});
 
 			if (!result.data.success) {
@@ -490,7 +505,8 @@ export class UsersService {
 				organizationId: data.organizationId,
 				divisionId: data.divisionId,
 				phone: data.phone,
-				dateOfBirth: data.dateOfBirth
+				dateOfBirth: data.dateOfBirth,
+				profile: data.profile
 			});
 
 			if (!result.data.success) {
@@ -593,6 +609,20 @@ export class UsersService {
 			const message = error instanceof Error ? error.message : 'Failed to delete user';
 			throw new Error(message);
 		}
+	}
+
+	/**
+	 * Soft delete helper (matches Flutter repo semantics)
+	 */
+	static async softDelete(userId: string): Promise<void> {
+		return this.delete(userId, false);
+	}
+
+	/**
+	 * Hard delete helper (matches Flutter repo semantics)
+	 */
+	static async hardDelete(userId: string): Promise<void> {
+		return this.delete(userId, true);
 	}
 
 	/**

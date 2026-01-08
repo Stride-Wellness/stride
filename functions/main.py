@@ -45,14 +45,11 @@ _db: FirestoreClient | None = None
 _openai: OpenAI | None = None
 
 # Configure CORS for your admin dashboard
+# Allow localhost (any port) plus hosted domains for the admin dashboard.
 cors_options = options.CorsOptions(
     cors_origins=[
-        "http://localhost:5173",  # Local development
-        "http://localhost:4173",  # Preview build
-        "https://admin.stridewellness.ca",  # Production (if using Firebase Hosting)
-        "https://stride-c054b.firebaseapp.com",  # Production (if using Firebase Hosting)
-        # Add your actual production domain here
-    ],
+        "*"
+    ],  # Cloud Functions on_call already validate auth; allow any origin for dev ports
     cors_methods=["GET", "POST", "OPTIONS"],
 )
 
