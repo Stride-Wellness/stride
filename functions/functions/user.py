@@ -1,7 +1,8 @@
 from google.cloud.firestore_v1.client import Client as FirestoreClient
+from google.cloud.firestore_v1 import DocumentReference
 from firebase_admin import auth, firestore
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Iterable
 
 from utils.logger import Logger
 from models.user import (
@@ -692,6 +693,43 @@ def get_user_statistics(
     return stats
 
 
+def _delete_collection_batch(refs: Iterable[DocumentReference]) -> None:
+    """Delete a batch of document references."""
+    batch = firestore.client().batch()
+    count = 0
+    for doc_ref in refs:
+        batch.delete(doc_ref)
+        count += 1
+        # Firestore batches are limited to 500 operations
+        if count == 450:
+            batch.commit()
+            batch = firestore.client().batch()
+            count = 0
+
+    if count:
+        batch.commit()
+
+
+def _delete_user_subcollections(db: FirestoreClient, user_ref: DocumentReference) -> None:
+    """Delete known subcollections for a user (e.g., quiz_results)."""
+    try:
+        quiz_results_ref = user_ref.collection("quiz_results")
+        quiz_results = list(quiz_results_ref.stream())
+        if quiz_results:
+            _delete_collection_batch(doc.reference for doc in quiz_results)
+            Logger.debug(
+                "Deleted quiz_results subcollection",
+                f"Deleted {len(quiz_results)} quiz_results for {user_ref.id}",
+                {"userId": user_ref.id},
+            )
+    except Exception as e:
+        Logger.warning(
+            "Failed to delete subcollections",
+            f"Could not delete subcollections for {user_ref.id}: {e}",
+            {"userId": user_ref.id, "error": str(e)},
+        )
+
+
 def delete_user_account(
     db: FirestoreClient,
     request: DeleteUserRequest,
@@ -764,6 +802,9 @@ def delete_user_account(
                 f"Could not delete auth user {request.user_id}",
                 {"userId": request.user_id, "error": str(e)},
             )
+
+        # Remove known subcollections (e.g., quiz_results) so the document fully disappears
+        _delete_user_subcollections(db, user_ref)
 
         user_ref.delete()
         Logger.info(

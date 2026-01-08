@@ -293,13 +293,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
-  stride_ui:
-    dependency: "direct main"
-    description:
-      path: "../stride_ui"
-      relative: true
-    source: path
-    version: "0.0.0"
   string_scanner:
     dependency: transitive
     description:
